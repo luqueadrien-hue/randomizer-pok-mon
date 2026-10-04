@@ -250,6 +250,13 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 const firebaseConfig={apiKey:"AIzaSyB6cWUJru6vpfdpj5aE59jKAXA523Eka1E",authDomain:"pokemon-randomizer-f3b0f.firebaseapp.com",databaseURL:"https://pokemon-randomizer-f3b0f-default-rtdb.firebaseio.com",projectId:"pokemon-randomizer-f3b0f",storageBucket:"pokemon-randomizer-f3b0f.firebasestorage.app",messagingSenderId:"1031451577108",appId:"1:1031451577108:web:428ade1b96ab7e85489001"};
 firebase.initializeApp(firebaseConfig);
 const MPDB=firebase.database();
+const mpName=document.getElementById('mpName');
+const mpCode=document.getElementById('mpCode');
+const mpCreate=document.getElementById('mpCreate');
+const mpJoin=document.getElementById('mpJoin');
+const mpLeave=document.getElementById('mpLeave');
+const mpCopy=document.getElementById('mpCopy');
+const mpPlayers=document.getElementById('mpPlayers');
 let mpSession=null,mpApplying=false,mpListener=null;
 function mpEsc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function mpRoom(c){return MPDB.ref('rooms/'+c)}
@@ -257,6 +264,7 @@ function mpCodeNew(){return 'PKMN-'+Math.floor(1000+Math.random()*9000)}
 function mpId(){return (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)).replace(/-/g,'').slice(0,12)}
 function mpSetStatus(t){const e=document.getElementById('mpStatus');if(e)e.innerHTML=t}
 async function mpCreateRoom(){
+ mpSetStatus('🟡 Création du salon…');
  const name=(mpName.value.trim()||'Hôte').slice(0,24);let code,s;
  do{code=mpCodeNew();s=await mpRoom(code).once('value')}while(s.exists());
  const id=mpId();await mpRoom(code).set({created:Date.now(),hostId:id,players:{[id]:{name,role:'host',online:true}}});
@@ -305,8 +313,8 @@ function mpReceive(r){
  if(r.state)mpHydrateState(r.state);
 }
 window.addEventListener('DOMContentLoaded',()=>{
- mpCreate.onclick=()=>mpCreateRoom().catch(e=>mpSetStatus('❌ '+mpEsc(e.message)));
- mpJoin.onclick=()=>mpJoinRoom().catch(e=>mpSetStatus('❌ '+mpEsc(e.message)));
+ mpCreate.addEventListener('click',()=>mpCreateRoom().catch(e=>{console.error('Création salon Firebase',e);mpSetStatus('❌ '+mpEsc(e.code||e.message||e))}));
+ mpJoin.addEventListener('click',()=>mpJoinRoom().catch(e=>{console.error('Connexion salon Firebase',e);mpSetStatus('❌ '+mpEsc(e.code||e.message||e))}));
  mpLeave.onclick=()=>mpLeaveRoom();
  mpCopy.onclick=()=>{if(mpSession)navigator.clipboard?.writeText(mpSession.room)};
  const old=JSON.parse(localStorage.getItem('pkmn-mp-session')||'null');if(old?.room)mpRoom(old.room).once('value').then(s=>s.exists()?mpEnter(old):localStorage.removeItem('pkmn-mp-session')).catch(()=>{});
