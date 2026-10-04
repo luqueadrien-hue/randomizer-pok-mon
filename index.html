@@ -1,31 +1,1000 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pokémon Randomizer V31</title><style>
-*{box-sizing:border-box}body{margin:0;background:#100817;color:#fff;font-family:system-ui,Arial}.wrap{max-width:1050px;margin:auto;padding:22px}.hero,.card{background:#21152c;border:1px solid #5e4772;border-radius:18px;padding:18px;margin:12px 0}.hero{text-align:center}h1,h2{margin:6px 0 14px}.sub,.muted{color:#cbbfd4}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}input,select,button{width:100%;padding:12px;margin:5px 0;border-radius:11px;border:1px solid #76658b;background:#160d20;color:#fff;font-size:16px}button{cursor:pointer;font-weight:800}.primary{background:#e7bd4d;color:#21152c}.danger{background:#51223a}.code{font-size:30px;letter-spacing:4px;text-align:center;color:#f2cf68;font-weight:900}.hidden{display:none}.status{text-align:center}.players{display:flex;flex-wrap:wrap;gap:8px}.pill{padding:8px 12px;background:#332440;border-radius:999px}.box{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}.slot{min-height:125px;background:#180f21;border:1px solid #59466c;border-radius:12px;text-align:center;padding:7px}.slot img{width:78px;height:78px;object-fit:contain}.slot.taken{opacity:.28}.slot button{padding:7px;font-size:12px}.toolbar{display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px}.err{color:#ff9da9}.ok{color:#91e6aa}@media(max-width:700px){.grid,.toolbar{grid-template-columns:1fr}.box{grid-template-columns:repeat(3,1fr)}}
-</style></head><body><div class="wrap"><div class="hero"><h1>🎲 Pokémon Randomizer</h1><div class="sub">V31 multijoueur — Firebase</div><div id="firebaseStatus" class="muted">Connexion…</div></div>
-<section id="home"><div class="grid"><div class="card"><h2>👑 Créer</h2><input id="hostName" placeholder="Pseudo de l'hôte" maxlength="24"><button id="createBtn" class="primary">Créer un salon</button><div id="hostOut"></div></div><div class="card"><h2>🎮 Rejoindre</h2><input id="playerName" placeholder="Ton pseudo" maxlength="24"><input id="roomCode" placeholder="PKMN-1234" maxlength="9"><button id="joinBtn">Rejoindre</button><div id="joinOut" class="status"></div></div></div></section>
-<section id="room" class="hidden"><div class="card"><div class="grid"><div><h2 id="roomTitle">Salon</h2><div id="roomCodeBig" class="code"></div></div><div><h2>Joueurs</h2><div id="players" class="players"></div></div></div><button id="leaveBtn" class="danger">Quitter le salon</button></div>
-<div id="hostControls" class="card hidden"><h2>🎛️ Contrôle de l'hôte</h2><div class="toolbar"><select id="pool"><option value="1025">National (jusqu'à 1025)</option><option value="151">Kanto</option><option value="251">Johto</option><option value="386">Hoenn</option><option value="493">Sinnoh</option><option value="649">Unys</option><option value="721">Kalos</option><option value="809">Alola</option><option value="898">Galar</option></select><select id="count"><option>6</option><option>12</option><option>18</option><option>24</option><option>30</option></select><button id="generateBtn" class="primary">Générer la Box</button></div><div id="genStatus" class="muted"></div><hr style="border-color:#59466c;margin:16px 0"><h2>🎵 Pokémon par musique de zone</h2><p class="muted">Génère un Pokémon et un aperçu musical associé à une zone de sa génération. Les joueurs écoutent puis devinent le Pokémon.</p><button id="musicBtn">🎵 Nouvelle énigme musicale</button></div>
-<div id="musicQuiz" class="card hidden"><h2>🎧 Énigme musicale</h2><div id="musicPlayer" class="status"></div><div id="musicAnswer" class="hidden status"></div><button id="revealMusic">Afficher la réponse</button></div><div class="card"><h2>📦 BOÎTE 1</h2><div id="box" class="box"></div></div></section></div>
-<script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-import{getDatabase,ref,set,get,update,onValue,onDisconnect,remove}from"https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
-const db=getDatabase(initializeApp({apiKey:"AIzaSyB6cWUJru6vpfdpj5aE59jKAXA523Eka1E",authDomain:"pokemon-randomizer-f3b0f.firebaseapp.com",databaseURL:"https://pokemon-randomizer-f3b0f-default-rtdb.firebaseio.com",projectId:"pokemon-randomizer-f3b0f",storageBucket:"pokemon-randomizer-f3b0f.firebasestorage.app",messagingSenderId:"1031451577108",appId:"1:1031451577108:web:428ade1b96ab7e85489001"}));let session=null,unsubRoom=null;
-const $=id=>document.getElementById(id), esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
-function msg(id,t,err=false){$(id).innerHTML='<span class="'+(err?'err':'ok')+'">'+esc(t)+'</span>'}
-async function probe(){try{await get(ref(db,".info/connected"));$("firebaseStatus").innerHTML='<span class="ok">● Firebase prêt</span>'}catch(e){$("firebaseStatus").innerHTML='<span class="err">● Firebase inaccessible</span>'}}probe();
-function code(){return"PKMN-"+Math.floor(1000+Math.random()*9000)}function id(){return crypto.randomUUID().replaceAll("-","").slice(0,12)}
-async function enter(s){session=s;localStorage.setItem("pkmn-session",JSON.stringify(s));$("home").classList.add("hidden");$("room").classList.remove("hidden");$("roomCodeBig").textContent=s.room;$("hostControls").classList.toggle("hidden",s.role!=="host");await set(ref(db,"rooms/"+s.room+"/players/"+s.id+"/online"),true);onDisconnect(ref(db,"rooms/"+s.room+"/players/"+s.id+"/online")).set(false);watch();}
-function watch(){if(unsubRoom)unsubRoom();unsubRoom=onValue(ref(db,"rooms/"+session.room),snap=>{if(!snap.exists()){leave(false);return}const r=snap.val(), ps=r.players||{};$("players").innerHTML=Object.entries(ps).map(([k,p])=>'<span class="pill">'+(p.role==="host"?"👑 ":"")+esc(p.name)+(p.online===false?" ⚫":" 🟢")+'</span>').join("");renderBox(r.box||{});renderMusic(r.music||null);});}
-function renderBox(b){const mons=b.mons||[],$b=$("box");$b.innerHTML="";for(let i=0;i<30;i++){const m=mons[i],d=document.createElement("div");d.className="slot"+(m?.takenBy?" taken":"");if(m)d.innerHTML='<div>#'+(i+1)+'</div><img src="'+m.sprite+'" alt=""><div><b>'+esc(m.name)+'</b></div>'+(m.takenBy?'<small>Choisi</small>':'<button data-i="'+i+'">Choisir</button>');else d.innerHTML='<div>#'+(i+1)+'</div><div class="muted" style="padding-top:42px">Vide</div>'; $b.appendChild(d)}$b.querySelectorAll("button[data-i]").forEach(x=>x.onclick=()=>pick(+x.dataset.i));}
-async function pick(i){if(!session)return;const p=ref(db,"rooms/"+session.room+"/box/mons/"+i);const s=await get(p);if(!s.exists()||s.val().takenBy)return;await update(p,{takenBy:session.id,takenName:session.name,takenAt:Date.now()});}
-$("createBtn").onclick=async()=>{try{const name=$("hostName").value.trim()||"Hôte";let c,s;do{c=code();s=await get(ref(db,"rooms/"+c))}while(s.exists());const uid=id();await set(ref(db,"rooms/"+c),{created:Date.now(),hostId:uid,status:"lobby",players:{[uid]:{name,role:"host",online:true,joined:Date.now()}}});await enter({room:c,id:uid,name,role:"host"});}catch(e){msg("hostOut","Firebase refuse l'écriture : "+(e.code||e.message),true)}};
-$("joinBtn").onclick=async()=>{try{const name=$("playerName").value.trim()||"Joueur",c=$("roomCode").value.trim().toUpperCase();if(!/^PKMN-\d{4}$/.test(c))return msg("joinOut","Code invalide.",true);const s=await get(ref(db,"rooms/"+c));if(!s.exists())return msg("joinOut","Salon introuvable.",true);const uid=id();await set(ref(db,"rooms/"+c+"/players/"+uid),{name,role:"player",online:true,joined:Date.now()});await enter({room:c,id:uid,name,role:"player"});}catch(e){msg("joinOut","Connexion refusée : "+(e.code||e.message),true)}};
-$("generateBtn").onclick=async()=>{if(session?.role!=="host")return;try{$("genStatus").textContent="Génération…";const max=+$("pool").value,n=+$("count").value,ids=[];while(ids.length<n){const x=1+Math.floor(Math.random()*max);if(!ids.includes(x))ids.push(x)}const data=await Promise.all(ids.map(x=>fetch("https://pokeapi.co/api/v2/pokemon/"+x).then(r=>{if(!r.ok)throw Error("PokeAPI");return r.json()})));const mons=data.map(p=>({id:p.id,name:p.name.charAt(0).toUpperCase()+p.name.slice(1),sprite:p.sprites.other["official-artwork"].front_default||p.sprites.front_default||""}));await set(ref(db,"rooms/"+session.room+"/box"),{created:Date.now(),mons});$("genStatus").textContent="Box synchronisée pour tous les joueurs."}catch(e){$("genStatus").textContent="Erreur de génération : "+e.message}};
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pokémon Randomizer Multi-Jeux</title>
+<style>
+body{margin:0;background:#120b18;color:#fff;font-family:Arial,sans-serif}
+.wrap{max-width:1150px;margin:auto;padding:20px}
+h1{text-align:center}.sub{text-align:center;color:#c7bacf}
+.panel,.team{background:#21152c;border:1px solid #654e78;border-radius:18px;padding:14px}
+.controls{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+select,input,button{width:100%;padding:10px;border-radius:10px;border:1px solid #6c5680;background:#17101f;color:#fff}
+button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.actions button{flex:1;min-width:160px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:18px}
+.card{background:#24182f;border:1px solid #6c5680;border-radius:18px;padding:14px;text-align:center}
+.card img{width:145px;height:145px;object-fit:contain}
+.hiddenPoke img,.hiddenPoke .name{filter:brightness(0)}
+.name{font-size:20px;font-weight:800}.clue{font-size:18px;font-weight:800;margin:8px 0}
+.teams{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}
+.teamgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.mini{background:#160e1d;border-radius:12px;padding:6px;text-align:center}
+.mini img{width:72px;height:72px;object-fit:contain}.badge{display:inline-block;padding:2px 6px;border-radius:999px;background:#3b2a49;font-size:10px;margin:2px}
+.turn{text-align:center;margin:12px 0;color:#f1ce68;font-weight:800}.danger{background:#5a2630}.offerTag{font-size:12px;color:#c7bacf;margin-top:5px}
+@media(max-width:850px){.controls{grid-template-columns:1fr 1fr}.teams{grid-template-columns:1fr}}
+@media(max-width:520px){.controls{grid-template-columns:1fr}}
 
-function renderMusic(m){const q=$("musicQuiz");if(!m){q.classList.add("hidden");return}q.classList.remove("hidden");$("musicPlayer").innerHTML=m.preview?'<audio controls preload="none" src="'+m.preview+'"></audio><p class="muted">Écoute le thème et devine quel Pokémon peut être rencontré dans cette génération.</p>':'<p class="err">Aperçu musical indisponible. L’hôte peut relancer.</p>';$("musicAnswer").innerHTML='<p><b>'+esc(m.pokemon)+'</b></p><p class="muted">Génération '+esc(m.gen)+' — thème recherché : '+esc(m.theme)+'</p>';$("musicAnswer").classList.add("hidden");}
-const MUSIC=[['I','Pokemon Red Blue Route theme',151],['II','Pokemon Gold Silver Route theme',251],['III','Pokemon Ruby Sapphire Route theme',386],['IV','Pokemon Diamond Pearl Route theme',493],['V','Pokemon Black White Route theme',649],['VI','Pokemon X Y Route theme',721],['VII','Pokemon Sun Moon Route theme',809],['VIII','Pokemon Sword Shield Wild Area theme',898],['IX','Pokemon Scarlet Violet South Province theme',1025]];
-async function preview(q){try{const d=await fetch('https://itunes.apple.com/search?term='+encodeURIComponent(q)+'&entity=song&limit=8').then(r=>r.json());return(d.results||[]).find(x=>x.previewUrl)?.previewUrl||''}catch{return''}}
-$("musicBtn").onclick=async()=>{if(session?.role!=="host")return;try{const g=MUSIC[Math.floor(Math.random()*MUSIC.length)],pid=1+Math.floor(Math.random()*g[2]),p=await fetch('https://pokeapi.co/api/v2/pokemon/'+pid).then(r=>r.json()),pv=await preview(g[1]);await set(ref(db,'rooms/'+session.room+'/music'),{pokemon:p.name.charAt(0).toUpperCase()+p.name.slice(1),pokemonId:p.id,gen:g[0],theme:g[1],preview:pv,created:Date.now()});}catch(e){$("genStatus").textContent='Erreur énigme musicale : '+e.message}};
-$("revealMusic").onclick=()=>$("musicAnswer").classList.toggle("hidden");
-async function leave(removeSelf=true){if(session&&removeSelf)try{await remove(ref(db,"rooms/"+session.room+"/players/"+session.id))}catch{}localStorage.removeItem("pkmn-session");session=null;if(unsubRoom){unsubRoom();unsubRoom=null}$("room").classList.add("hidden");$("home").classList.remove("hidden");}$("leaveBtn").onclick=()=>leave();
-const old=JSON.parse(localStorage.getItem("pkmn-session")||"null");if(old?.room&&old?.id){get(ref(db,"rooms/"+old.room)).then(s=>s.exists()?enter(old):localStorage.removeItem("pkmn-session")).catch(()=>localStorage.removeItem("pkmn-session"))}
-</script></body></html>
+.pokeBallMystery{width:170px;height:170px;border-radius:50%;margin:10px auto;position:relative;overflow:hidden;border:6px solid #111;background:#ddd}
+.pokeBallMystery .pbTop{position:absolute;left:0;top:0;width:100%;height:50%;background:var(--pb-top,#d44)}
+.pokeBallMystery .pbBottom{position:absolute;left:0;bottom:0;width:100%;height:50%;background:var(--pb-bottom,#eee)}
+.pokeBallMystery .pbBand{position:absolute;left:0;top:46%;width:100%;height:8%;background:#111;z-index:4}
+.pokeBallMystery .pbButton{position:absolute;left:50%;top:50%;width:42px;height:42px;transform:translate(-50%,-50%);border-radius:50%;background:#f5f5f5;border:6px solid #111;z-index:5}
+.pokeBallMystery .pbMark{position:absolute;z-index:3;font-size:34px;filter:drop-shadow(0 1px 1px #0006)}
+.pokeBallMystery .pbA{left:18px;top:18px}.pokeBallMystery .pbB{right:18px;top:24px}.pokeBallMystery .pbC{left:62px;bottom:18px}
+.pbHint{font-size:12px;color:#c7bacf;text-align:center;margin-top:6px}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.visualFallback 
+
+
+
+
+
+
+
+
+.gameClue{margin:10px 0 12px;padding:10px 12px;border-radius:12px;background:#160f1f;border:1px solid #3a2b48;font-size:14px;line-height:1.45;text-align:left}
+.dexDescription{font-size:15px;line-height:1.55}
+.dexSource{display:block;margin-top:7px;font-size:11px;color:#b8a9c5;text-align:right}
+.card.hiddenPoke .gameClue,.card.hiddenPoke .dexDescription,.card.hiddenPoke .dexSource{filter:none!important;opacity:1!important;color:inherit!important}
+
+
+.boxModeGrid{grid-template-columns:repeat(auto-fit,minmax(145px,1fr))!important}
+.boxModeGrid .card{min-width:0}
+.boxModeGrid .card img{max-height:125px;object-fit:contain}
+.boxNumber{font-size:11px;color:#b8a9c5;margin-top:4px}
+
+.pcBoxOptions{padding:8px 10px;border:1px solid #443552;border-radius:12px;background:#17101f}
+.pcBoxHint{font-size:11px;color:#b8a9c5;margin-top:5px}
+#cards.boxModeGrid{display:block!important;background:linear-gradient(180deg,#43345c,#241b38);border:3px solid #8f82a9;border-radius:20px;padding:12px;max-width:820px;margin:14px auto;box-shadow:inset 0 0 0 3px #171020}
+.pcBoxHeader{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;padding:7px 12px;border-radius:12px;background:#171020;border:2px solid #786a91;color:#fff;font-weight:800}
+.pcBoxHeader button{border:0;border-radius:9px;padding:7px 12px;background:#6f6088;color:#fff;font-weight:800;cursor:pointer}
+.pcBoxSlots{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.pcSlot{aspect-ratio:1/1;min-width:0;border:2px solid #75688d;border-radius:11px;background:linear-gradient(145deg,#c8bed7,#9386a7);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.pcSlot.empty{opacity:.55;background:linear-gradient(145deg,#80748e,#5f546c)}
+.pcSlot img{width:88%;height:88%;object-fit:contain;image-rendering:auto}
+.pcSlot .slotNo{position:absolute;left:4px;top:3px;font-size:9px;font-weight:900;color:#342a43;background:#eee8f5aa;border-radius:5px;padding:1px 3px}
+.pcSlot .slotName{position:absolute;left:2px;right:2px;bottom:2px;font-size:9px;font-weight:800;line-height:1.05;text-align:center;color:#fff;text-shadow:0 1px 2px #000;background:#261d33bb;border-radius:5px;padding:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcBoxFooter{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:#e3daee}
+@media(max-width:560px){.pcBoxSlots{gap:3px}.pcSlot{border-width:1px;border-radius:7px}.pcSlot .slotName{font-size:7px}.pcSlot .slotNo{font-size:7px}}
+
+.mpbar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.mpstate{padding:10px;border-radius:10px;background:#17101f;text-align:center}
+.mpplayers{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+.mpbadge{background:#3b2a49;border-radius:999px;padding:5px 9px;font-size:12px}
+@media(max-width:650px){.mpbar{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🎲 Pokémon Randomizer Multi-Jeux</h1>
+<div class="sub">Œufs, stats, espèce, taille, poids, apprendre ou laisser, silhouette et plus.</div>
+<div class="panel" id="multiplayerPanel" style="margin-bottom:18px">
+<h2 style="text-align:center;margin-top:0">🌐 Multijoueur Firebase</h2>
+<div class="mpbar">
+<div><input id="mpName" placeholder="Pseudo" maxlength="24"><button id="mpCreate" class="primary">👑 Créer un salon</button></div>
+<div><input id="mpCode" placeholder="PKMN-1234" maxlength="9"><button id="mpJoin">🎮 Rejoindre</button></div>
+</div>
+<div id="mpStatus" class="mpstate">Hors salon — le randomizer reste utilisable en local.</div>
+<div id="mpPlayers" class="mpplayers"></div>
+<div class="actions"><button id="mpCopy">📋 Copier le code</button><button id="mpLeave" class="danger">Quitter le salon</button></div>
+</div>
+
+<div class="panel">
+<div class="controls">
+<label>Jeu<select id="gameMode">
+<option value="egg">🥚 Œuf par type</option>
+<option value="stats">📊 Stats à l'aveugle</option>
+<option value="species">🧬 Espèce / catégorie Pokémon</option>
+<option value="height">📏 Taille</option>
+<option value="weight">⚖️ Poids</option>
+<option value="learnleave">📦 À prendre ou à laisser</option>
+<option value="typeblind">❓ Type à l'aveugle</option>
+<option value="generationblind">🕰 Génération à l'aveugle</option><option value="dexnumber">🔢 Numéro du Pokédex</option>
+<option value="silhouette">👤 Silhouette</option>
+<option value="movelearn">⚔️ Choisir via une attaque apprise</option>
+<option value="auction">💰 Enchères Pokémon</option>
+<option value="dexdesc">📖 Description Pokédex</option>
+<option value="evolution">🧬 Deviner l’évolution</option>
+<option value="ability">✨ Deviner par le talent</option>
+<option value="pokeballtraits">🔴 Poké Ball mystère</option>
+<option value="dominantstat">🏆 Stat dominante</option>
+<option value="bstonly">📊 Total de stats (BST)</option>
+<option value="ranking">📈 Classement mystère</option>
+<option value="multimove">⚔️ Attaques mystères</option>
+<option value="weaknesses">🎯 Faiblesses</option>
+<option value="resistances">🛡️ Résistances / immunités</option>
+<option value="effectiveness">💥 Efficacité mystère</option>
+<option value="evochain">🧬 Chaîne d’évolution</option>
+<option value="egggroup">🥚 Groupe d’Œuf</option>
+<option value="growth">🍬 Vitesse d’XP</option>
+<option value="encountermethod">🎣 Méthode de rencontre</option>
+<option value="capturelocation">📍 Lieu de capture</option>
+<option value="regionaldex">🌎 Numéro Pokédex régional</option>
+<option value="olddesc">📜 Ancienne description Pokédex</option>
+<option value="color">🎨 Couleur Pokédex</option>
+<option value="categoryheight">🏷️ Catégorie + taille</option>
+<option value="twotruths">🔀 2 vérités, 1 mensonge</option>
+<option value="progressive">❓ Indices progressifs</option>
+<option value="buyhints">💰 Achat d’indices</option>
+<option value="slotchallenge">🎰 Machine à défis</option>
+<option value="boss">👑 Boss mystère</option>
+<option value="raritydraft">💎 Draft à rareté</option>
+<option value="randomchallenge">🎲 Défi aléatoire</option>
+<option value="randombox">📦 Boîte Pokémon aléatoire</option>
+<option value="zonemusic">🎵 Pokémon par musique de zone</option>
+</select></label>
+
+<label>Taille équipe<select id="teamSize"><option>3</option><option>4</option><option>5</option><option selected>6</option></select></label>
+<label>Nombre de choix<input id="choiceCount" type="number" min="2" max="12" value="3"></label>
+<label>Légendaires<select id="legend"><option value="all">Autorisés</option><option value="no" selected>Sans légendaires</option><option value="yes">Uniquement légendaires</option></select></label>
+<label>Dex / Génération<select id="generation">
+<option value="all" selected>Toutes les générations</option>
+<option value="1">Kanto</option><option value="2">Johto</option><option value="3">Hoenn</option><option value="4">Sinnoh</option>
+<option value="5">Unys</option><option value="6">Kalos</option><option value="7">Alola</option><option value="8">Galar</option>
+<option value="9">Écarlate / Violet + DLC + Hisui — SV + DLC + anciennes générations</option>
+</select></label>
+<label>Mode de type<select id="typeMode">
+<option value="random" selected>Types aléatoires</option><option value="same">Même type aléatoire</option>
+<option value="mono-normal">Monotype Normal</option><option value="mono-fire">Monotype Feu</option><option value="mono-water">Monotype Eau</option>
+<option value="mono-electric">Monotype Électrik</option><option value="mono-grass">Monotype Plante</option><option value="mono-ice">Monotype Glace</option>
+<option value="mono-fighting">Monotype Combat</option><option value="mono-poison">Monotype Poison</option><option value="mono-ground">Monotype Sol</option>
+<option value="mono-flying">Monotype Vol</option><option value="mono-psychic">Monotype Psy</option><option value="mono-bug">Monotype Insecte</option>
+<option value="mono-rock">Monotype Roche</option><option value="mono-ghost">Monotype Spectre</option><option value="mono-dragon">Monotype Dragon</option>
+<option value="mono-dark">Monotype Ténèbres</option><option value="mono-steel">Monotype Acier</option><option value="mono-fairy">Monotype Fée</option>
+</select></label>
+
+<div id="boxSizeWrap" style="display:none" class="pcBoxOptions">
+<label>Remplissage de la boîte
+<select id="boxSize">
+<option value="6">6 Pokémon</option>
+<option value="12">12 Pokémon</option>
+<option value="18">18 Pokémon</option>
+<option value="24">24 Pokémon</option>
+<option value="30" selected>30 Pokémon</option>
+</select></label>
+<div class="pcBoxHint">La boîte conserve toujours 30 emplacements, comme une boîte PC Pokémon.</div>
+</div>
+<label>Affichage<select id="revealMode"><option value="hidden" selected>Pokémon cachés</option><option value="visible">Pokémon visibles</option></select></label>
+<label>Mensonge / Leurre
+<select id="lieMode">
+<option value="none" selected>Non</option>
+<option value="yes">Oui — adapté automatiquement au jeu choisi</option>
+</select>
+</label>
+</div>
+<div class="actions"><button id="roll" class="primary">🎲 GÉNÉRER</button><button id="reveal">👁 Révéler tous</button><button id="hide">🙈 Masquer tous</button><button id="reset">↺ Nouvelle partie</button></div>
+<div id="turn" class="turn">Tour du JOUEUR 1</div>
+</div>
+<div id="dealPanel" class="panel" style="display:none;margin-top:18px">
+  <h2 style="text-align:center;margin-top:0">📦 À prendre ou à laisser</h2>
+  <div id="starterOffer" style="text-align:center;color:#c7bacf;margin-bottom:12px"></div>
+  <div class="actions">
+    <button id="keepStarter">✅ Garder le Pokémon de départ</button>
+    <button id="discardStarter">🗑️ Refuser le Pokémon de départ</button>
+  </div>
+  <div id="dealInfo" class="turn" style="margin-top:10px"></div>
+</div>
+<div id="auctionPanel" class="panel" style="display:none;margin-top:18px">
+  <h2 style="text-align:center;margin-top:0">💰 Enchères Pokémon</h2>
+  <div class="controls">
+    <label>Budget par joueur
+      <input id="auctionBudget" type="number" min="10" max="9999" value="100">
+    </label>
+    <label>Pas minimum
+      <input id="auctionStep" type="number" min="1" max="999" value="5">
+    </label>
+    <label>Malus
+      <select id="auctionMalusMode">
+        <option value="none" selected>Aucun</option>
+        <option value="random">Malus aléatoire</option>
+        <option value="pokemon">Malus sur le Pokémon</option>
+        <option value="player">Malus sur le joueur</option>
+        <option value="bid">Malus sur la mise</option>
+      </select>
+    </label>
+    <label>Valeur du malus
+      <input id="auctionMalusValue" type="number" min="1" max="100" value="10">
+    </label>
+  </div>
+  <div class="actions">
+    <button id="startAuction" class="primary">🎯 Lancer une enchère</button>
+    <button id="bidP1">Joueur 1 : + mise</button>
+    <button id="bidP2">Joueur 2 : + mise</button>
+    <button id="passP1">Joueur 1 passe</button>
+    <button id="passP2">Joueur 2 passe</button>
+    <button id="awardAuction">🏆 Attribuer au plus offrant</button>
+  </div>
+  <div id="auctionInfo" class="turn"></div>
+</div>
+
+<div id="gmPanel" class="panel" style="margin-top:18px;display:none;border-color:#c59a3a">
+  <h3 style="margin:0 0 8px;text-align:center">🧠 Information Générateur / Maître du jeu</h3>
+  <div id="gmInfo" style="text-align:center;color:#f5d77b;font-weight:700"></div>
+</div>
+<div id="cards" class="cards"></div>
+<div class="teams">
+<div class="team"><h2>JOUEUR 1</h2><div id="team1" class="teamgrid"></div></div>
+<div class="team"><h2>JOUEUR 2</h2><div id="team2" class="teamgrid"></div></div>
+</div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig={apiKey:"AIzaSyB6cWUJru6vpfdpj5aE59jKAXA523Eka1E",authDomain:"pokemon-randomizer-f3b0f.firebaseapp.com",databaseURL:"https://pokemon-randomizer-f3b0f-default-rtdb.firebaseio.com",projectId:"pokemon-randomizer-f3b0f",storageBucket:"pokemon-randomizer-f3b0f.firebasestorage.app",messagingSenderId:"1031451577108",appId:"1:1031451577108:web:428ade1b96ab7e85489001"};
+firebase.initializeApp(firebaseConfig);
+const MPDB=firebase.database();
+let mpSession=null,mpApplying=false,mpListener=null;
+function mpEsc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function mpRoom(c){return MPDB.ref('rooms/'+c)}
+function mpCodeNew(){return 'PKMN-'+Math.floor(1000+Math.random()*9000)}
+function mpId(){return (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)).replace(/-/g,'').slice(0,12)}
+function mpSetStatus(t){const e=document.getElementById('mpStatus');if(e)e.innerHTML=t}
+async function mpCreateRoom(){
+ const name=(mpName.value.trim()||'Hôte').slice(0,24);let code,s;
+ do{code=mpCodeNew();s=await mpRoom(code).once('value')}while(s.exists());
+ const id=mpId();await mpRoom(code).set({created:Date.now(),hostId:id,players:{[id]:{name,role:'host',online:true}}});
+ await mpEnter({room:code,id,name,role:'host'}); await mpSyncState();
+}
+async function mpJoinRoom(){
+ const name=(mpName.value.trim()||'Joueur').slice(0,24),code=mpCode.value.trim().toUpperCase();
+ if(!/^PKMN-\d{4}$/.test(code))throw Error('Code invalide');
+ const s=await mpRoom(code).once('value');if(!s.exists())throw Error('Salon introuvable');
+ const id=mpId();await mpRoom(code).child('players/'+id).set({name,role:'player',online:true});
+ await mpEnter({room:code,id,name,role:'player'});
+}
+async function mpEnter(s){
+ mpSession=s;localStorage.setItem('pkmn-mp-session',JSON.stringify(s));mpCode.value=s.room;
+ const online=mpRoom(s.room).child('players/'+s.id+'/online');await online.set(true);online.onDisconnect().set(false);
+ if(mpListener)mpRoom(s.room).off('value',mpListener);
+ mpListener=mpRoom(s.room).on('value',snap=>mpReceive(snap.val()));
+ mpSetStatus('🟢 Salon <b>'+mpEsc(s.room)+'</b> — '+(s.role==='host'?'Hôte':'Joueur'));
+}
+async function mpLeaveRoom(){
+ if(mpSession){try{await mpRoom(mpSession.room).child('players/'+mpSession.id).remove()}catch(e){}}
+ if(mpSession&&mpListener)mpRoom(mpSession.room).off('value',mpListener);
+ mpSession=null;mpListener=null;localStorage.removeItem('pkmn-mp-session');mpPlayers.innerHTML='';mpSetStatus('Hors salon — le randomizer reste utilisable en local.');
+}
+function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null}}
+async function mpSnapshot(){
+ return {player,mode:gameMode.value,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(mpLite),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,turn:turn.textContent,updated:Date.now()};
+}
+async function mpSyncState(){
+ if(!mpSession||mpApplying)return;
+ try{await mpRoom(mpSession.room).child('state').set(await mpSnapshot())}catch(e){console.warn('Sync Firebase',e)}
+}
+async function mpHydrateState(st){
+ if(!st||mpApplying)return;mpApplying=true;
+ try{
+  if(st.mode)gameMode.value=st.mode;
+  const z=st.settings||{};for(const [k,v] of Object.entries(z)){const el=document.getElementById(k);if(el&&v!=null)el.value=v}
+  if(typeof updateModePanels==='function')updateModePanels();
+  const arr=await Promise.all((st.current||[]).map(async x=>{const p=await getP(x.id);return {p,clue:x.clue||'',isLie:!!x.isLie,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null}}));
+  current=arr;teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;
+  if(st.turn)turn.textContent=st.turn;render();drawTeams();
+ }catch(e){console.warn('Hydratation multijoueur',e)}finally{mpApplying=false}
+}
+function mpReceive(r){
+ if(!r)return;const ps=r.players||{};mpPlayers.innerHTML=Object.values(ps).map(p=>'<span class="mpbadge">'+(p.role==='host'?'👑 ':'')+mpEsc(p.name)+(p.online===false?' ⚫':' 🟢')+'</span>').join('');
+ if(r.state)mpHydrateState(r.state);
+}
+window.addEventListener('DOMContentLoaded',()=>{
+ mpCreate.onclick=()=>mpCreateRoom().catch(e=>mpSetStatus('❌ '+mpEsc(e.message)));
+ mpJoin.onclick=()=>mpJoinRoom().catch(e=>mpSetStatus('❌ '+mpEsc(e.message)));
+ mpLeave.onclick=()=>mpLeaveRoom();
+ mpCopy.onclick=()=>{if(mpSession)navigator.clipboard?.writeText(mpSession.room)};
+ const old=JSON.parse(localStorage.getItem('pkmn-mp-session')||'null');if(old?.room)mpRoom(old.room).once('value').then(s=>s.exists()?mpEnter(old):localStorage.removeItem('pkmn-mp-session')).catch(()=>{});
+});
+const TYPES=[['normal','Normal'],['fire','Feu'],['water','Eau'],['electric','Électrik'],['grass','Plante'],['ice','Glace'],['fighting','Combat'],['poison','Poison'],['ground','Sol'],['flying','Vol'],['psychic','Psy'],['bug','Insecte'],['rock','Roche'],['ghost','Spectre'],['dragon','Dragon'],['dark','Ténèbres'],['steel','Acier'],['fairy','Fée']].map(x=>({en:x[0],fr:x[1]}));
+const GEN={1:[1,151],2:[152,251],3:[252,386],4:[387,493],5:[494,649],6:[650,721],7:[722,809],8:[810,905],9:[1,1025]};
+const cache=new Map();const moveCache=new Map();let player=1,teams={1:[],2:[]},current=[];let starterPokemon=null;let dealStarted=false;let batchLocked=false;let auctionState={active:false,pokemon:null,bids:{1:0,2:0},passed:{1:false,2:false},budget:{1:100,2:100},malus:null};
+function range(){return generation.value==='all'?[1,1025]:GEN[generation.value]}
+function tfilter(){const m=typeMode.value;if(m.startsWith('mono-'))return m.slice(5);return null}
+function frt(t){return TYPES.find(x=>x.en===t)?.fr||t}
+async function getP(id){
+ if(cache.has(id))return cache.get(id);
+ const [p,s]=await Promise.all([fetch('https://pokeapi.co/api/v2/pokemon/'+id).then(r=>r.json()),fetch('https://pokeapi.co/api/v2/pokemon-species/'+id).then(r=>r.json())]);
+ const fr=s.names.find(x=>x.language.name==='fr');const genus=s.genera.find(x=>x.language.name==='fr')?.genus||'Pokémon';
+ const sv=((p.moves.some(m=>m.version_group_details.some(v=>v.version_group.name==='scarlet-violet'))||id>=906)||(id>=899&&id<=905));
+ const flavorTexts=(s.flavor_text_entries||[]).filter(x=>x.language?.name==='fr').map(x=>({text:(x.flavor_text||'').replace(/[\n\f\r]+/g,' ').replace(/\s+/g,' ').trim(),version:x.version?.name||'Pokédex'})).filter(x=>x.text);
+ const o={id,apiName:s.name,name:fr?.name||s.name,img:p.sprites.other?.['official-artwork']?.front_default||p.sprites.front_default,sprite:p.sprites.front_default||p.sprites.other?.['official-artwork']?.front_default,types:p.types.map(x=>x.type.name),legendary:!!(s.is_legendary||s.is_mythical),sv,height:p.height/10,weight:p.weight/10,total:p.stats.reduce((a,x)=>a+x.base_stat,0),stats:Object.fromEntries(p.stats.map(x=>[x.stat.name,x.base_stat])),genus,gen:s.generation?.name||'',moves:p.moves.map(m=>({name:m.move.name,url:m.move.url})),abilities:p.abilities.map(a=>({name:a.ability.name,url:a.ability.url,hidden:!!a.is_hidden})),flavorTexts,
+ color:s.color?.name||'unknown',
+ eggGroups:(s.egg_groups||[]).map(x=>x.name),
+ growthRate:s.growth_rate?.name||'unknown',
+ habitat:s.habitat?.name||null,
+ pokedexNumbers:(s.pokedex_numbers||[]).map(x=>({dex:x.pokedex?.name||'',entry:x.entry_number})),
+ encounterUrl:p.location_area_encounters};
+ cache.set(id,o);return o;
+}
+function valid(p){const [lo,hi]=range();if(p.id<lo||p.id>hi)return false;if(generation.value==='9'&&!p.sv)return false;const l=legend.value;if(l==='no'&&p.legendary)return false;if(l==='yes'&&!p.legendary)return false;const tf=tfilter();if(tf&&!p.types.includes(tf))return false;return ![...teams[1],...teams[2]].some(x=>x.id===p.id)}
+async function draw(used){const [lo,hi]=range();for(let i=0;i<4000;i++){const id=Math.floor(Math.random()*(hi-lo+1))+lo;if(used.has(id))continue;try{const p=await getP(id);if(valid(p)){used.add(id);return p}}catch(e){}}throw new Error('Aucun Pokémon trouvé avec ces filtres.')}
+
+async function moveFr(move){
+ if(moveCache.has(move.name))return moveCache.get(move.name);
+ try{
+   const data=await fetch(move.url).then(r=>r.json());
+   const fr=data.names.find(x=>x.language.name==='fr')?.name || move.name;
+   moveCache.set(move.name,fr); return fr;
+ }catch(e){return move.name}
+}
+async function randomRealMove(p){
+ const usable=p.moves.filter(Boolean);
+ if(!usable.length)return 'Lutte';
+ const m=usable[Math.floor(Math.random()*usable.length)];
+ return await moveFr(m);
+}
+async function randomFalseMove(p){
+ const owned=new Set(p.moves.map(m=>m.name));
+ for(let tries=0;tries<60;tries++){
+   const id=Math.floor(Math.random()*850)+1;
+   try{
+     const data=await fetch('https://pokeapi.co/api/v2/move/'+id).then(r=>r.json());
+     if(!owned.has(data.name)){
+       const fr=data.names.find(x=>x.language.name==='fr')?.name || data.name;
+       return fr;
+     }
+   }catch(e){}
+ }
+ return 'Spore';
+}
+
+
+const VERSION_FR={
+ red:'Pokémon Rouge',blue:'Pokémon Bleu',yellow:'Pokémon Jaune',gold:'Pokémon Or',silver:'Pokémon Argent',crystal:'Pokémon Cristal',
+ ruby:'Pokémon Rubis',sapphire:'Pokémon Saphir',emerald:'Pokémon Émeraude','firered':'Pokémon Rouge Feu','leafgreen':'Pokémon Vert Feuille',
+ diamond:'Pokémon Diamant',pearl:'Pokémon Perle',platinum:'Pokémon Platine','heartgold':'Pokémon Or HeartGold','soulsilver':'Pokémon Argent SoulSilver',
+ black:'Pokémon Noir',white:'Pokémon Blanc','black-2':'Pokémon Noir 2','white-2':'Pokémon Blanc 2',
+ x:'Pokémon X',y:'Pokémon Y','omega-ruby':'Pokémon Rubis Oméga','alpha-sapphire':'Pokémon Saphir Alpha',
+ sun:'Pokémon Soleil',moon:'Pokémon Lune','ultra-sun':'Pokémon Ultra-Soleil','ultra-moon':'Pokémon Ultra-Lune',
+ sword:'Pokémon Épée',shield:'Pokémon Bouclier','brilliant-diamond':'Pokémon Diamant Étincelant','shining-pearl':'Pokémon Perle Scintillante',
+ 'legends-arceus':'Légendes Pokémon : Arceus',scarlet:'Pokémon Écarlate',violet:'Pokémon Violet'
+};
+const sleepDescCache=new Map();
+
+async function getSleepDescription(p){
+ if(sleepDescCache.has(p.id)) return sleepDescCache.get(p.id);
+ try{
+   const url='https://r.jina.ai/https://www.margxt.fr/descriptions-des-pokemon-du-dododex-dans-pokemon-sleep/';
+   if(!window.__sleepPageText){
+     const r=await fetch(url);
+     if(!r.ok) throw new Error('Sleep source unavailable');
+     window.__sleepPageText=await r.text();
+   }
+   const txt=window.__sleepPageText;
+   const num=String(p.id).padStart(3,'0');
+   const escaped=p.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+   const re=new RegExp(`${num}\\s*[–-]\\s*${escaped}[\\s\\S]{0,180}?Pokémon[^\\n]*\\n+([^\\n]{35,500})`,'i');
+   const m=txt.match(re);
+   if(m){
+     const desc=m[1].replace(/\\[[^\\]]*\\]/g,'').replace(/\\s+/g,' ').trim();
+     const out={text:desc,source:'Pokémon Sleep — Dododex'};
+     sleepDescCache.set(p.id,out); return out;
+   }
+ }catch(e){}
+ sleepDescCache.set(p.id,null); return null;
+}
+
+async function getDexDescription(p){
+ const seen=new Set();
+ const choices=[];
+ for(const x of (p.flavorTexts||[])){
+   const text=(x.text||'').replace(/\s+/g,' ').trim();
+   if(!text)continue;
+   const key=text.toLowerCase();
+   if(seen.has(key))continue;
+   seen.add(key);
+   choices.push({
+     text,
+     source:VERSION_FR[x.version]||String(x.version||'Pokédex').replace(/-/g,' ')
+   });
+ }
+ try{
+   const sleep=await getSleepDescription(p);
+   if(sleep && sleep.text){
+     const key=sleep.text.toLowerCase();
+     if(!seen.has(key))choices.push(sleep);
+   }
+ }catch(e){}
+ if(!choices.length){
+   return {
+     text:`Aucune description Pokédex française n’est disponible pour ${p.name}.`,
+     source:'Pokédex'
+   };
+ }
+ return choices[Math.floor(Math.random()*choices.length)];
+}
+
+
+const evoCache=new Map();
+
+function frItemName(x){
+ const map={
+  'fire-stone':'Pierre Feu','water-stone':'Pierre Eau','thunder-stone':'Pierre Foudre',
+  'leaf-stone':'Pierre Plante','moon-stone':'Pierre Lune','sun-stone':'Pierre Soleil',
+  'shiny-stone':'Pierre Éclat','dusk-stone':'Pierre Nuit','dawn-stone':'Pierre Aube',
+  'ice-stone':'Pierre Glace','oval-stone':'Pierre Ovale','kings-rock':'Roche Royale',
+  'metal-coat':'Peau Métal','dragon-scale':'Écaille Draco','upgrade':'Améliorator',
+  'dubious-disc':'CD Douteux','protector':'Protecteur','electirizer':'Électriseur',
+  'magmarizer':'Magmariseur','reaper-cloth':'Tissu Fauche','razor-claw':'Griffe Rasoir',
+  'razor-fang':'Croc Rasoir','prism-scale':'Bel’Écaille','sachet':'Sachet Senteur',
+  'whipped-dream':'Chantibon','sweet-apple':'Pomme Sucrée','tart-apple':'Pomme Acidulée',
+  'cracked-pot':'Théière Fêlée','chipped-pot':'Théière Ébréchée'
+ };
+ return map[x]||String(x||'').replace(/-/g,' ');
+}
+
+function frTrigger(t){
+ const map={
+   'level-up':'Montée de niveau',
+   'use-item':'Objet',
+   'trade':'Échange',
+   'shed':'Autre condition',
+   'spin':'Autre condition',
+   'tower-of-darkness':'Autre condition',
+   'tower-of-waters':'Autre condition',
+   'three-critical-hits':'Autre condition',
+   'take-damage':'Autre condition',
+   'other':'Autre condition'
+ };
+ return map[t]||'Autre condition';
+}
+
+function describeEvolutionDetail(d){
+ const trigger=d.trigger?.name||'other';
+ if(trigger==='level-up'){
+   if(d.min_level) return `Montée de niveau — niveau ${d.min_level}`;
+   const extras=[];
+   if(d.min_happiness!=null) extras.push(`bonheur ≥ ${d.min_happiness}`);
+   if(d.time_of_day) extras.push(`de ${d.time_of_day==='day'?'jour':'nuit'}`);
+   if(d.known_move?.name) extras.push(`en connaissant ${d.known_move.name.replace(/-/g,' ')}`);
+   if(d.known_move_type?.name) extras.push(`avec une attaque de type ${d.known_move_type.name}`);
+   if(d.location?.name) extras.push(`à ${d.location.name.replace(/-/g,' ')}`);
+   if(d.min_beauty!=null) extras.push(`beauté ≥ ${d.min_beauty}`);
+   return extras.length?`Montée de niveau — ${extras.join(', ')}`:'Montée de niveau — niveau non précisé';
+ }
+ if(trigger==='use-item'){
+   return `Objet — ${frItemName(d.item?.name||'objet spécial')}`;
+ }
+ if(trigger==='trade'){
+   const extras=[];
+   if(d.held_item?.name) extras.push(`avec ${frItemName(d.held_item.name)}`);
+   if(d.trade_species?.name) extras.push(`contre ${d.trade_species.name.replace(/-/g,' ')}`);
+   return `Échange${extras.length?' — '+extras.join(', '):''}`;
+ }
+ const extras=[];
+ if(d.item?.name) extras.push(frItemName(d.item.name));
+ if(d.held_item?.name) extras.push(`objet tenu : ${frItemName(d.held_item.name)}`);
+ if(d.time_of_day) extras.push(d.time_of_day==='day'?'de jour':'de nuit');
+ if(d.gender===1) extras.push('femelle');
+ if(d.gender===2) extras.push('mâle');
+ if(d.needs_overworld_rain) extras.push('sous la pluie');
+ if(d.turn_upside_down) extras.push('console retournée');
+ if(d.min_affection!=null) extras.push(`affection ≥ ${d.min_affection}`);
+ return `${frTrigger(trigger)}${extras.length?' — '+extras.join(', '):''}`;
+}
+
+function findEvolutionNode(chain, speciesName){
+ if(!chain) return null;
+ if(chain.species?.name===speciesName) return chain;
+ for(const e of chain.evolves_to||[]){
+   const r=findEvolutionNode(e,speciesName);
+   if(r) return r;
+ }
+ return null;
+}
+
+async function getEvolutionClue(p){
+ if(evoCache.has(p.id)) return evoCache.get(p.id);
+ try{
+   const s=await fetch(`https://pokeapi.co/api/v2/pokemon-species/${p.id}`).then(r=>r.json());
+   const chainUrl=s.evolution_chain?.url;
+   if(!chainUrl) throw new Error('Pas de chaîne');
+   const chain=await fetch(chainUrl).then(r=>r.json());
+   const node=findEvolutionNode(chain.chain,s.name);
+   if(!node) throw new Error('Nœud introuvable');
+   const next=node.evolves_to||[];
+   if(!next.length){
+     const out={text:'Ce Pokémon est au stade final de sa lignée évolutive.',final:true,source:'PokéAPI'};
+     evoCache.set(p.id,out); return out;
+   }
+   const methods=[];
+   for(const evo of next){
+     const target=evo.species?.name?.replace(/-/g,' ')||'évolution';
+     const details=evo.evolution_details||[];
+     if(!details.length){
+       methods.push(`Vers ${target} — condition spéciale`);
+     }else{
+       for(const d of details){
+         methods.push(`Vers ${target} — ${describeEvolutionDetail(d)}`);
+       }
+     }
+   }
+   const out={text:methods.join(' | '),final:false,source:'PokéAPI'};
+   evoCache.set(p.id,out); return out;
+ }catch(e){
+   const out={text:'Méthode d’évolution indisponible.',final:false,source:'PokéAPI'};
+   evoCache.set(p.id,out); return out;
+ }
+}
+
+
+
+function typeTheme(types){
+ const t=(types&&types[0])||'normal';
+ const map={normal:['#b8b8a8','#f0f0e8'],fire:['#e95b35','#ffb66e'],water:['#4f86e8','#9fd3ff'],electric:['#f3ca3e','#fff29a'],grass:['#62b45c','#b7e89c'],ice:['#7fd8e8','#d8f7ff'],fighting:['#b34a3c','#e79a8d'],poison:['#9343a8','#d59add'],ground:['#caa35e','#ead3a0'],flying:['#93a7e8','#d3dcff'],psychic:['#e85f9f','#f6b8d5'],bug:['#9cad2a','#d8e883'],rock:['#a58c4a','#d8c28a'],ghost:['#6c5a9e','#aaa0cc'],dragon:['#6b4bd6','#a997f0'],dark:['#4f4545','#8f8080'],steel:['#9aa0ad','#d9dde5'],fairy:['#e89ac8','#ffd3ea']};
+ return map[t]||map.normal;
+}
+function traitMarks(p){
+ const marks=[],types=p.types||[];
+ const map={electric:'⚡',fire:'🔥',water:'💧',grass:'🍃',ice:'❄️',ghost:'👻',dragon:'🐉',fairy:'✨',steel:'⚙️',rock:'🪨',ground:'🪨',poison:'☠️',flying:'🪽',bug:'🪲',psychic:'🔮',fighting:'🥊',dark:'🌑'};
+ types.forEach(t=>{if(map[t]&&!marks.includes(map[t]))marks.push(map[t])});
+ if(p.legendary)marks.push('👑');
+ if((p.height||0)>=2)marks.push('⬆️');
+ if((p.weight||0)>=100)marks.push('⚖️');
+ for(const x of ['⭐','◆','✦'])if(marks.length<3)marks.push(x);
+ return marks.slice(0,3);
+}
+function pokeballTraits(p){const c=typeTheme(p.types);return {top:c[0],bottom:c[1],marks:traitMarks(p)};}
+
+
+const abilityCache=new Map();
+
+async function abilityFr(a){
+  if(!a) return 'Talent inconnu';
+  if(abilityCache.has(a.url)) return abilityCache.get(a.url);
+  try{
+    const r=await fetch(a.url);
+    if(!r.ok) throw new Error('Talent indisponible');
+    const d=await r.json();
+    const fr=d.names?.find(x=>x.language?.name==='fr')?.name
+      || a.name?.replace(/-/g,' ')
+      || 'Talent inconnu';
+    abilityCache.set(a.url,fr);
+    return fr;
+  }catch(e){
+    const fallback=a.name?.replace(/-/g,' ')||'Talent inconnu';
+    abilityCache.set(a.url,fallback);
+    return fallback;
+  }
+}
+
+async function randomAbilityClue(p){
+  const list=(p && Array.isArray(p.abilities)) ? p.abilities : [];
+  if(!list.length) return {text:'Talent inconnu',ability:null};
+
+  const a=list[Math.floor(Math.random()*list.length)];
+  const fr=await abilityFr(a);
+
+  return {
+    text:`${fr}${a.hidden?' — talent caché':''}`,
+    ability:a
+  };
+}
+
+async function randomFalseAbility(p){
+  const real=new Set(((p && p.abilities)||[]).map(a=>a.name));
+
+  for(let tries=0;tries<40;tries++){
+    const id=1+Math.floor(Math.random()*307);
+    try{
+      const r=await fetch(`https://pokeapi.co/api/v2/ability/${id}`);
+      if(!r.ok) continue;
+      const d=await r.json();
+
+      if(real.has(d.name)) continue;
+
+      const fr=d.names?.find(x=>x.language?.name==='fr')?.name
+        || d.name?.replace(/-/g,' ')
+        || 'Talent inconnu';
+
+      return {text:fr,name:d.name};
+    }catch(e){}
+  }
+
+  return {text:'Talent inconnu',name:'unknown'};
+}
+
+
+
+
+const EXTRA_FR={
+ red:'Rouge',blue:'Bleu',yellow:'Jaune',green:'Vert',black:'Noir',brown:'Marron',purple:'Violet',gray:'Gris',white:'Blanc',pink:'Rose',
+ monster:'Monstrueux',water1:'Aquatique 1',water2:'Aquatique 2',water3:'Aquatique 3',bug:'Insectoïde',flying:'Aérien',field:'Terrestre',
+ fairy:'Féerique',grass:'Végétal',humanlike:'Humanoïde',mineral:'Minéral',amorphous:'Amorphe',ditto:'Métamorph','dragon':'Draconique','no-eggs':'Inconnu',
+ slow:'Lente',medium:'Moyenne','medium-slow':'Moyenne-lente',fast:'Rapide','slow-then-very-fast':'Erratique','fast-then-very-slow':'Fluctuante'
+};
+const STAT_FR={hp:'PV',attack:'Attaque',defense:'Défense','special-attack':'Attaque Spé.','special-defense':'Défense Spé.',speed:'Vitesse'};
+const TYPE_DAMAGE_CACHE=new Map();
+const ENCOUNTER_CACHE=new Map();
+let activeRoundMode=null;
+
+function extraFr(x){return EXTRA_FR[x]||String(x||'Inconnu').replace(/-/g,' ')}
+function dominantStat(p){
+ const a=Object.entries(p.stats||{}).sort((x,y)=>y[1]-x[1]);
+ return `${STAT_FR[a[0]?.[0]]||a[0]?.[0]||'Stat'} : ${a[0]?.[1]??'?'}`;
+}
+async function typeDamage(type){
+ if(TYPE_DAMAGE_CACHE.has(type))return TYPE_DAMAGE_CACHE.get(type);
+ const d=await fetch('https://pokeapi.co/api/v2/type/'+type).then(r=>r.json());
+ const o={
+   weak:(d.damage_relations?.double_damage_from||[]).map(x=>x.name),
+   resist:(d.damage_relations?.half_damage_from||[]).map(x=>x.name),
+   immune:(d.damage_relations?.no_damage_from||[]).map(x=>x.name)
+ };
+ TYPE_DAMAGE_CACHE.set(type,o);return o;
+}
+async function defensiveProfile(p){
+ const mult={};
+ for(const t of TYPES)mult[t.en]=1;
+ for(const own of p.types){
+   const d=await typeDamage(own);
+   d.weak.forEach(t=>mult[t]=(mult[t]||1)*2);
+   d.resist.forEach(t=>mult[t]=(mult[t]||1)*.5);
+   d.immune.forEach(t=>mult[t]=0);
+ }
+ return mult;
+}
+async function encounterInfo(p){
+ if(ENCOUNTER_CACHE.has(p.id))return ENCOUNTER_CACHE.get(p.id);
+ try{
+   const arr=await fetch(p.encounterUrl).then(r=>r.json());
+   const locations=[];
+   const methods=new Set();
+   for(const e of arr||[]){
+     locations.push(String(e.location_area?.name||'').replace(/-/g,' '));
+     for(const vd of e.version_details||[])for(const ed of vd.encounter_details||[])if(ed.method?.name)methods.add(ed.method.name);
+   }
+   const o={locations:[...new Set(locations)].filter(Boolean),methods:[...methods]};
+   ENCOUNTER_CACHE.set(p.id,o);return o;
+ }catch(e){const o={locations:[],methods:[]};ENCOUNTER_CACHE.set(p.id,o);return o;}
+}
+const METHOD_FR={walk:'Herbes / marche','old-rod':'Canne','good-rod':'Super Canne','super-rod':'Méga Canne',surf:'Surf','rock-smash':'Éclate-Roc','headbutt':'Coup d’Boule','dark-grass':'Herbes sombres','grass-spots':'Herbes mouvantes','cave-spots':'Nuages de poussière','bridge-spots':'Ombres','gift':'Pokémon offert','gift-egg':'Œuf offert'};
+function methodFr(x){return METHOD_FR[x]||String(x||'Rencontre spéciale').replace(/-/g,' ')}
+function regionalDexClue(p){
+ const banned=new Set(['national']);
+ const n=(p.pokedexNumbers||[]).find(x=>!banned.has(x.dex));
+ return n?`${n.dex.replace(/-/g,' ')} — N° ${String(n.entry).padStart(3,'0')}`:`Pokédex National — N° ${String(p.id).padStart(4,'0')}`;
+}
+function oldDescription(p){
+ const old=(p.flavorTexts||[]).filter(x=>!['scarlet','violet','sword','shield'].includes(x.version));
+ return old.length?old[Math.floor(Math.random()*old.length)]:((p.flavorTexts||[])[0]||{text:'Description indisponible',version:'Pokédex'});
+}
+function truthLieClue(p){
+ const truths=[
+   `Type : ${p.types.map(frt).join(' / ')}`,
+   `Taille : ${p.height.toFixed(1)} m`,
+   `BST : ${p.total}`,
+   `Catégorie : ${p.genus}`
+ ];
+ const fakeTypes=TYPES.filter(t=>!p.types.includes(t.en));
+ const fake=fakeTypes[Math.floor(Math.random()*fakeTypes.length)]?.fr||'Normal';
+ const lies=[
+   `Type : ${fake}`,
+   `Taille : ${(Math.max(.1,p.height*(Math.random()<.5?.5:1.8))).toFixed(1)} m`,
+   `BST : ${Math.max(180,Math.min(720,p.total+(Math.random()<.5?-80:80)))}`
+ ];
+ const selected=[truths[Math.floor(Math.random()*truths.length)],truths[Math.floor(Math.random()*truths.length)],lies[Math.floor(Math.random()*lies.length)]];
+ return selected.sort(()=>Math.random()-.5).map((x,i)=>`${i+1}. ${x}`).join('<br>');
+}
+async function progressiveHints(p){
+ const a=await randomAbilityClue(p).catch(()=>({text:'Talent inconnu'}));
+ return [
+   `Génération : ${p.gen.replace('generation-','').toUpperCase()}`,
+   `Type : ${p.types.map(frt).join(' / ')}`,
+   dominantStat(p),
+   `Talent : ${a.text}`,
+   `N° Pokédex : ${String(p.id).padStart(4,'0')}`
+ ];
+}
+function rarityOf(p){
+ if(p.legendary)return '★★★★★ Légendaire';
+ if(p.total>=580)return '★★★★ Très rare';
+ if(p.total>=520)return '★★★ Rare';
+ if(p.total>=450)return '★★ Peu commun';
+ return '★ Commun';
+}
+function slotClue(p){
+ const constraints=['Sans objet','Téra-type imposé','Une attaque interdite','Talent imposé','Lead obligatoire','Pas d’attaque de statut','Nature défavorable'];
+ const bonuses=['+1 indice gratuit','Peut changer de Téra-type','Objet libre','Relance autorisée','Immunité au prochain malus'];
+ return `🎯 ${dominantStat(p)}<br>⚠️ Contrainte : ${constraints[Math.floor(Math.random()*constraints.length)]}<br>🎁 Bonus : ${bonuses[Math.floor(Math.random()*bonuses.length)]}`;
+}
+
+const ZONE_MUSIC_THEMES=[
+ {gen:'generation-i',keys:['viridian-forest'],q:'Pokemon Red Blue Viridian Forest'},
+ {gen:'generation-i',keys:['mt-moon','rock-tunnel','seafoam'],q:'Pokemon Red Blue Cave theme'},
+ {gen:'generation-i',keys:['route'],q:'Pokemon Red Blue Route theme'},
+ {gen:'generation-ii',keys:['ilex-forest'],q:'Pokemon Gold Silver Ilex Forest'},
+ {gen:'generation-ii',keys:['route'],q:'Pokemon Gold Silver Route theme'},
+ {gen:'generation-iii',keys:['petalburg-woods'],q:'Pokemon Ruby Sapphire Petalburg Woods'},
+ {gen:'generation-iii',keys:['route'],q:'Pokemon Ruby Sapphire Route theme'},
+ {gen:'generation-iv',keys:['eterna-forest'],q:'Pokemon Diamond Pearl Eterna Forest'},
+ {gen:'generation-iv',keys:['route'],q:'Pokemon Diamond Pearl Route theme'},
+ {gen:'generation-v',keys:['pinwheel-forest'],q:'Pokemon Black White Pinwheel Forest'},
+ {gen:'generation-v',keys:['route'],q:'Pokemon Black White Route theme'},
+ {gen:'generation-vi',keys:['santalune-forest'],q:'Pokemon X Y Santalune Forest'},
+ {gen:'generation-vi',keys:['route'],q:'Pokemon X Y Route theme'},
+ {gen:'generation-vii',keys:['route','melemele','akala','ulaula','poni'],q:'Pokemon Sun Moon Route theme'},
+ {gen:'generation-viii',keys:['wild-area','route'],q:'Pokemon Sword Shield Wild Area theme'},
+ {gen:'generation-ix',keys:['south-province','east-province','west-province','north-province','area'],q:'Pokemon Scarlet Violet South Province theme'}
+];
+function zoneMusicFor(p,locations){
+ const ls=(locations||[]).map(x=>String(x).toLowerCase());
+ const same=ZONE_MUSIC_THEMES.filter(x=>x.gen===p.gen);
+ let t=same.find(x=>x.keys.some(k=>ls.some(l=>l.includes(k))));
+ if(!t)t=same[0];
+ return t||{q:'Pokemon game route theme'};
+}
+async function musicPreview(query){
+ try{
+  const u='https://itunes.apple.com/search?term='+encodeURIComponent(query)+'&entity=song&limit=8';
+  const d=await fetch(u).then(r=>r.json());
+  const hit=(d.results||[]).find(x=>x.previewUrl);
+  return hit?.previewUrl||'';
+ }catch(e){return ''}
+}
+function clue(p,m){if(m==='egg')return 'Œuf '+frt(p.types[0]);if(m==='stats')return `BST ${p.total} • PV ${p.stats.hp} • Atk ${p.stats.attack} • Vit ${p.stats.speed}`;if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind')return p.gen.replace('generation-','Génération ').toUpperCase();if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
+if(m==='dominantstat')return dominantStat(p);
+if(m==='bstonly')return `BST : ${p.total}`;
+if(m==='egggroup')return (p.eggGroups||[]).map(extraFr).join(' / ')||'Groupe d’Œuf inconnu';
+if(m==='growth')return `Croissance : ${extraFr(p.growthRate)}`;
+if(m==='regionaldex')return regionalDexClue(p);
+if(m==='color')return `Couleur Pokédex : ${extraFr(p.color)}`;
+if(m==='categoryheight')return `${p.genus} • ${p.height.toFixed(1)} m`;
+if(m==='twotruths')return truthLieClue(p);
+if(m==='slotchallenge')return slotClue(p);
+if(m==='raritydraft')return `Rareté : ${rarityOf(p)} • BST ${p.total}`;
+if(m==='randombox')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='zonemusic')return '🎵 Écoute le thème de la zone puis devine quel Pokémon peut y être rencontré.';
+if(m==='boss')return 'Un Boss se cache parmi les propositions…';
+return '???'}
+async function drawByStrength(targetBST,used){
+ const [lo,hi]=range();
+ const roll=Math.random();
+ let minBST,maxBST,label;
+ if(roll<0.30){minBST=Math.max(180,targetBST-120);maxBST=Math.max(minBST+20,targetBST-35);label='Proposition plus faible';}
+ else if(roll<0.75){minBST=Math.max(180,targetBST-35);maxBST=Math.min(720,targetBST+35);label='Proposition de force proche';}
+ else{minBST=Math.min(690,targetBST+35);maxBST=Math.min(720,targetBST+120);label='Proposition plus forte';}
+ for(let i=0;i<5000;i++){
+   const id=Math.floor(Math.random()*(hi-lo+1))+lo;
+   if(used.has(id))continue;
+   try{
+     const p=await getP(id);
+     if(valid(p) && p.total>=minBST && p.total<=maxBST){
+       used.add(id); return {p,label};
+     }
+   }catch(e){}
+ }
+ const fallback=await draw(used);
+ return {p:fallback,label:'Proposition de remplacement'};
+}
+
+async function startDealGame(){
+ dealPanel.style.display='block';
+ cards.innerHTML='Préparation du Pokémon de départ…';
+ const used=new Set();
+ starterPokemon=await draw(used);
+ dealStarted=true;
+ starterOffer.innerHTML=`<div class="card" style="max-width:260px;margin:auto">
+   <img src="${starterPokemon.img||''}">
+   <div class="name">${starterPokemon.name}</div>
+   <div class="clue">BST ${starterPokemon.total}</div>
+   <div>${starterPokemon.types.map(t=>`<span class="badge">${frt(t)}</span>`).join('')}</div>
+ </div>`;
+ dealInfo.textContent='Choisis de garder ou de refuser ce Pokémon de départ.';
+ current=[];
+ batchLocked=false;
+ cards.innerHTML='';cards.classList.toggle('boxModeGrid',gameMode.value==='randombox');
+}
+
+async function generateDealChoices(){
+ let n=parseInt(choiceCount.value)||3;
+ n=Math.max(3,Math.min(12,n));
+ choiceCount.value=n;
+ const used=new Set([...(starterPokemon?[starterPokemon.id]:[]),...teams[1],...teams[2]].map(x=>x.id||x));
+ current=[];
+ batchLocked=false;
+ cards.innerHTML='Préparation des propositions…';
+ for(let i=0;i<n;i++){
+   const p=await draw(used);
+   current.push({p,clue:`BST ${p.total}`,offerLabel:'Proposition initiale'});
+ }
+ render();
+ dealInfo.textContent='Supprime un Pokémon pour déclencher une nouvelle proposition adaptée à sa force.';
+}
+
+async function rollCards(){
+ const requestedCount=gameMode.value==='randombox'?Number(boxSize.value):Number(choiceCount.value);
+ 
+ if(gameMode.value==='learnleave'){
+   if(!dealStarted) return startDealGame();
+   return generateDealChoices();
+ }
+ dealPanel.style.display='none';
+ let n=parseInt(choiceCount.value)||3;n=Math.max(2,Math.min(12,n));choiceCount.value=n;
+ const used=new Set();current=[];batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML='Préparation…';
+ for(let i=0;i<n;i++){
+   const p=await draw(used);
+   let c=clue(p,gameMode.value);
+   if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
+   if(gameMode.value==='dexdesc'){const d=await getDexDescription(p);c=d.text;p._dexSource=d.source;}
+   if(gameMode.value==='evolution'){const e=await getEvolutionClue(p);c=e.text;p._evoFinal=e.final;}
+   if(gameMode.value==='ability'){
+     try{
+       const a=await randomAbilityClue(p);
+       c=a.text;
+       p._abilityName=a.ability?.name||null;
+     }catch(e){
+       c='Talent indisponible';
+       p._abilityName=null;
+     }
+   }
+   if(gameMode.value==='pokeballtraits'){p._pb=pokeballTraits(p);c='Poké Ball mystère';}
+   if(gameMode.value==='multimove'){
+     const ms=[]; for(let z=0;z<3;z++)ms.push(await randomRealMove(p));
+     c='⚔️ '+[...new Set(ms)].join(' • ');
+   }
+   if(['weaknesses','resistances','effectiveness'].includes(gameMode.value)){
+     const prof=await defensiveProfile(p);
+     const weak=Object.entries(prof).filter(x=>x[1]>1).sort((a,b)=>b[1]-a[1]);
+     const resist=Object.entries(prof).filter(x=>x[1]>0&&x[1]<1);
+     const immune=Object.entries(prof).filter(x=>x[1]===0);
+     if(gameMode.value==='weaknesses')c='Faiblesses : '+(weak.map(x=>`${frt(x[0])} ×${x[1]}`).join(' • ')||'Aucune');
+     if(gameMode.value==='resistances')c='Résistances : '+(resist.map(x=>frt(x[0])).join(' • ')||'Aucune')+(immune.length?`<br>Immunités : ${immune.map(x=>frt(x[0])).join(' • ')}`:'');
+     if(gameMode.value==='effectiveness'){
+       const pool=[...weak,...resist,...immune]; const x=pool[Math.floor(Math.random()*pool.length)];
+       c=x?`${x[1]===0?'Immunisé à':x[1]>1?'Faible à':'Résiste à'} ${frt(x[0])}${x[1]!==0?` ×${x[1]}`:''}`:'Profil défensif neutre';
+     }
+   }
+   if(gameMode.value==='encountermethod'||gameMode.value==='capturelocation'){
+     const e=await encounterInfo(p);
+     if(gameMode.value==='encountermethod')c=e.methods.length?`Rencontre : ${methodFr(e.methods[Math.floor(Math.random()*e.methods.length)])}`:'Rencontre spéciale / indisponible dans les tables';
+     else c=e.locations.length?`Zone : ${e.locations[Math.floor(Math.random()*e.locations.length)]}`:'Lieu de capture non renseigné';
+   }
+   if(gameMode.value==='olddesc'){
+     const d=oldDescription(p); c=d.text; p._dexSource=VERSION_FR[d.version]||String(d.version||'Ancien Pokédex').replace(/-/g,' ');
+   }
+   if(gameMode.value==='progressive'||gameMode.value==='buyhints'){
+     p._progressive=await progressiveHints(p); p._hintLevel=1; c=p._progressive[0];
+   }
+   if(gameMode.value==='evochain'){
+     const e=await getEvolutionClue(p); c=`Évolution : ${e.text}`;
+   }
+   if(gameMode.value==='zonemusic'){const e=await encounterInfo(p);const t=zoneMusicFor(p,e.locations);const a=await musicPreview(t.q);c=a?`🎵 <audio controls preload="none" src="${a}"></audio><br>Devine quel Pokémon peut être rencontré dans une zone utilisant ce thème.`:`🎵 Aperçu musical indisponible — relance pour un autre Pokémon.`;}
+   current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null});
+ }
+ if(gameMode.value==='ranking'){
+   current.forEach((x,i)=>{
+     if(i===0)x.clue=`Référence : BST ${x.p.total}`;
+     else {
+       const prev=current[i-1].p;
+       const dir=x.p.total>prev.total?'plus élevé':x.p.total<prev.total?'plus faible':'égal';
+       x.clue=`BST ${dir} que le choix ${i} (${prev.total})`;
+     }
+   });
+ }
+ if(gameMode.value==='boss' && current.length){
+   const boss=[...current].sort((a,b)=>b.p.total-a.p.total)[0];
+   boss.p._boss=true;
+   current.forEach(x=>x.clue=x===boss?'👑 BOSS MYSTÈRE — puissance supérieure':'Pokémon challenger');
+ }
+ if(gameMode.value==='randomchallenge'){
+   const pool=['dominantstat','bstonly','species','height','weight','typeblind','generationblind','dexnumber','color','categoryheight','egggroup','growth'];
+   const chosen=pool[Math.floor(Math.random()*pool.length)];
+   activeRoundMode=chosen;
+   current.forEach(x=>x.clue=clue(x.p,chosen));
+   turn.textContent=`🎲 Défi aléatoire : ${gameTexts[chosen]||chosen}`;
+ }
+ await applyLieMode();
+ render();
+ await mpSyncState();
+}
+
+async function applyLieMode(){
+ gmInfo.textContent='';
+ gmPanel.style.display='none';
+ if(lieMode.value!=='yes'||!current.length)return;
+
+ const idx=Math.floor(Math.random()*current.length);
+ const target=current[idx];
+ const mode=gameMode.value;
+ const noExtraLie=new Set(['zonemusic','twotruths','progressive','buyhints','slotchallenge','boss','raritydraft','randomchallenge','ranking','weaknesses','resistances','effectiveness','evochain','egggroup','growth','encountermethod','capturelocation','regionaldex','olddesc','color','categoryheight','dominantstat','bstonly','multimove','randombox']);
+ if(noExtraLie.has(mode)){gmPanel.style.display='none';return;}
+
+ target.isLie=true;
+ gmPanel.style.display='block';
+
+ if(mode==='egg'){
+   const realType=target.p.types[0];
+   const fakeChoices=TYPES.filter(t=>t.en!==realType);
+   const fake=fakeChoices[Math.floor(Math.random()*fakeChoices.length)];
+   target.clue='Œuf '+fake.fr;
+   target.lieText='FAUX TYPE D’ŒUF';
+   gmInfo.textContent=`Choix ${idx+1} — ${target.p.name} est le leurre : l’œuf annonce ${fake.fr}, mais son vrai type principal est ${frt(realType)}.`;
+   return;
+ }
+
+ if(mode==='stats'){
+   const fakeBST=Math.max(180,Math.min(720,target.p.total + (Math.random()<.5?-1:1)*(40+Math.floor(Math.random()*100))));
+   const fakeHP=Math.max(20,Math.min(255,target.p.stats.hp + (Math.random()<.5?-1:1)*(10+Math.floor(Math.random()*35))));
+   target.clue=`BST ${fakeBST} • PV ${fakeHP} • Atk ${target.p.stats.attack} • Vit ${target.p.stats.speed}`;
+   target.lieText='FAUSSES STATS';
+   gmInfo.textContent=`Choix ${idx+1} — ${target.p.name} a de fausses statistiques. Vrai BST : ${target.p.total}, vrais PV : ${target.p.stats.hp}.`;
+   return;
+ }
+
+ if(mode==='dexnumber'){
+   let fakeId=target.p.id;
+   for(let tries=0;tries<30 && fakeId===target.p.id;tries++){
+     fakeId=1+Math.floor(Math.random()*1025);
+   }
+   target.clue=`N° ${String(fakeId).padStart(4,'0')}`;
+   target.lieText='FAUX NUMÉRO POKÉDEX';
+   gmInfo.textContent=`Choix ${idx+1} — ${target.p.name} est le leurre : numéro affiché ${String(fakeId).padStart(4,'0')}, vrai numéro ${String(target.p.id).padStart(4,'0')}.`;
+   return;
+ }
+
+ if(mode==='species'){
+   const decoyCandidates=current.filter((x,j)=>j!==idx && x.p.genus!==target.p.genus);
+   const fake=decoyCandidates.length?decoyCandidates[Math.floor(Math.random()*decoyCandidates.length)].p.genus:'Pokémon Mystère';
+   target.clue=fake;
+   target.lieText='FAUSSE ESPÈCE / CATÉGORIE';
+   gmInfo.textContent=`Choix ${idx+1} — ${target.p.name} : « ${fake} » est faux. Sa vraie catégorie est « ${target.p.genus} ».`;
+   return;
+ }
+
+ if(mode==='height'){
+   let fake=Math.max(0.1,target.p.height*(Math.random()<.5?0.45:1.8));
+   fake=Math.round(fake*10)/10;
+   target.clue=fake.toFixed(1)+' m';
+   target.lieText='FAUSSE TAILLE';
+   gmInfo.textContent=`Choix ${idx+1} — ${target.p.name} : taille annoncée ${fake.toFixed(1)} m, vraie taille ${target.p.height.toFixed(1)} m.`;
+   return;
+ }
+
+ if(mode==='weight'){
+   let fake=Math.max(0.1,target.p.weight*(Math.random()<.5?0.4:2));
+   fake=Math.round(fake*10)/10;
+   target.clue=fake.toFixed(1)+' kg';
+   target.lieText='FAUX POIDS';
+   gmInfo.textContent=`Choix ${idx+1} — ${target.p.name} : poids annoncé ${fake.toFixed(1)} kg, vrai poids ${target.p.weight.toFixed(1)} kg.`;
+   return;
+ }
+
+ if(mode==='movelearn'){
+   const fake=await randomFalseMove(target.p);
+   target.clue='⚔️ '+fake;
+   target.lieText='FAUSSE ATTAQUE';
+   gmInfo.textContent=`Choix ${idx+1} — ${target.p.name} ne peut pas apprendre « ${fake} ».`;
+   return;
+ }
+
+ if(mode==='typeblind'){
+   const real=target.p.types;
+   const fakeChoices=TYPES.filter(t=>!real.includes(t.en));
+   const fake=fakeChoices[Math.floor(Math.random()*fakeChoices.length)];
+   target.clue=fake.fr;
