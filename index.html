@@ -150,6 +150,7 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <option value="progressive">🔢 Devine la génération</option>
 <option value="randombox">📦 Boîte Pokémon aléatoire</option>
 <option value="zonemusic">🎵 Pokémon par musique de zone</option>
+<option value="pokemoncry">🔊 Devine le Pokémon par son cri</option>
 </select></label>
 
 <label>Taille équipe<select id="teamSize"><option>3</option><option>4</option><option>5</option><option selected>6</option></select></label>
@@ -963,12 +964,16 @@ function zoneMusicFor(p,locations){
  return t||{q:'Pokemon game route theme'};
 }
 async function musicPreview(query){
- try{
-  const u='https://itunes.apple.com/search?term='+encodeURIComponent(query)+'&entity=song&limit=8';
-  const d=await fetch(u).then(r=>r.json());
-  const hit=(d.results||[]).find(x=>x.previewUrl);
-  return hit?.previewUrl||'';
- }catch(e){return ''}
+ const queries=Array.isArray(query)?query:[query,'Pokemon game soundtrack route theme','Pokemon video game soundtrack'];
+ for(const q of queries){
+  try{
+   const u='https://itunes.apple.com/search?term='+encodeURIComponent(q)+'&entity=song&limit=8';
+   const d=await fetch(u).then(r=>r.json());
+   const hit=(d.results||[]).find(x=>x.previewUrl);
+   if(hit)return {url:hit.previewUrl,title:hit.trackName||'Thème Pokémon',album:hit.collectionName||'',query:q};
+  }catch(e){}
+ }
+ return null;
 }
 function clue(p,m){if(m==='egg')return 'Œuf '+frt(p.types[0]);if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind'){const g={'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9};return `Génération ${g[p.gen]||'?'}`;}if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
 if(m==='dominantstat')return dominantStat(p);
@@ -981,7 +986,7 @@ if(m==='categoryheight')return `${p.genus} • ${p.height.toFixed(1)} m`;
 
 if(m==='slotchallenge')return slotClue(p);
 if(m==='raritydraft')return `Rareté : ${rarityOf(p)} • BST ${p.total}`;
-if(m==='randombox')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='zonemusic')return '🎵 Écoute le thème de la zone puis devine quel Pokémon peut y être rencontré.';
+if(m==='randombox')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='zonemusic')return '🎵 Écoute le thème de la zone puis devine quel Pokémon peut y être rencontré.';if(m==='pokemoncry')return '🔊 Écoute le cri puis devine le Pokémon.';
 if(m==='boss')return 'Un Boss se cache parmi les propositions…';
 return '???'}
 async function drawByStrength(targetBST,used){
@@ -1106,8 +1111,18 @@ async function rollCards(){
    if(gameMode.value==='evochain'){
      const e=await getEvolutionClue(p); c=`Évolution : ${e.text}`;
    }
-   if(gameMode.value==='zonemusic'){const e=await encounterInfo(p);const t=zoneMusicFor(p,e.locations);const a=await musicPreview(t.q);c=a?`🎵 <audio controls preload="none" src="${a}"></audio><br>Devine quel Pokémon peut être rencontré dans une zone utilisant ce thème.`:`🎵 Aperçu musical indisponible — relance pour un autre Pokémon.`;}
-   current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null});
+   if(gameMode.value==='zonemusic'){
+     const e=await encounterInfo(p),t=zoneMusicFor(p,e.locations);
+     const a=await musicPreview([t.q,'Pokemon '+(e.locations?.[0]||'route')+' theme','Pokemon game route theme']);
+     const zone=(e.details?.[0]||e.locations?.[0]||'Zone Pokémon').replace(/-/g,' ');
+     c=a?`🎵 <audio controls preload="none" src="${a.url}"></audio><br>Devine quel Pokémon peut être rencontré avec cette musique.`:'🎵 Musique indisponible';
+     p._musicAnswer=zone+(a?.title?' — '+a.title:'');
+   }
+   if(gameMode.value==='pokemoncry'){
+     const cry=p.cries?.latest||p.cries?.legacy;
+     c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br>À quel Pokémon appartient ce cri ?`:'🔊 Cri indisponible';
+   }
+   current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null});
  }
  if(gameMode.value==='ranking'){
    current.forEach((x,i)=>{
@@ -1165,7 +1180,7 @@ async function applyLieMode(){
    gmInfo.textContent='Choix '+(idx+1)+' — nom leurre : '+fake.name+' (vrai nom : '+target.p.name+').';
    return;
  }
- const noExtraLie=new Set(['zonemusic','progressive','buyhints','slotchallenge','boss','raritydraft','randomchallenge','ranking','weaknesses','resistances','effectiveness','evochain','egggroup','growth','encountermethod','capturelocation','regionaldex','color','categoryheight','dominantstat','bstonly','multimove','randombox']);
+ const noExtraLie=new Set(['zonemusic','pokemoncry','progressive','buyhints','slotchallenge','boss','raritydraft','randomchallenge','ranking','weaknesses','resistances','effectiveness','evochain','egggroup','growth','encountermethod','capturelocation','regionaldex','color','categoryheight','dominantstat','bstonly','multimove','randombox']);
  if(noExtraLie.has(mode)){gmPanel.style.display='none';return;}
 
  target.isLie=true;
