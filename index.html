@@ -131,7 +131,12 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <option value="dominantstat">🏆 Stat dominante</option>
 <option value="bstonly">📊 Total de stats (BST)</option>
 <option value="ranking">📈 Classement mystère</option>
-<option value="multimove">⚔️ Attaques mystères</option>
+<option value="multimove">⚔️ Attaques mystères (movepool + CT/DT)</option>
+<option value="evolevel">⬆️ Niveau d’évolution</option>
+<option value="evomethod">🧬 Méthode d’évolution mystère</option>
+<option value="firstregion">🗺️ Première région d’apparition</option>
+<option value="trainerteam">🧢 Équipe de dresseur</option>
+<option value="wildgift">🎁 Pokémon sauvage ou cadeau ?</option>
 <option value="weaknesses">🎯 Faiblesses</option>
 <option value="resistances">🛡️ Résistances / immunités</option>
 <option value="effectiveness">💥 Efficacité mystère</option>
@@ -528,6 +533,32 @@ function findEvolutionNode(chain, speciesName){
  return null;
 }
 
+async function evolutionModeClue(p,kind){
+ try{
+  const sp=await fetch('https://pokeapi.co/api/v2/pokemon-species/'+p.id).then(r=>r.json());
+  const ch=await fetch(sp.evolution_chain.url).then(r=>r.json());
+  const node=findEvolutionNode(ch.chain,sp.name);
+  const next=node?.evolves_to||[];
+  if(!next.length)return 'Stade final — aucune évolution suivante';
+  const ds=next.flatMap(x=>x.evolution_details||[]);
+  if(kind==='level'){
+   const levels=ds.map(d=>d.min_level).filter(Boolean);
+   return levels.length?'Niveau d’évolution : '+[...new Set(levels)].join(' / '):'Évolution sans niveau fixe';
+  }
+  const names=ds.map(d=>d.trigger?.name).filter(Boolean);
+  const fr={ 'level-up':'Montée de niveau / condition liée au niveau','use-item':'Pierre ou objet d’évolution','trade':'Échange','shed':'Condition spéciale','spin':'Rotation / condition spéciale','take-damage':'Condition liée aux dégâts','other':'Condition spéciale'};
+  return 'Méthode : '+[...new Set(names.map(x=>fr[x]||'Condition spéciale'))].join(' / ');
+ }catch(e){return 'Information d’évolution indisponible'}
+}
+const REGION_BY_GEN={'generation-i':'Kanto','generation-ii':'Johto','generation-iii':'Hoenn','generation-iv':'Sinnoh','generation-v':'Unys','generation-vi':'Kalos','generation-vii':'Alola','generation-viii':'Galar','generation-ix':'Paldea'};
+async function wildGiftClue(p){
+ try{const e=await encounterInfo(p);return e.details?.length?'Obtention : Pokémon sauvage':'Obtention : cadeau, échange, évolution ou rencontre spéciale'}catch(e){return 'Mode d’obtention indisponible'}
+}
+const TRAINER_HINTS={
+ 25:['Red','Sacha / Red'],6:['Red','Blue'],9:['Blue'],3:['Red'],131:['Aldo'],130:['Peter'],149:['Peter'],248:['Peter'],376:['Pierre Rochard'],445:['Cynthia'],448:['Cornélia'],282:['Dianthéa'],700:['Valériane'],778:['Margie'],887:['Roy'],937:['Menzi']
+};
+function trainerTeamClue(p){const a=TRAINER_HINTS[p.id];return a?'Dresseur important : '+a[Math.floor(Math.random()*a.length)]:'Aucun dresseur majeur référencé pour ce Pokémon';}
+
 async function getEvolutionClue(p){
  if(evoCache.has(p.id)) return evoCache.get(p.id);
  try{
@@ -874,6 +905,11 @@ async function rollCards(){
    if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
    if(gameMode.value==='dexdesc'){const d=await getDexDescription(p);c=d.text;p._dexSource=d.source;}
    if(gameMode.value==='evolution'){const e=await getEvolutionClue(p);c=e.text;p._evoFinal=e.final;}
+   if(gameMode.value==='evolevel')c=await evolutionModeClue(p,'level');
+   if(gameMode.value==='evomethod')c=await evolutionModeClue(p,'method');
+   if(gameMode.value==='firstregion')c='Première région : '+(REGION_BY_GEN[p.gen]||'Inconnue');
+   if(gameMode.value==='trainerteam')c=trainerTeamClue(p);
+   if(gameMode.value==='wildgift')c=await wildGiftClue(p);
    if(gameMode.value==='ability'){
      try{
        const a=await randomAbilityClue(p);
@@ -886,8 +922,13 @@ async function rollCards(){
    }
    if(gameMode.value==='pokeballtraits'){p._pb=pokeballTraits(p);c='Poké Ball mystère';}
    if(gameMode.value==='multimove'){
-     const ms=[]; for(let z=0;z<3;z++)ms.push(await randomRealMove(p));
-     c='⚔️ '+[...new Set(ms)].join(' • ');
+     let pool=p.moves.filter(Boolean);
+     const g=String(generation.value||'all');
+     if(g!=='all'&&GEN_VERSION_GROUPS[g])pool=pool.filter(m=>(m.version_group_details||[]).some(v=>GEN_VERSION_GROUPS[g].includes(v.version_group?.name)));
+     const machine=pool.filter(m=>(m.version_group_details||[]).some(v=>['machine','tutor'].includes(v.move_learn_method?.name)));
+     const source=machine.length?machine:pool;
+     const ms=[];for(let z=0;z<3&&source.length;z++){const m=source[Math.floor(Math.random()*source.length)];ms.push(await moveFr(m))}
+     c='⚔️ Movepool / CT-DT : '+[...new Set(ms)].join(' • ');
    }
    if(['weaknesses','resistances','effectiveness'].includes(gameMode.value)){
      const prof=await defensiveProfile(p);
