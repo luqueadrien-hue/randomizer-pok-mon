@@ -1006,3 +1006,39 @@ async function applyLieMode(){
    const fakeChoices=TYPES.filter(t=>!real.includes(t.en));
    const fake=fakeChoices[Math.floor(Math.random()*fakeChoices.length)];
    target.clue=fake.fr;
+   target.lieText='FAUX TYPE';
+   gmInfo.textContent='Choix '+(idx+1)+' — '+target.p.name+' : type annoncé '+fake.fr+' faux. Vrai type : '+real.map(frt).join(' / ')+'.';
+   return;
+ }
+ target.lieText='LEURRE';
+ gmInfo.textContent='Choix '+(idx+1)+' — '+target.p.name+' est le leurre de cette sélection.';
+}
+
+function render(){
+ cards.classList.toggle('boxModeGrid',gameMode.value==='randombox');
+ if(gameMode.value==='randombox'){
+  let slots='';
+  for(let i=0;i<30;i++){const x=current[i];slots+=x?'<button type="button" class="pcSlot" onclick="pick('+i+')"><span class="slotNo">'+(i+1)+'</span><img src="'+(x.p.img||'')+'" alt=""><span class="slotName">'+x.p.name+'</span></button>':'<div class="pcSlot empty"><span class="slotNo">'+(i+1)+'</span></div>'}
+  cards.innerHTML='<div class="pcBoxHeader"><button disabled>◀</button><span>📦 BOÎTE 1</span><button disabled>▶</button></div><div class="pcBoxSlots">'+slots+'</div><div class="pcBoxFooter"><span>'+current.length+'/30 Pokémon</span><span>'+generation.options[generation.selectedIndex].text+'</span><span>Clique un Pokémon pour le sélectionner</span></div>';
+  return;
+ }
+ const hidden=revealMode.value==='hidden',deal=gameMode.value==='learnleave';
+ cards.innerHTML=current.map((x,i)=>'<div class="card '+(hidden?'hiddenPoke':'')+'" id="c'+i+'"><img src="'+(x.p.img||'')+'"><div class="name">'+x.p.name+'</div><div>'+x.p.types.map(t=>'<span class="badge">'+frt(t)+'</span>').join('')+'</div><div class="gameClue">'+(x.clue||'')+'</div>'+(x.isLie?'<div class="offerTag lieflag" style="display:none">⚠️ '+(x.lieText||'LEURRE')+'</div>':'')+(deal?'<button onclick="pick('+i+')">✅ PRENDRE</button><button class="danger" onclick="discardDeal('+i+')">🗑️ SUPPRIMER</button>':'<button onclick="pick('+i+')">CHOISIR</button>')+'</div>').join('');
+}
+function drawTeams(){[1,2].forEach(n=>document.getElementById('team'+n).innerHTML=teams[n].map(p=>'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>').join(''))}
+function pick(i){
+ if(batchLocked||!current[i])return;batchLocked=true;teams[player].push(current[i].p);drawTeams();
+ const max=+teamSize.value;if(teams[1].length>=max&&teams[2].length>=max){turn.textContent='ÉQUIPES COMPLÈTES';roll.disabled=true;mpSyncState();return}
+ player=player===1?2:1;if(teams[player].length>=max)player=player===1?2:1;
+ turn.textContent='Sélection verrouillée — génère une nouvelle sélection pour le JOUEUR '+player;render();mpSyncState();
+}
+async function discardDeal(i){if(gameMode.value!=='learnleave'||!current[i])return;current.splice(i,1);render();mpSyncState()}
+roll.addEventListener('click',()=>rollCards().catch(e=>{console.error(e);alert(e.message||'Erreur')}));
+reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag').forEach(x=>x.style.display='block')});
+hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag').forEach(x=>x.style.display='none')});
+reset.addEventListener('click',()=>{player=1;teams={1:[],2:[]};current=[];batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
+gameMode.addEventListener('change',()=>{batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';auctionPanel.style.display=gameMode.value==='auction'?'block':'none';turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
+['teamSize','choiceCount','legend','generation','typeMode','revealMode','lieMode','boxSize'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
+</script>
+</body>
+</html>
