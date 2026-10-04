@@ -1021,7 +1021,7 @@ if(m==='categoryheight')return `${p.genus} • ${p.height.toFixed(1)} m`;
 
 if(m==='slotchallenge')return slotClue(p);
 if(m==='raritydraft')return `Rareté : ${rarityOf(p)} • BST ${p.total}`;
-if(m==='randombox')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='zonemusic')return '🎵 Écoute le thème de la zone puis devine quel Pokémon peut y être rencontré.';if(m==='pokemoncry')return '🔊 Écoute le cri puis devine le Pokémon.';
+if(m==='randombox')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='zonemusic')return '🎵 Musique de zone';if(m==='pokemoncry')return '🔊 Cri de Pokémon';
 if(m==='boss')return 'Un Boss se cache parmi les propositions…';
 return '???'}
 async function drawByStrength(targetBST,used){
@@ -1150,12 +1150,12 @@ async function rollCards(){
      const e=await encounterInfo(p),t=zoneMusicFor(p,e.locations);
      const a=await musicPreview([t.q,'Pokemon '+(e.locations?.[0]||'route')+' theme','Pokemon game route theme']);
      const zone=(e.details?.[0]||e.locations?.[0]||'Zone Pokémon').replace(/-/g,' ');
-     c=a?`🎵 <audio controls preload="none" src="${a.url}"></audio><br>Devine quel Pokémon peut être rencontré avec cette musique.`:'🎵 Musique indisponible';
+     c=a?`🎵 <audio controls preload="none" src="${a.url}"></audio>`:'🎵 Musique indisponible';
      p._musicAnswer=zone+(a?.title?' — '+a.title:'');
    }
    if(gameMode.value==='pokemoncry'){
      const cg=9;const cry=p.cries?.latest||p.cries?.legacy;
-     c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br>À quel Pokémon appartient ce cri ?<br><small data-media-answer>Source : cri le plus récent disponible</small>`:'🔊 Cri indisponible';
+     c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br><small data-media-answer>Source : cri le plus récent disponible</small>`:'🔊 Cri indisponible';
    }
    current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null});
  }
