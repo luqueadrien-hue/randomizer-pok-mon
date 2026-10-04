@@ -300,7 +300,7 @@ async function mpLeaveRoom(){
  if(mpSession&&mpListener)mpRoom(mpSession.room).off('value',mpListener);
  mpSession=null;mpListener=null;localStorage.removeItem('pkmn-mp-session');mpPlayers.innerHTML='';mpSetStatus('Hors salon — le randomizer reste utilisable en local.');
 }
-function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
+function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
 async function mpSnapshot(){
  return {player,mode:gameMode.value,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(mpLite),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,turn:turn.textContent,updated:Date.now()};
 }
@@ -314,7 +314,7 @@ async function mpHydrateState(st){
   if(st.mode)gameMode.value=(st.mode==='olddesc'?'dexdesc':st.mode);
   const z=st.settings||{};for(const [k,v] of Object.entries(z)){const el=document.getElementById(k);if(el&&v!=null)el.value=v}
   if(typeof updateModePanels==='function')updateModePanels();
-  const arr=await Promise.all((st.current||[]).map(async x=>{const p=await getP(x.id);return {p,clue:x.clue||'',isLie:!!x.isLie,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}));
+  const arr=await Promise.all((st.current||[]).map(async x=>{const p=await getP(x.id);return {p,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}));
   current=arr;teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;
   if(st.turn)turn.textContent=st.turn;render();drawTeams();
  }catch(e){console.warn('Hydratation multijoueur',e)}finally{mpApplying=false}
@@ -940,51 +940,43 @@ function slotClue(p){
  return `🎯 ${dominantStat(p)}<br>⚠️ Contrainte : ${constraints[Math.floor(Math.random()*constraints.length)]}<br>🎁 Bonus : ${bonuses[Math.floor(Math.random()*bonuses.length)]}`;
 }
 
-const ZONE_MUSIC_THEMES=[
- {gen:'generation-i',keys:['viridian-forest'],q:'Pokemon Red Blue Viridian Forest'},
- {gen:'generation-i',keys:['mt-moon','rock-tunnel','seafoam'],q:'Pokemon Red Blue Cave theme'},
- {gen:'generation-i',keys:['route'],q:'Pokemon Red Blue Route theme'},
- {gen:'generation-ii',keys:['ilex-forest'],q:'Pokemon Gold Silver Ilex Forest'},
- {gen:'generation-ii',keys:['route'],q:'Pokemon Gold Silver Route theme'},
- {gen:'generation-iii',keys:['petalburg-woods'],q:'Pokemon Ruby Sapphire Petalburg Woods'},
- {gen:'generation-iii',keys:['route'],q:'Pokemon Ruby Sapphire Route theme'},
- {gen:'generation-iv',keys:['eterna-forest'],q:'Pokemon Diamond Pearl Eterna Forest'},
- {gen:'generation-iv',keys:['route'],q:'Pokemon Diamond Pearl Route theme'},
- {gen:'generation-v',keys:['pinwheel-forest'],q:'Pokemon Black White Pinwheel Forest'},
- {gen:'generation-v',keys:['route'],q:'Pokemon Black White Route theme'},
- {gen:'generation-vi',keys:['santalune-forest'],q:'Pokemon X Y Santalune Forest'},
- {gen:'generation-vi',keys:['route'],q:'Pokemon X Y Route theme'},
- {gen:'generation-vii',keys:['route','melemele','akala','ulaula','poni'],q:'Pokemon Sun Moon Route theme'},
- {gen:'generation-viii',keys:['wild-area','route'],q:'Pokemon Sword Shield Wild Area theme'},
- {gen:'generation-ix',keys:['south-province','east-province','west-province','north-province','area'],q:'Pokemon Scarlet Violet South Province theme'}
-];
 const GEN_LABEL={1:'Génération 1',2:'Génération 2',3:'Génération 3',4:'Génération 4',5:'Génération 5',6:'Génération 6',7:'Génération 7',8:'Génération 8',9:'Génération 9'};
 const VERSION_TO_GEN={red:1,blue:1,yellow:1,gold:2,silver:2,crystal:2,ruby:3,sapphire:3,emerald:3,firered:3,leafgreen:3,diamond:4,pearl:4,platinum:4,heartgold:4,soulsilver:4,black:5,white:5,'black-2':5,'white-2':5,x:6,y:6,'omega-ruby':6,'alpha-sapphire':6,sun:7,moon:7,'ultra-sun':7,'ultra-moon':7,'lets-go-pikachu':7,'lets-go-eevee':7,sword:8,shield:8,'brilliant-diamond':8,'shining-pearl':8,'legends-arceus':8,scarlet:9,violet:9};
 function availableGenerations(p){
- const first=({'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9})[p.gen]||1;
- const found=new Set([first]);
+ const first=({'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9})[p.gen]||1,found=new Set([first]);
  for(const v of (p.gameIndices||[])){const g=VERSION_TO_GEN[v];if(g)found.add(g)}
  for(const m of (p.moves||[]))for(const v of (m.version_group_details||[]))for(const [g,groups] of Object.entries(GEN_VERSION_GROUPS))if(groups.includes(v.version_group?.name))found.add(Number(g));
- return [...found].filter(g=>g>=first&&g<=9).sort((a,b)=>a-b);
+ return [...found].filter(g=>g>=first&&g<=9).sort((x,y)=>x-y);
 }
-function zoneMusicFor(p,locations){
- const ls=(locations||[]).map(x=>String(x).toLowerCase());
- const wanted=availableGenerations(p).at(-1)||1;const same=ZONE_MUSIC_THEMES.filter(x=>x.gen==='generation-'+['i','ii','iii','iv','v','vi','vii','viii','ix'][wanted-1]);
- let t=same.find(x=>x.keys.some(k=>ls.some(l=>l.includes(k))));
- if(!t)t=same[0];
- return t||same[0]||{q:'Pokemon Scarlet Violet soundtrack route theme'};
+function cleanZoneName(x){return String(x||'').replace(/-/g,' ').replace(/\b(area|zone)\b/gi,' ').replace(/\s+/g,' ').trim()}
+function latestEncounterForMusic(e,p){
+ const latest=availableGenerations(p).at(-1)||1;
+ const rows=(e.details||[]).map(x=>{const parts=x.split(' — '),game=parts.at(-1),version=Object.keys(VERSION_FR).find(k=>VERSION_FR[k]===game),g=VERSION_TO_GEN[version]||0;return {raw:x,zone:parts.slice(0,-1).join(' — ')||parts[0],game,g}}).filter(x=>x.g===latest);
+ const pool=rows.length?rows:(e.details||[]).map(x=>({raw:x,zone:x.split(' — ')[0],game:x.split(' — ').at(-1),g:latest}));
+ return {latest,pool};
 }
-async function musicPreview(query){
- const queries=Array.isArray(query)?query:[query,'Pokemon game soundtrack route theme','Pokemon video game soundtrack'];
- for(const q of queries){
+async function musicPreview(queries){
+ const qs=[...new Set((Array.isArray(queries)?queries:[queries]).filter(Boolean))];
+ for(const q of qs){
   try{
-   const u='https://itunes.apple.com/search?term='+encodeURIComponent(q)+'&entity=song&limit=8';
+   const u='https://itunes.apple.com/search?term='+encodeURIComponent(q)+'&entity=song&limit=25';
    const d=await fetch(u).then(r=>r.json());
-   const hit=(d.results||[]).find(x=>x.previewUrl);
-   if(hit)return {url:hit.previewUrl,title:hit.trackName||'Thème Pokémon',album:hit.collectionName||'',query:q};
+   const hits=(d.results||[]).filter(x=>x.previewUrl&&/pokemon|pokémon/i.test((x.trackName||'')+' '+(x.collectionName||'')+' '+(x.artistName||'')));
+   if(hits.length){const hit=hits[Math.floor(Math.random()*hits.length)];return {url:hit.previewUrl,title:hit.trackName||'Thème Pokémon',album:hit.collectionName||'',query:q}}
   }catch(e){}
  }
  return null;
+}
+async function zoneMusicFor(p,e){
+ const {latest,pool}=latestEncounterForMusic(e,p);
+ const row=pool.length?pool[Math.floor(Math.random()*pool.length)]:null;
+ const zone=cleanZoneName(row?.zone||e.locations?.[Math.floor(Math.random()*Math.max(1,e.locations?.length||0))]||'');
+ const game=row?.game||'Pokémon';
+ const qs=[];
+ if(zone)qs.push('Pokemon '+game+' '+zone+' theme','Pokemon '+zone+' soundtrack');
+ qs.push('Pokemon '+game+' route theme','Pokemon generation '+latest+' route theme');
+ const audio=await musicPreview(qs);
+ return {audio,zone:zone||'Zone non renseignée',game,gen:latest};
 }
 function clue(p,m){if(m==='egg')return 'Œuf '+frt(p.types[0]);if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind'){const g={'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9};return `Génération ${g[p.gen]||'?'}`;}if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
 if(m==='dominantstat')return dominantStat(p);
@@ -1123,11 +1115,9 @@ async function rollCards(){
      const e=await getEvolutionClue(p); c=`Évolution : ${e.text}`;
    }
    if(gameMode.value==='zonemusic'){
-     const e=await encounterInfo(p),t=zoneMusicFor(p,e.locations);
-     const a=await musicPreview([t.q,'Pokemon '+(e.locations?.[0]||'route')+' theme','Pokemon game route theme']);
-     const latestGen=availableGenerations(p).at(-1)||1;const zone=(e.details?.[0]||e.locations?.[0]||'Zone Pokémon').replace(/-/g,' ');
+     const e=await encounterInfo(p),m=await zoneMusicFor(p,e),a=m.audio;
      c=a?`🎵 <audio controls preload="none" src="${a.url}"></audio>`:'🎵 Musique indisponible';
-     p._musicAnswer='Source : '+zone+' • '+GEN_LABEL[latestGen]+(a?.title?' • '+a.title:'');
+     p._musicAnswer='Source : '+m.zone+' • '+m.game+' • '+GEN_LABEL[m.gen]+(a?.title?' • '+a.title:'');
    }
    if(gameMode.value==='pokemoncry'){
      const cg=9;const cry=p.cries?.latest||p.cries?.legacy;
