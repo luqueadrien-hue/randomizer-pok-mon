@@ -360,7 +360,7 @@ async function getP(id){
  evolutionChainUrl:s.evolution_chain?.url||null,
  varieties:(s.varieties||[]).map(v=>({name:v.pokemon?.name||'',url:v.pokemon?.url||'',isDefault:!!v.is_default})),
  pokedexNumbers:(s.pokedex_numbers||[]).map(x=>({dex:x.pokedex?.name||'',entry:x.entry_number})),
- cries:p.cries||{},
+ cries:p.cries||{},gameIndices:(p.game_indices||[]).map(x=>x.version?.name).filter(Boolean),
  baseExperience:p.base_experience??null,
  heldItems:(p.held_items||[]).map(h=>({name:h.item?.name||'',versions:(h.version_details||[]).map(v=>({rarity:v.rarity,version:v.version?.name||''}))})),
  encounterUrl:p.location_area_encounters};
@@ -957,22 +957,41 @@ const ZONE_MUSIC_THEMES=[
  {gen:'generation-ix',keys:['south-province','east-province','west-province','north-province','area'],q:'Pokemon Scarlet Violet South Province theme'}
 ];
 const GEN_LABEL={1:'Génération 1',2:'Génération 2',3:'Génération 3',4:'Génération 4',5:'Génération 5',6:'Génération 6',7:'Génération 7',8:'Génération 8',9:'Génération 9'};
+const VERSION_TO_GEN={red:1,blue:1,yellow:1,gold:2,silver:2,crystal:2,ruby:3,sapphire:3,emerald:3,firered:3,leafgreen:3,diamond:4,pearl:4,platinum:4,heartgold:4,soulsilver:4,black:5,white:5,'black-2':5,'white-2':5,x:6,y:6,'omega-ruby':6,'alpha-sapphire':6,sun:7,moon:7,'ultra-sun':7,'ultra-moon':7,'lets-go-pikachu':7,'lets-go-eevee':7,sword:8,shield:8,'brilliant-diamond':8,'shining-pearl':8,'legends-arceus':8,scarlet:9,violet:9};
 function availableGenerations(p){
  const first=({'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9})[p.gen]||1;
  const found=new Set([first]);
- for(const m of (p.moves||[]))for(const v of (m.version_group_details||[])){
-  for(const [g,groups] of Object.entries(GEN_VERSION_GROUPS))if(groups.includes(v.version_group?.name))found.add(Number(g));
- }
+ for(const v of (p.gameIndices||[])){const g=VERSION_TO_GEN[v];if(g)found.add(g)}
+ for(const m of (p.moves||[]))for(const v of (m.version_group_details||[]))for(const [g,groups] of Object.entries(GEN_VERSION_GROUPS))if(groups.includes(v.version_group?.name))found.add(Number(g));
  return [...found].filter(g=>g>=first&&g<=9).sort((a,b)=>a-b);
+}
+function selectedMediaGeneration(p,kind){
+ const el=document.querySelector('[data-media-kind="'+kind+'"][data-pokemon-id="'+p.id+'"]');return Number(el?.value)||availableGenerations(p).at(-1)||1;
+}
+function cryForGeneration(p,g){
+ // PokéAPI ne publie que deux époques audio : legacy (jusqu'à la Gen 5) et latest.
+ return g<=5?(p.cries?.legacy||p.cries?.latest):(p.cries?.latest||p.cries?.legacy);
 }
 function generationChooser(p,kind){
  const gs=availableGenerations(p);if(gs.length<2)return '';
  const id='genpick-'+kind+'-'+p.id+'-'+Math.random().toString(36).slice(2,7);
  return '<label style="display:block;margin:6px 0">Génération du '+(kind==='cry'?'cri':'thème')+' : <select id="'+id+'" onchange="this.closest(\'.card\').dataset.mediaGeneration=this.value">'+gs.map(g=>'<option value="'+g+'">'+GEN_LABEL[g]+'</option>').join('')+'</select></label>';
 }
+function updateMediaGeneration(sel){
+ const card=sel.closest('.card');if(!card)return;
+ const id=Number(sel.dataset.pokemonId),g=Number(sel.value),kind=sel.dataset.mediaKind;
+ const item=current.find(x=>x.p.id===id);if(!item)return;
+ if(kind==='cry'){
+  const audio=card.querySelector('audio');if(audio){audio.src=cryForGeneration(item.p,g);audio.load()}
+  const ans=card.querySelector('[data-media-answer]');if(ans)ans.textContent='Source du cri : '+GEN_LABEL[g]+(g<=5?' — cri historique':' — cri moderne');
+ }else if(kind==='music'){
+  item.p._requestedMusicGen=g;
+  const ans=card.querySelector('[data-media-answer]');if(ans)ans.textContent='Génération musicale choisie : '+GEN_LABEL[g]+' — relance la génération pour charger un thème correspondant.';
+ }
+}
 function zoneMusicFor(p,locations){
  const ls=(locations||[]).map(x=>String(x).toLowerCase());
- const same=ZONE_MUSIC_THEMES.filter(x=>x.gen===p.gen);
+ const wanted=p._requestedMusicGen||availableGenerations(p).at(-1);const same=ZONE_MUSIC_THEMES.filter(x=>x.gen==='generation-'+['i','ii','iii','iv','v','vi','vii','viii','ix'][wanted-1]);
  let t=same.find(x=>x.keys.some(k=>ls.some(l=>l.includes(k))));
  if(!t)t=same[0];
  return t||{q:'Pokemon game route theme'};
@@ -1133,8 +1152,8 @@ async function rollCards(){
      p._musicAnswer=zone+(a?.title?' — '+a.title:'');
    }
    if(gameMode.value==='pokemoncry'){
-     const cry=p.cries?.latest||p.cries?.legacy;
-     c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br>${generationChooser(p,'cry')}À quel Pokémon appartient ce cri ?`:'🔊 Cri indisponible';
+     const cg=availableGenerations(p).at(-1)||1;const cry=cryForGeneration(p,cg);
+     c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br>${generationChooser(p,'cry')}À quel Pokémon appartient ce cri ?<br><small data-media-answer>Source du cri : ${GEN_LABEL[cg]}${cg<=5?' — cri historique':' — cri moderne'}</small>`:'🔊 Cri indisponible';
    }
    current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null});
  }
