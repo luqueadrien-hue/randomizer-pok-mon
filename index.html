@@ -110,7 +110,13 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <div class="controls">
 <label>Jeu<select id="gameMode">
 <option value="egg">🥚 Œuf par type</option>
-<option value="stats">📊 Stats à l'aveugle</option>
+<option value="stats">📊 Total de stats (BST)</option>
+<option value="stat-hp">❤️ PV à l'aveugle</option>
+<option value="stat-speed">💨 Vitesse à l'aveugle</option>
+<option value="stat-attack">⚔️ Attaque physique à l'aveugle</option>
+<option value="stat-special-attack">✨ Attaque spéciale à l'aveugle</option>
+<option value="stat-defense">🛡️ Défense physique à l'aveugle</option>
+<option value="stat-special-defense">🔮 Défense spéciale à l'aveugle</option>
 <option value="species">🧬 Espèce / catégorie Pokémon</option>
 <option value="height">📏 Taille</option>
 <option value="weight">⚖️ Poids</option>
@@ -773,7 +779,7 @@ async function musicPreview(query){
   return hit?.previewUrl||'';
  }catch(e){return ''}
 }
-function clue(p,m){if(m==='egg')return 'Œuf '+frt(p.types[0]);if(m==='stats')return `BST ${p.total} • PV ${p.stats.hp} • Atk ${p.stats.attack} • Vit ${p.stats.speed}`;if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind')return p.gen.replace('generation-','Génération ').toUpperCase();if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
+function clue(p,m){if(m==='egg')return 'Œuf '+frt(p.types[0]);if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind')return p.gen.replace('generation-','Génération ').toUpperCase();if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
 if(m==='dominantstat')return dominantStat(p);
 if(m==='bstonly')return `BST : ${p.total}`;
 if(m==='egggroup')return (p.eggGroups||[]).map(extraFr).join(' / ')||'Groupe d’Œuf inconnu';
@@ -955,10 +961,19 @@ async function applyLieMode(){
 
  if(mode==='stats'){
    const fakeBST=Math.max(180,Math.min(720,target.p.total + (Math.random()<.5?-1:1)*(40+Math.floor(Math.random()*100))));
-   const fakeHP=Math.max(20,Math.min(255,target.p.stats.hp + (Math.random()<.5?-1:1)*(10+Math.floor(Math.random()*35))));
-   target.clue=`BST ${fakeBST} • PV ${fakeHP} • Atk ${target.p.stats.attack} • Vit ${target.p.stats.speed}`;
-   target.lieText='FAUSSES STATS';
-   gmInfo.textContent=`Choix ${idx+1} — ${target.p.name} a de fausses statistiques. Vrai BST : ${target.p.total}, vrais PV : ${target.p.stats.hp}.`;
+   target.clue='BST : '+fakeBST;
+   target.lieText='FAUX BST';
+   gmInfo.textContent='Choix '+(idx+1)+' — '+target.p.name+' : BST annoncé '+fakeBST+', vrai BST '+target.p.total+'.';
+   return;
+ }
+ const blindStats={'stat-hp':['hp','PV'],'stat-speed':['speed','Vitesse'],'stat-attack':['attack','Attaque physique'],'stat-special-attack':['special-attack','Attaque spéciale'],'stat-defense':['defense','Défense physique'],'stat-special-defense':['special-defense','Défense spéciale']};
+ if(blindStats[mode]){
+   const [key,label]=blindStats[mode],real=target.p.stats[key];
+   let fake=real;
+   while(fake===real)fake=Math.max(1,Math.min(255,real+(Math.random()<.5?-1:1)*(5+Math.floor(Math.random()*40))));
+   target.clue=label+' : '+fake;
+   target.lieText='FAUSSE STAT';
+   gmInfo.textContent='Choix '+(idx+1)+' — '+target.p.name+' : '+label+' annoncée '+fake+', vraie valeur '+real+'.';
    return;
  }
 
