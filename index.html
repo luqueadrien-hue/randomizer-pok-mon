@@ -334,7 +334,7 @@ async function getP(id){
  const fr=s.names.find(x=>x.language.name==='fr');const genus=s.genera.find(x=>x.language.name==='fr')?.genus||'Pokémon';
  const sv=((p.moves.some(m=>m.version_group_details.some(v=>v.version_group.name==='scarlet-violet'))||id>=906)||(id>=899&&id<=905));
  const flavorTexts=(s.flavor_text_entries||[]).filter(x=>x.language?.name==='fr').map(x=>({text:(x.flavor_text||'').replace(/[\n\f\r]+/g,' ').replace(/\s+/g,' ').trim(),version:x.version?.name||'Pokédex'})).filter(x=>x.text);
- const o={id,apiName:s.name,name:fr?.name||s.name,img:p.sprites.other?.['official-artwork']?.front_default||p.sprites.front_default,sprite:p.sprites.front_default||p.sprites.other?.['official-artwork']?.front_default,types:p.types.map(x=>x.type.name),legendary:!!(s.is_legendary||s.is_mythical),sv,height:p.height/10,weight:p.weight/10,total:p.stats.reduce((a,x)=>a+x.base_stat,0),stats:Object.fromEntries(p.stats.map(x=>[x.stat.name,x.base_stat])),genus,gen:s.generation?.name||'',moves:p.moves.map(m=>({name:m.move.name,url:m.move.url})),abilities:p.abilities.map(a=>({name:a.ability.name,url:a.ability.url,hidden:!!a.is_hidden})),flavorTexts,
+ const o={id,apiName:s.name,name:fr?.name||('Pokémon n°'+id),img:p.sprites.other?.['official-artwork']?.front_default||p.sprites.front_default,sprite:p.sprites.front_default||p.sprites.other?.['official-artwork']?.front_default,types:p.types.map(x=>x.type.name),legendary:!!(s.is_legendary||s.is_mythical),sv,height:p.height/10,weight:p.weight/10,total:p.stats.reduce((a,x)=>a+x.base_stat,0),stats:Object.fromEntries(p.stats.map(x=>[x.stat.name,x.base_stat])),genus,gen:s.generation?.name||'',moves:p.moves.map(m=>({name:m.move.name,url:m.move.url})),abilities:p.abilities.map(a=>({name:a.ability.name,url:a.ability.url,hidden:!!a.is_hidden})),flavorTexts,
  color:s.color?.name||'unknown',
  eggGroups:(s.egg_groups||[]).map(x=>x.name),
  growthRate:s.growth_rate?.name||'unknown',
@@ -350,9 +350,9 @@ async function moveFr(move){
  if(moveCache.has(move.name))return moveCache.get(move.name);
  try{
    const data=await fetch(move.url).then(r=>r.json());
-   const fr=data.names.find(x=>x.language.name==='fr')?.name || move.name;
+   const fr=data.names.find(x=>x.language.name==='fr')?.name || 'Attaque non traduite';
    moveCache.set(move.name,fr); return fr;
- }catch(e){return move.name}
+ }catch(e){return 'Attaque indisponible'}
 }
 const GEN_VERSION_GROUPS={1:['red-blue','yellow'],2:['gold-silver','crystal'],3:['ruby-sapphire','emerald','firered-leafgreen'],4:['diamond-pearl','platinum','heartgold-soulsilver'],5:['black-white','black-2-white-2'],6:['x-y','omega-ruby-alpha-sapphire'],7:['sun-moon','ultra-sun-ultra-moon'],8:['sword-shield','brilliant-diamond-shining-pearl','legends-arceus'],9:['scarlet-violet']};
 async function randomRealMove(p){
@@ -491,9 +491,9 @@ function describeEvolutionDetail(d){
    const extras=[];
    if(d.min_happiness!=null) extras.push(`bonheur ≥ ${d.min_happiness}`);
    if(d.time_of_day) extras.push(`de ${d.time_of_day==='day'?'jour':'nuit'}`);
-   if(d.known_move?.name) extras.push(`en connaissant ${d.known_move.name.replace(/-/g,' ')}`);
-   if(d.known_move_type?.name) extras.push(`avec une attaque de type ${d.known_move_type.name}`);
-   if(d.location?.name) extras.push(`à ${d.location.name.replace(/-/g,' ')}`);
+   if(d.known_move?.name) extras.push(`en connaissant une attaque spécifique`);
+   if(d.known_move_type?.name) extras.push(`avec une attaque de type ${frt(d.known_move_type.name)}`);
+   if(d.location?.name) extras.push(`dans un lieu spécifique`);
    if(d.min_beauty!=null) extras.push(`beauté ≥ ${d.min_beauty}`);
    return extras.length?`Montée de niveau — ${extras.join(', ')}`:'Montée de niveau — niveau non précisé';
  }
@@ -503,7 +503,7 @@ function describeEvolutionDetail(d){
  if(trigger==='trade'){
    const extras=[];
    if(d.held_item?.name) extras.push(`avec ${frItemName(d.held_item.name)}`);
-   if(d.trade_species?.name) extras.push(`contre ${d.trade_species.name.replace(/-/g,' ')}`);
+   if(d.trade_species?.name) extras.push(`contre un Pokémon spécifique`);
    return `Échange${extras.length?' — '+extras.join(', '):''}`;
  }
  const extras=[];
@@ -544,7 +544,7 @@ async function getEvolutionClue(p){
    }
    const methods=[];
    for(const evo of next){
-     const target=evo.species?.name?.replace(/-/g,' ')||'évolution';
+     let target='une évolution'; try{const es=await fetch(evo.species.url).then(r=>r.json());target=es.names?.find(x=>x.language?.name==='fr')?.name||target}catch(_){}
      const details=evo.evolution_details||[];
      if(!details.length){
        methods.push(`Vers ${target} — condition spéciale`);
@@ -597,7 +597,7 @@ async function abilityFr(a){
     abilityCache.set(a.url,fr);
     return fr;
   }catch(e){
-    const fallback=a.name?.replace(/-/g,' ')||'Talent inconnu';
+    const fallback='Talent indisponible';
     abilityCache.set(a.url,fallback);
     return fallback;
   }
@@ -710,7 +710,7 @@ function methodFr(x){return METHOD_FR[x]||String(x||'Rencontre spéciale').repla
 function regionalDexClue(p){
  const banned=new Set(['national']);
  const n=(p.pokedexNumbers||[]).find(x=>!banned.has(x.dex));
- return n?`${n.dex.replace(/-/g,' ')} — N° ${String(n.entry).padStart(3,'0')}`:`Pokédex National — N° ${String(p.id).padStart(4,'0')}`;
+ const dexFr={'kanto':'Kanto','original-johto':'Johto','updated-johto':'Johto','hoenn':'Hoenn','updated-hoenn':'Hoenn','original-sinnoh':'Sinnoh','extended-sinnoh':'Sinnoh','original-unova':'Unys','updated-unova':'Unys','kalos-central':'Kalos Centre','kalos-coastal':'Kalos Côte','kalos-mountain':'Kalos Monts','original-alola':'Alola','updated-alola':'Alola','galar':'Galar','isle-of-armor':'Île Solitaire de l’Armure','crown-tundra':'Couronneige','paldea':'Paldea','kitakami':'Septentria','blueberry':'Institut Myrtille'};return n?`${dexFr[n.dex]||'Pokédex régional'} — N° ${String(n.entry).padStart(3,'0')}`:`Pokédex National — N° ${String(p.id).padStart(4,'0')}`;
 }
 function oldDescription(p){
  const old=(p.flavorTexts||[]).filter(x=>!['scarlet','violet','sword','shield'].includes(x.version));
@@ -789,7 +789,7 @@ async function musicPreview(query){
   return hit?.previewUrl||'';
  }catch(e){return ''}
 }
-function clue(p,m){if(m==='egg')return 'Œuf '+frt(p.types[0]);if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind')return p.gen.replace('generation-','Génération ').toUpperCase();if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
+function clue(p,m){if(m==='egg')return 'Œuf '+frt(p.types[0]);if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind'){const g={'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9};return `Génération ${g[p.gen]||'?'}`;}if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
 if(m==='dominantstat')return dominantStat(p);
 if(m==='bstonly')return `BST : ${p.total}`;
 if(m==='egggroup')return (p.eggGroups||[]).map(extraFr).join(' / ')||'Groupe d’Œuf inconnu';
