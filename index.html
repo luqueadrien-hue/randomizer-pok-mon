@@ -339,15 +339,47 @@ async function getP(id){
  const fr=s.names.find(x=>x.language.name==='fr');const genus=s.genera.find(x=>x.language.name==='fr')?.genus||'Pokémon';
  const sv=((p.moves.some(m=>m.version_group_details.some(v=>v.version_group.name==='scarlet-violet'))||id>=906)||(id>=899&&id<=905));
  const flavorTexts=(s.flavor_text_entries||[]).filter(x=>x.language?.name==='fr').map(x=>({text:(x.flavor_text||'').replace(/[\n\f\r]+/g,' ').replace(/\s+/g,' ').trim(),version:x.version?.name||'Pokédex'})).filter(x=>x.text);
- const o={id,apiName:s.name,name:fr?.name||('Pokémon n°'+id),img:p.sprites.other?.['official-artwork']?.front_default||p.sprites.front_default,sprite:p.sprites.front_default||p.sprites.other?.['official-artwork']?.front_default,types:p.types.map(x=>x.type.name),legendary:!!(s.is_legendary||s.is_mythical),sv,height:p.height/10,weight:p.weight/10,total:p.stats.reduce((a,x)=>a+x.base_stat,0),stats:Object.fromEntries(p.stats.map(x=>[x.stat.name,x.base_stat])),genus,gen:s.generation?.name||'',moves:p.moves.map(m=>({name:m.move.name,url:m.move.url})),abilities:p.abilities.map(a=>({name:a.ability.name,url:a.ability.url,hidden:!!a.is_hidden})),flavorTexts,
+ const o={id,apiName:s.name,name:fr?.name||('Pokémon n°'+id),img:p.sprites.other?.['official-artwork']?.front_default||p.sprites.front_default,sprite:p.sprites.front_default||p.sprites.other?.['official-artwork']?.front_default,types:p.types.map(x=>x.type.name),legendary:!!(s.is_legendary||s.is_mythical),sv,height:p.height/10,weight:p.weight/10,total:p.stats.reduce((a,x)=>a+x.base_stat,0),stats:Object.fromEntries(p.stats.map(x=>[x.stat.name,x.base_stat])),genus,gen:s.generation?.name||'',moves:p.moves.map(m=>({name:m.move.name,url:m.move.url,version_group_details:(m.version_group_details||[]).map(v=>({level_learned_at:v.level_learned_at||0,move_learn_method:{name:v.move_learn_method?.name||''},version_group:{name:v.version_group?.name||''}}))})),
+ abilities:p.abilities.map(a=>({name:a.ability.name,url:a.ability.url,hidden:!!a.is_hidden,slot:a.slot})),flavorTexts,
  color:s.color?.name||'unknown',
+ shape:s.shape?.name||null,
  eggGroups:(s.egg_groups||[]).map(x=>x.name),
  growthRate:s.growth_rate?.name||'unknown',
  habitat:s.habitat?.name||null,
+ captureRate:s.capture_rate??null,
+ baseHappiness:s.base_happiness??null,
+ genderRate:s.gender_rate??null,
+ hatchCounter:s.hatch_counter??null,
+ isBaby:!!s.is_baby,
+ isLegendary:!!s.is_legendary,
+ isMythical:!!s.is_mythical,
+ formsSwitchable:!!s.forms_switchable,
+ hasGenderDifferences:!!s.has_gender_differences,
+ evolvesFrom:s.evolves_from_species?.name||null,
+ evolutionChainUrl:s.evolution_chain?.url||null,
+ varieties:(s.varieties||[]).map(v=>({name:v.pokemon?.name||'',url:v.pokemon?.url||'',isDefault:!!v.is_default})),
  pokedexNumbers:(s.pokedex_numbers||[]).map(x=>({dex:x.pokedex?.name||'',entry:x.entry_number})),
+ cries:p.cries||{},
+ baseExperience:p.base_experience??null,
+ heldItems:(p.held_items||[]).map(h=>({name:h.item?.name||'',versions:(h.version_details||[]).map(v=>({rarity:v.rarity,version:v.version?.name||''}))})),
  encounterUrl:p.location_area_encounters};
  cache.set(id,o);return o;
 }
+
+// Base nationale 1–1025 : préchargement progressif et persistant dans le navigateur.
+// Elle évite de retélécharger les mêmes fiches et accélère les modes utilisant beaucoup d'informations.
+const FULL_DEX_MAX=1025;
+async function preloadNationalDex(onProgress){
+ const ids=Array.from({length:FULL_DEX_MAX},(_,i)=>i+1);
+ let done=0;
+ for(let i=0;i<ids.length;i+=20){
+  const batch=ids.slice(i,i+20);
+  await Promise.all(batch.map(id=>getP(id).catch(()=>null)));
+  done+=batch.length;if(onProgress)onProgress(done,FULL_DEX_MAX);
+ }
+ return cache;
+}
+
 function valid(p){const [lo,hi]=range();if(p.id<lo||p.id>hi)return false;if(generation.value==='9'&&!p.sv)return false;const l=legend.value;if(l==='no'&&p.legendary)return false;if(l==='yes'&&!p.legendary)return false;const tf=tfilter();if(tf&&!p.types.includes(tf))return false;return ![...teams[1],...teams[2]].some(x=>x.id===p.id)}
 async function draw(used){const [lo,hi]=range();for(let i=0;i<4000;i++){const id=Math.floor(Math.random()*(hi-lo+1))+lo;if(used.has(id))continue;try{const p=await getP(id);if(valid(p)){used.add(id);return p}}catch(e){}}throw new Error('Aucun Pokémon trouvé avec ces filtres.')}
 
