@@ -99,7 +99,7 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <h2 style="text-align:center;margin-top:0">🌐 Multijoueur Firebase</h2>
 <div class="mpbar">
 <div><input id="mpName" placeholder="Pseudo" maxlength="24"><button id="mpCreate" class="primary">👑 Créer un salon</button></div>
-<div><input id="mpCode" placeholder="PKMN-1234" maxlength="9"><button id="mpJoin">🎮 Rejoindre</button></div>
+<div><input id="mpCode" placeholder="Code du salon (ex. A)" maxlength="1"><button id="mpJoin">🎮 Rejoindre</button></div>
 </div>
 <div id="mpStatus" class="mpstate">Hors salon — le randomizer reste utilisable en local.</div>
 <div id="mpPlayers" class="mpplayers"></div>
@@ -260,19 +260,21 @@ const mpPlayers=document.getElementById('mpPlayers');
 let mpSession=null,mpApplying=false,mpListener=null;
 function mpEsc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function mpRoom(c){return MPDB.ref('rooms/'+c)}
-function mpCodeNew(){return 'PKMN-'+Math.floor(1000+Math.random()*9000)}
+function mpCodeNew(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return chars[Math.floor(Math.random()*chars.length)]}
 function mpId(){return (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)).replace(/-/g,'').slice(0,12)}
 function mpSetStatus(t){const e=document.getElementById('mpStatus');if(e)e.innerHTML=t}
 async function mpCreateRoom(){
  mpSetStatus('🟡 Création du salon…');
- const name=(mpName.value.trim()||'Hôte').slice(0,24);let code,s;
- do{code=mpCodeNew();s=await mpRoom(code).once('value')}while(s.exists());
+ const name=(mpName.value.trim()||'Hôte').slice(0,24);let code=(mpCode.value.trim().toUpperCase()||mpCodeNew()),s;
+ if(!/^[A-Z0-9]$/.test(code))throw Error('Code invalide : utilise un seul caractère (A-Z ou 0-9)');
+ s=await mpRoom(code).once('value');
+ if(s.exists())throw Error('Ce code est déjà utilisé : choisis un autre caractère');
  const id=mpId();await mpRoom(code).set({created:Date.now(),hostId:id,players:{[id]:{name,role:'host',online:true}}});
  await mpEnter({room:code,id,name,role:'host'}); await mpSyncState();
 }
 async function mpJoinRoom(){
  const name=(mpName.value.trim()||'Joueur').slice(0,24),code=mpCode.value.trim().toUpperCase();
- if(!/^PKMN-\d{4}$/.test(code))throw Error('Code invalide');
+ if(!/^[A-Z0-9]$/.test(code))throw Error('Code invalide : entre un seul caractère (A-Z ou 0-9)');
  const s=await mpRoom(code).once('value');if(!s.exists())throw Error('Salon introuvable');
  const id=mpId();await mpRoom(code).child('players/'+id).set({name,role:'player',online:true});
  await mpEnter({room:code,id,name,role:'player'});
