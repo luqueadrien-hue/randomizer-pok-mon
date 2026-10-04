@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pokémon Randomizer Multi-Jeux</title>
+<style>
+body{margin:0;background:#120b18;color:#fff;font-family:Arial,sans-serif}
+.wrap{max-width:1150px;margin:auto;padding:20px}
+h1{text-align:center}.sub{text-align:center;color:#c7bacf}
+.panel,.team{background:#21152c;border:1px solid #654e78;border-radius:18px;padding:14px}
+.controls{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+select,input,button{width:100%;padding:10px;border-radius:10px;border:1px solid #6c5680;background:#17101f;color:#fff}
+button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.actions button{flex:1;min-width:160px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:18px}
+.card{background:#24182f;border:1px solid #6c5680;border-radius:18px;padding:14px;text-align:center}
+.card img{width:145px;height:145px;object-fit:contain}
+.hiddenPoke img,.hiddenPoke .name{filter:brightness(0)}
+.name{font-size:20px;font-weight:800}.clue{font-size:18px;font-weight:800;margin:8px 0}
+.teams{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}
+.teamgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.mini{background:#160e1d;border-radius:12px;padding:6px;text-align:center}
+.mini img{width:72px;height:72px;object-fit:contain}.badge{display:inline-block;padding:2px 6px;border-radius:999px;background:#3b2a49;font-size:10px;margin:2px}
+.turn{text-align:center;margin:12px 0;color:#f1ce68;font-weight:800}.danger{background:#5a2630}.offerTag{font-size:12px;color:#c7bacf;margin-top:5px}
+@media(max-width:850px){.controls{grid-template-columns:1fr 1fr}.teams{grid-template-columns:1fr}}
+@media(max-width:520px){.controls{grid-template-columns:1fr}}
+.pokeBallMystery{width:170px;height:170px;border-radius:50%;margin:10px auto;position:relative;overflow:hidden;border:6px solid #111;background:#ddd}
+.pokeBallMystery .pbTop{position:absolute;left:0;top:0;width:100%;height:50%;background:var(--pb-top,#d44)}
+.pokeBallMystery .pbBottom{position:absolute;left:0;bottom:0;width:100%;height:50%;background:var(--pb-bottom,#eee)}
+.pokeBallMystery .pbBand{position:absolute;left:0;top:46%;width:100%;height:8%;background:#111;z-index:4}
+.pokeBallMystery .pbButton{position:absolute;left:50%;top:50%;width:42px;height:42px;transform:translate(-50%,-50%);border-radius:50%;background:#f5f5f5;border:6px solid #111;z-index:5}
+.pokeBallMystery .pbMark{position:absolute;z-index:3;font-size:34px;filter:drop-shadow(0 1px 1px #0006)}
+.pokeBallMystery .pbA{left:18px;top:18px}.pokeBallMystery .pbB{right:18px;top:24px}.pokeBallMystery .pbC{left:62px;bottom:18px}
+.pbHint{font-size:12px;color:#c7bacf;text-align:center;margin-top:6px}
+.gameClue{margin:10px 0 12px;padding:10px 12px;border-radius:12px;background:#160f1f;border:1px solid #3a2b48;font-size:14px;line-height:1.45;text-align:left}
+.dexDescription{font-size:15px;line-height:1.55}
+.dexSource{display:block;margin-top:7px;font-size:11px;color:#b8a9c5;text-align:right}
+.card.hiddenPoke .gameClue,.card.hiddenPoke .dexDescription,.card.hiddenPoke .dexSource{filter:none!important;opacity:1!important;color:inherit!important}
+.boxModeGrid{grid-template-columns:repeat(auto-fit,minmax(145px,1fr))!important}
+.boxModeGrid .card{min-width:0}
+.boxModeGrid .card img{max-height:125px;object-fit:contain}
+.boxNumber{font-size:11px;color:#b8a9c5;margin-top:4px}
+.pcBoxOptions{padding:8px 10px;border:1px solid #443552;border-radius:12px;background:#17101f}
+.pcBoxHint{font-size:11px;color:#b8a9c5;margin-top:5px}
+#cards.boxModeGrid{display:block!important;background:linear-gradient(180deg,#43345c,#241b38);border:3px solid #8f82a9;border-radius:20px;padding:12px;max-width:820px;margin:14px auto;box-shadow:inset 0 0 0 3px #171020}
+.pcBoxHeader{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;padding:7px 12px;border-radius:12px;background:#171020;border:2px solid #786a91;color:#fff;font-weight:800}
+.pcBoxHeader button{border:0;border-radius:9px;padding:7px 12px;background:#6f6088;color:#fff;font-weight:800;cursor:pointer}
+.pcBoxSlots{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.pcSlot{aspect-ratio:1/1;min-width:0;border:2px solid #75688d;border-radius:11px;background:linear-gradient(145deg,#c8bed7,#9386a7);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.pcSlot.empty{opacity:.55;background:linear-gradient(145deg,#80748e,#5f546c)}
+.pcSlot img{width:88%;height:88%;object-fit:contain;image-rendering:auto}
+.pcSlot .slotNo{position:absolute;left:4px;top:3px;font-size:9px;font-weight:900;color:#342a43;background:#eee8f5aa;border-radius:5px;padding:1px 3px}
+.pcSlot .slotName{position:absolute;left:2px;right:2px;bottom:2px;font-size:9px;font-weight:800;line-height:1.05;text-align:center;color:#fff;text-shadow:0 1px 2px #000;background:#261d33bb;border-radius:5px;padding:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcBoxFooter{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:#e3daee}
+@media(max-width:560px){.pcBoxSlots{gap:3px}.pcSlot{border-width:1px;border-radius:7px}.pcSlot .slotName{font-size:7px}.pcSlot .slotNo{font-size:7px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🎲 Pokémon Randomizer Multi-Jeux</h1>
+<div class="sub">Œufs, stats, espèce, taille, poids, apprendre ou laisser, silhouette et plus.</div>
+<div class="panel">
+<div class="controls">
+<label>Jeu<select id="gameMode">
+<option value="egg">🥚 Œuf par type</option>
+<option value="stats">📊 Stats à l'aveugle</option>
+<option value="species">🧬 Espèce / catégorie Pokémon</option>
+<option value="height">📏 Taille</option>
+<option value="weight">⚖️ Poids</option>
+<option value="learnleave">📦 À prendre ou à laisser</option>
+<option value="typeblind">❓ Type à l'aveugle</option>
+<option value="generationblind">🕰 Génération à l'aveugle</option><option value="dexnumber">🔢 Numéro du Pokédex</option>
+<option value="silhouette">👤 Silhouette</option>
+<option value="movelearn">⚔️ Choisir via une attaque apprise</option>
+<option value="auction">💰 Enchères Pokémon</option>
+<option value="dexdesc">📖 Description Pokédex</option>
+<option value="evolution">🧬 Deviner l’évolution</option>
+<option value="ability">✨ Deviner par le talent</option>
+<option value="pokeballtraits">🔴 Poké Ball mystère</option>
+<option value="dominantstat">🏆 Stat dominante</option>
+<option value="bstonly">📊 Total de stats (BST)</option>
+<option value="ranking">📈 Classement mystère</option>
+<option value="multimove">⚔️ Attaques mystères</option>
+<option value="weaknesses">🎯 Faiblesses</option>
+<option value="resistances">🛡️ Résistances / immunités</option>
+<option value="effectiveness">💥 Efficacité mystère</option>
+<option value="evochain">🧬 Chaîne d’évolution</option>
+<option value="egggroup">🥚 Groupe d’Œuf</option>
+<option value="growth">🍬 Vitesse d’XP</option>
+<option value="encountermethod">🎣 Méthode de rencontre</option>
+<option value="capturelocation">📍 Lieu de capture</option>
+<option value="regionaldex">🌎 Numéro Pokédex régional</option>
+<option value="olddesc">📜 Ancienne description Pokédex</option>
+<option value="color">🎨 Couleur Pokédex</option>
+<option value="categoryheight">🏷️ Catégorie + taille</option>
+<option value="twotruths">🔀 2 vérités, 1 mensonge</option>
+<option value="progressive">❓ Indices progressifs</option>
+<option value="buyhints">💰 Achat d’indices</option>
+<option value="slotchallenge">🎰 Machine à défis</option>
+<option value="boss">👑 Boss mystère</option>
+<option value="raritydraft">💎 Draft à rareté</option>
+<option value="randomchallenge">🎲 Défi aléatoire</option>
+<option value="randombox">📦 Boîte Pokémon aléatoire</option>
+</select></label>
+<label>Taille équipe<select id="teamSize"><option>3</option><option>4</option><option>5</option><option selected>6</option></select></label>
+<label>Nombre de choix<input id="choiceCount" type="number" min="2" max="12" value="3"></label>
+<label>Légendaires<select id="legend"><option value="all">Autorisés</option><option value="no" selected>Sans légendaires</option><option value="yes">Uniquement légendaires</option></select></label>
+<label>Dex / Génération<select id="generation">
+<option value="all" selected>Toutes les générations</option>
+<option value="1">Kanto</option><option value="2">Johto</option><option value="3">Hoenn</option><option value="4">Sinnoh</option>
+<option value="5">Unys</option><option value="6">Kalos</option><option value="7">Alola</option><option value="8">Galar</option>
+<option value="9">Écarlate / Violet + DLC + Hisui — SV + DLC + anciennes générations</option>
+</select></label>
+<label>Mode de type<select id="typeMode">
+<option value="random" selected>Types aléatoires</option><option value="same">Même type aléatoire</option>
+<option value="mono-normal">Monotype Normal</option><option value="mono-fire">Monotype Feu</option><option value="mono-water">Monotype Eau</option>
+<option value="mono-electric">Monotype Électrik</option><option value="mono-grass">Monotype Plante</option><option value="mono-ice">Monotype Glace</option>
+<option value="mono-fighting">Monotype Combat</option><option value="mono-poison">Monotype Poison</option><option value="mono-ground">Monotype Sol</option>
+<option value="mono-flying">Monotype Vol</option><option value="mono-psychic">Monotype Psy</option><option value="mono-bug">Monotype Insecte</option>
+<option value="mono-rock">Monotype Roche</option><option value="mono-ghost">Monotype Spectre</option><option value="mono-dragon">Monotype Dragon</option>
+<option value="mono-dark">Monotype Ténèbres</option><option value="mono-steel">Monotype Acier</option><option value="mono-fairy">Monotype Fée</option>
+</select></label>
+<div id="boxSizeWrap" style="display:none" class="pcBoxOptions">
+<label>Remplissage de la boîte
+<select id="boxSize">
+<option value="6">6 Pokémon</option>
+<option value="12">12 Pokémon</option>
+<option value="18">18 Pokémon</option>
+<option value="24">24 Pokémon</option>
+<option value="30" selected>30 Pokémon</option>
+</select></label>
+<div class="pcBoxHint">La boîte conserve toujours 30 emplacements, comme une boîte PC Pokémon.</div>
+</div>
+<label>Affichage<select id="revealMode"><option value="hidden" selected>Pokémon cachés</option><option value="visible">Pokémon visibles</option></select></label>
+<label>Mensonge / Leurre
+<select id="lieMode">
+<option value="none" selected>Non</option>
+<option value="yes">Oui — adapté automatiquement au jeu choisi</option>
+</select>
+</label>
+</div>
+<div class="actions"><button id="roll" class="primary">🎲 GÉNÉRER</button><button id="reveal">👁 Révéler tous</button><button id="hide">🙈 Masquer tous</button><button id="reset">↺ Nouvelle partie</button></div>
+<div id="turn" class="turn">Tour du JOUEUR 1</div>
+</div>
+<div id="dealPanel" class="panel" style="display:none;margin-top:18px">
+  <h2 style="text-align:center;margin-top:0">📦 À prendre ou à laisser</h2>
+  <div id="starterOffer" style="text-align:center;color:#c7bacf;margin-bottom:12px"></div>
+  <div class="actions">
+    <button id="keepStarter">✅ Garder le Pokémon de départ</button>
+    <button id="discardStarter">🗑️ Refuser le Pokémon de départ</button>
+  </div>
+  <div id="dealInfo" class="turn" style="margin-top:10px"></div>
+</div>
+<div id="auctionPanel" class="panel" style="display:none;margin-top:18px">
+  <h2 style="text-align:center;margin-top:0">💰 Enchères Pokémon</h2>
+  <div class="controls">
+    <label>Budget par joueur
+      <input id="auctionBudget" type="number" min="10" max="9999" value="100">
+    </label>
+    <label>Pas minimum
+      <input id="auctionStep" type="number" min="1" max="999" value="5">
+    </label>
+    <label>Malus
+      <select id="auctionMalusMode">
+        <option value="none" selected>Aucun</option>
+        <option value="random">Malus aléatoire</option>
+        <option value="pokemon">Malus sur le Pokémon</option>
+        <option value="player">Malus sur le joueur</option>
+        <option value="bid">Malus sur la mise</option>
+      </select>
+    </label>
+    <label>Valeur du malus
+      <input id="auctionMalusValue" type="number" min="1" max="100" value="10">
+    </label>
+  </div>
+  <div class="actions">
+    <button id="startAuction" class="primary">🎯 Lancer une enchère</button>
+    <button id="bidP1">Joueur 1 : + mise</button>
+    <button id="bidP2">Joueur 2 : + mise</button>
+    <button id="passP1">Joueur 1 passe</button>
+    <button id="passP2">Joueur 2 passe</button>
+    <button id="awardAuction">🏆 Attribuer au plus offrant</button>
+  </div>
+  <div id="auctionInfo" class="turn"></div>
+</div>
+<div id="gmPanel" class="panel" style="margin-top:18px;display:none;border-color:#c59a3a">
+  <h3 style="margin:0 0 8px;text-align:center">🧠 Information Générateur / Maître du jeu</h3>
+  <div id="gmInfo" style="text-align:center;color:#f5d77b;font-weight:700"></div>
+</div>
+<div id="cards" class="cards"></div>
+<div class="teams">
+<div class="team"><h2>JOUEUR 1</h2><div id="team1" class="teamgrid"></div></div>
+<div class="team"><h2>JOUEUR 2</h2><div id="team2" class="teamgrid"></div></div>
+</div>
+</div>
+<script>
+const TYPES=[['normal','Normal'],['fire','Feu'],['water','Eau'],['electric','Électrik'],['grass','Plante'],['ice','Glace'],['fighting','Combat'],['poison','Poison'],['ground','Sol'],['flying','Vol'],['psychic','Psy'],['bug','Insecte'],['rock','Roche'],['ghost','Spectre'],['dragon','Dragon'],['dark','Ténèbres'],['steel','Acier'],['fairy','Fée']].map(x=>({en:x[0],fr:x[1]}));
+const GEN={1:[1,151],2:[152,251],3:[252,386],4:[387,493],5:[494,649],6:[650,721],7:[722,809],8:[810,905],9:[1,1025]};
+const cache=new Map();const moveCache=new Map();let player=1,teams={1:[],2:[]},current=[];let starterPokemon=null;let dealStarted=false;let batchLocked=false;let auctionState={active:false,pokemon:null,bids:{1:0,2:0},passed:{1:false,2:false},budget:{1:100,2:100},malus:null};
+function range(){return generation.value==='all'?[1,1025]:GEN[generation.value]}
+function tfilter(){const m=typeMode.value;if(m.startsWith('mono-'))return m.slice(5);return null}
+function frt(t){return TYPES.find(x=>x.en===t)?.fr||t}
+async function getP(id){
+ if(cache.has(id))return cache.get(id);
+ const [p,s]=await Promise.all([fetch('https://pokeapi.co/api/v2/pokemon/'+id).then(r=>r.json()),fetch('https://pokeapi.co/api/v2/pokemon-species/'+id).then(r=>r.json())]);
+ const fr=s.names.find(x=>x.language.name==='fr');const genus=s.genera.find(x=>x.language.name==='fr')?.genus||'Pokémon';
+ const sv=((p.moves.some(m=>m.version_group_details.some(v=>v.version_group.name==='scarlet-violet'))||id>=906)||(id>=899&&id<=905));
+ const flavorTexts=(s.flavor_text_entries||[]).filter(x=>x.language?.name==='fr').map(x=>({text:(x.flavor_text||'').replace(/[
+]+/g,' ').replace(/s+/g,' ').trim(),version:x.version?.name||'Pokédex'})).filter(x=>x.text);
+ const o={id,apiName:s.name,name:fr?.name||s.name,img:p.sprites.other?.['official-artwork']?.front_default||p.sprites.front_default,sprite:p.sprites.front_default||p.sprites.other?.['official-artwork']?.front_default,types:p.types.map(x=>x.type.name),legendary:!!(s.is_legendary||s.is_mythical),sv,height:p.height/10,weight:p.weight/10,total:p.stats.reduce((a,x)=>a+x.base_stat,0),stats:Object.fromEntries(p.stats.map(x=>[x.stat.name,x.base_stat])),genus,gen:s.generation?.name||'',moves:p.moves.map(m=>({name:m.move.name,url:m.move.url})),abilities:p.abilities.map(a=>({name:a.ability.name,url:a.ability.url,hidden:!!a.is_hidden})),flavorTexts,
+ color:s.color?.name||'unknown',
+ eggGroups:(s.egg_groups||[]).map(x=>x.name),
+ growthRate:s.growth_rate?.name||'unknown',
+ habitat:s.habitat?.name||null,
+ pokedexNumbers:(s.pokedex_numbers||[]).map(x=>({dex:x.pokedex?.name||'',entry:x.entry_number})),
+ encounter
