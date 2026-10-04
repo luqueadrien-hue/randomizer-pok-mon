@@ -1126,11 +1126,11 @@ async function applyLieMode(){
      }catch(e){break}
    }
    if(!fake)return;
-   target.displayName=fake.name;
+   target.displayName=fake.name+' ('+target.p.name+')';
    target.isLie=true;
    target.lieText='FAUX NOM';
    gmPanel.style.display='block';
-   gmInfo.textContent='Choix '+(idx+1)+' — le Pokémon réel est '+target.p.name+', mais le nom affiché est « '+fake.name+' ».';
+   gmInfo.textContent='Choix '+(idx+1)+' — nom leurre : '+fake.name+' (vrai nom : '+target.p.name+').';
    return;
  }
  const noExtraLie=new Set(['zonemusic','twotruths','progressive','buyhints','slotchallenge','boss','raritydraft','randomchallenge','ranking','weaknesses','resistances','effectiveness','evochain','egggroup','growth','encountermethod','capturelocation','regionaldex','olddesc','color','categoryheight','dominantstat','bstonly','multimove','randombox']);
