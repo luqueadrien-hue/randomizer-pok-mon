@@ -144,9 +144,9 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <option value="egggroup">🥚 Groupe d’Œuf</option>
 <option value="capturelocation">📍 Lieu de capture</option>
 <option value="regionaldex">🌎 Numéro Pokédex régional</option>
-<option value="olddesc">📜 Ancienne description Pokédex</option>
+
 <option value="color">🎨 Couleur Pokédex</option>
-<option value="twotruths">🔀 2 vérités, 1 mensonge</option>
+
 <option value="progressive">🔢 Devine la génération</option>
 <option value="randombox">📦 Boîte Pokémon aléatoire</option>
 <option value="zonemusic">🎵 Pokémon par musique de zone</option>
@@ -308,7 +308,7 @@ async function mpSyncState(){
 async function mpHydrateState(st){
  if(!st||mpApplying)return;mpApplying=true;
  try{
-  if(st.mode)gameMode.value=st.mode;
+  if(st.mode)gameMode.value=(st.mode==='olddesc'?'dexdesc':st.mode);
   const z=st.settings||{};for(const [k,v] of Object.entries(z)){const el=document.getElementById(k);if(el&&v!=null)el.value=v}
   if(typeof updateModePanels==='function')updateModePanels();
   const arr=await Promise.all((st.current||[]).map(async x=>{const p=await getP(x.id);return {p,clue:x.clue||'',isLie:!!x.isLie,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null}}));
@@ -978,7 +978,7 @@ if(m==='growth')return `Croissance : ${extraFr(p.growthRate)}`;
 if(m==='regionaldex')return regionalDexClue(p);
 if(m==='color')return `Couleur Pokédex : ${extraFr(p.color)}`;
 if(m==='categoryheight')return `${p.genus} • ${p.height.toFixed(1)} m`;
-if(m==='twotruths')return truthLieClue(p);
+
 if(m==='slotchallenge')return slotClue(p);
 if(m==='raritydraft')return `Rareté : ${rarityOf(p)} • BST ${p.total}`;
 if(m==='randombox')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='zonemusic')return '🎵 Écoute le thème de la zone puis devine quel Pokémon peut y être rencontré.';
@@ -1165,7 +1165,7 @@ async function applyLieMode(){
    gmInfo.textContent='Choix '+(idx+1)+' — nom leurre : '+fake.name+' (vrai nom : '+target.p.name+').';
    return;
  }
- const noExtraLie=new Set(['zonemusic','twotruths','progressive','buyhints','slotchallenge','boss','raritydraft','randomchallenge','ranking','weaknesses','resistances','effectiveness','evochain','egggroup','growth','encountermethod','capturelocation','regionaldex','olddesc','color','categoryheight','dominantstat','bstonly','multimove','randombox']);
+ const noExtraLie=new Set(['zonemusic','progressive','buyhints','slotchallenge','boss','raritydraft','randomchallenge','ranking','weaknesses','resistances','effectiveness','evochain','egggroup','growth','encountermethod','capturelocation','regionaldex','color','categoryheight','dominantstat','bstonly','multimove','randombox']);
  if(noExtraLie.has(mode)){gmPanel.style.display='none';return;}
 
  target.isLie=true;
