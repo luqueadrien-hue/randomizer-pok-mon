@@ -89,6 +89,8 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 .mpplayers{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:8px}
 .mpbadge{background:#3b2a49;border-radius:999px;padding:5px 9px;font-size:12px}
 @media(max-width:650px){.mpbar{grid-template-columns:1fr}}
+
+.loaderGen{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:180px;font-weight:800}.loaderBall{width:58px;height:58px;border:5px solid currentColor;border-radius:50%;position:relative;animation:pokeSpin .85s linear infinite}.loaderBall:before{content:'';position:absolute;left:-5px;right:-5px;top:21px;border-top:5px solid currentColor}.loaderBall:after{content:'';position:absolute;width:15px;height:15px;border:5px solid currentColor;border-radius:50%;left:16px;top:11px;background:var(--card,#fff)}@keyframes pokeSpin{to{transform:rotate(360deg)}}.loaderDots:after{content:'…';animation:loaderDots 1.2s steps(4,end) infinite}@keyframes loaderDots{0%{content:''}25%{content:'.'}50%{content:'..'}75%,100%{content:'...'}}
 </style>
 </head>
 <body>
@@ -991,7 +993,7 @@ function updateMediaGeneration(sel){
 }
 function zoneMusicFor(p,locations){
  const ls=(locations||[]).map(x=>String(x).toLowerCase());
- const wanted=p._requestedMusicGen||availableGenerations(p).at(-1);const same=ZONE_MUSIC_THEMES.filter(x=>x.gen==='generation-'+['i','ii','iii','iv','v','vi','vii','viii','ix'][wanted-1]);
+ const wanted=availableGenerations(p).at(-1)||1;const same=ZONE_MUSIC_THEMES.filter(x=>x.gen==='generation-'+['i','ii','iii','iv','v','vi','vii','viii','ix'][wanted-1]);
  let t=same.find(x=>x.keys.some(k=>ls.some(l=>l.includes(k))));
  if(!t)t=same[0];
  return t||{q:'Pokemon game route theme'};
@@ -1045,7 +1047,7 @@ async function drawByStrength(targetBST,used){
 
 async function startDealGame(){
  dealPanel.style.display='block';
- cards.innerHTML='Préparation du Pokémon de départ…';
+ cards.innerHTML='<div class="loaderGen"><div class="loaderBall"></div><div>Génération du Pokémon<span class="loaderDots"></span></div></div>';
  const used=new Set();
  starterPokemon=await draw(used);
  dealStarted=true;
@@ -1068,7 +1070,7 @@ async function generateDealChoices(){
  const used=new Set([...(starterPokemon?[starterPokemon.id]:[]),...teams[1],...teams[2]].map(x=>x.id||x));
  current=[];
  batchLocked=false;
- cards.innerHTML='Préparation des propositions…';
+ cards.innerHTML='<div class="loaderGen"><div class="loaderBall"></div><div>Génération des propositions<span class="loaderDots"></span></div></div>';
  for(let i=0;i<n;i++){
    const p=await draw(used);
    current.push({p,clue:`BST ${p.total}`,offerLabel:'Proposition initiale'});
@@ -1086,7 +1088,7 @@ async function rollCards(){
  }
  dealPanel.style.display='none';
  let n=parseInt(choiceCount.value)||3;n=Math.max(2,Math.min(12,n));choiceCount.value=n;
- const used=new Set();current=[];batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML='Préparation…';
+ const used=new Set();current=[];batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML='<div class="loaderGen"><div class="loaderBall"></div><div>Génération en cours<span class="loaderDots"></span></div></div>';
  for(let i=0;i<n;i++){
    const p=await draw(used);
    let c=clue(p,gameMode.value);
@@ -1148,12 +1150,12 @@ async function rollCards(){
      const e=await encounterInfo(p),t=zoneMusicFor(p,e.locations);
      const a=await musicPreview([t.q,'Pokemon '+(e.locations?.[0]||'route')+' theme','Pokemon game route theme']);
      const zone=(e.details?.[0]||e.locations?.[0]||'Zone Pokémon').replace(/-/g,' ');
-     c=a?`🎵 <audio controls preload="none" src="${a.url}"></audio><br>${generationChooser(p,'music')}Devine quel Pokémon peut être rencontré avec cette musique.`:'🎵 Musique indisponible';
+     c=a?`🎵 <audio controls preload="none" src="${a.url}"></audio><br>Devine quel Pokémon peut être rencontré avec cette musique.`:'🎵 Musique indisponible';
      p._musicAnswer=zone+(a?.title?' — '+a.title:'');
    }
    if(gameMode.value==='pokemoncry'){
-     const cg=availableGenerations(p).at(-1)||1;const cry=cryForGeneration(p,cg);
-     c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br>${generationChooser(p,'cry')}À quel Pokémon appartient ce cri ?<br><small data-media-answer>Source du cri : ${GEN_LABEL[cg]}${cg<=5?' — cri historique':' — cri moderne'}</small>`:'🔊 Cri indisponible';
+     const cg=9;const cry=p.cries?.latest||p.cries?.legacy;
+     c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br>À quel Pokémon appartient ce cri ?<br><small data-media-answer>Source : cri le plus récent disponible</small>`:'🔊 Cri indisponible';
    }
    current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null});
  }
