@@ -422,38 +422,37 @@ async function getSleepDescription(p){
  sleepDescCache.set(p.id,null); return null;
 }
 
-async function getDexDescription(p){
- const seen=new Set();
- const choices=[];
- for(const x of (p.flavorTexts||[])){
-   const text=(x.text||'').replace(/\s+/g,' ').trim();
-   if(!text)continue;
-   const key=text.toLowerCase();
-   if(seen.has(key))continue;
-   seen.add(key);
-   choices.push({
-     text,
-     source:VERSION_FR[x.version]||String(x.version||'Pokédex').replace(/-/g,' ')
-   });
- }
+const SPINOFF_DEX_CACHE=new Map();
+async function getSpinOffDexDescriptions(p){
+ if(SPINOFF_DEX_CACHE.has(p.id))return SPINOFF_DEX_CACHE.get(p.id);
+ const out=[];
+ try{const sl=await getSleepDescription(p);if(sl?.text)out.push({text:sl.text,source:'Pokémon Sleep — Dododex'});}catch(e){}
  try{
-   const sleep=await getSleepDescription(p);
-   if(sleep && sleep.text){
-     const key=sleep.text.toLowerCase();
-     if(!seen.has(key))choices.push(sleep);
-   }
+  const url='https://r.jina.ai/https://www.pokepedia.fr/Pok%C3%A9mon_n%C2%B0'+String(p.id).padStart(4,'0');
+  const page=await fetch(url).then(r=>r.ok?r.text():'');
+  for(const game of ['Pokémon GO','Pokémon Masters EX','Pokémon Sleep','Pokémon HOME','Pokémon Quest','Pokémon Rumble Rush','Pokémon Café ReMix']){
+   const at=page.indexOf(game);if(at<0)continue;
+   const tail=page.slice(at+game.length,at+game.length+900);
+   const lines=tail.split('\n').map(x=>x.trim()).filter(x=>x.length>25&&!x.startsWith('#')&&!x.startsWith('['));
+   if(lines[0])out.push({text:lines[0],source:game});
+  }
  }catch(e){}
- if(!choices.length){
-   try{
-     const sp=await fetch('https://pokeapi.co/api/v2/pokemon-species/'+p.id).then(r=>r.json());
-     const any=(sp.flavor_text_entries||[]).find(x=>x.language?.name==='fr')||(sp.flavor_text_entries||[]).find(x=>x.language?.name==='en');
-     if(any)return {text:(any.flavor_text||'').replace(/[\n\f\r]+/g,' ').replace(/\s+/g,' ').trim(),source:(VERSION_FR[any.version?.name]||any.version?.name||'Pokédex')+(any.language?.name==='en'?' — description EN':'')};
-   }catch(e){}
-   return {text:'Description Pokédex indisponible pour ce Pokémon.',source:'Pokédex'};
+ const seen=new Set(),unique=[];for(const x of out){const k=x.source+'|'+x.text.toLowerCase();if(!seen.has(k)){seen.add(k);unique.push(x)}}
+ SPINOFF_DEX_CACHE.set(p.id,unique);return unique;
+}
+async function getDexDescription(p){
+ const seen=new Set(),choices=[];
+ const GEN_NUM={red:1,blue:1,yellow:1,gold:2,silver:2,crystal:2,ruby:3,sapphire:3,emerald:3,firered:3,leafgreen:3,diamond:4,pearl:4,platinum:4,heartgold:4,soulsilver:4,black:5,white:5,'black-2':5,'white-2':5,x:6,y:6,'omega-ruby':6,'alpha-sapphire':6,sun:7,moon:7,'ultra-sun':7,'ultra-moon':7,sword:8,shield:8,'brilliant-diamond':8,'shining-pearl':8,'legends-arceus':8,scarlet:9,violet:9};
+ for(const x of (p.flavorTexts||[])){
+  const text=(x.text||'').replace(/\s+/g,' ').trim();if(!text)continue;
+  const key=text.toLowerCase();if(seen.has(key))continue;seen.add(key);
+  const game=VERSION_FR[x.version]||'Jeu principal',gen=GEN_NUM[x.version];
+  choices.push({text,source:game+(gen?' — Génération '+gen:'')});
  }
+ for(const x of await getSpinOffDexDescriptions(p)){const key=x.text.toLowerCase();if(!seen.has(key)){seen.add(key);choices.push(x)}}
+ if(!choices.length)return {text:'Description Pokédex française indisponible pour ce Pokémon.',source:'Pokédex'};
  return choices[Math.floor(Math.random()*choices.length)];
 }
-
 
 const evoCache=new Map();
 
