@@ -269,15 +269,20 @@ async function mpCreateRoom(){
  if(!/^[A-Z0-9+]+$/.test(code))throw Error('Code invalide : utilise au moins 1 caractère (A-Z, 0-9 ou +)');
  s=await mpRoom(code).once('value');
  if(s.exists())throw Error('Ce code est déjà utilisé : choisis un autre code');
- const id=mpId();await mpRoom(code).set({created:Date.now(),hostId:id,players:{[id]:{name,role:'host',online:true}}});
+ const id=mpId();await mpRoom(code).set({created:Date.now(),hostIds:{[id]:true},players:{[id]:{name,role:'host',online:true}}});
  await mpEnter({room:code,id,name,role:'host'}); await mpSyncState();
 }
 async function mpJoinRoom(){
  const name=(mpName.value.trim()||'Joueur').slice(0,24),code=mpCode.value.trim().toUpperCase();
  if(!/^[A-Z0-9+]+$/.test(code))throw Error('Code invalide : entre au moins 1 caractère (A-Z, 0-9 ou +)');
  const s=await mpRoom(code).once('value');if(!s.exists())throw Error('Salon introuvable');
- const id=mpId();await mpRoom(code).child('players/'+id).set({name,role:'player',online:true});
- await mpEnter({room:code,id,name,role:'player'});
+ const id=mpId();
+ const room=s.val()||{},players=room.players||{};
+ const hostCount=Object.values(players).filter(p=>p&&p.role==='host').length;
+ const role=hostCount<4?'host':'player';
+ await mpRoom(code).child('players/'+id).set({name,role,online:true});
+ if(role==='host')await mpRoom(code).child('hostIds/'+id).set(true);
+ await mpEnter({room:code,id,name,role});
 }
 async function mpEnter(s){
  mpSession=s;localStorage.setItem('pkmn-mp-session',JSON.stringify(s));mpCode.value=s.room;
