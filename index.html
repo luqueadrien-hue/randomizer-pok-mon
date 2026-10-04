@@ -956,6 +956,20 @@ const ZONE_MUSIC_THEMES=[
  {gen:'generation-viii',keys:['wild-area','route'],q:'Pokemon Sword Shield Wild Area theme'},
  {gen:'generation-ix',keys:['south-province','east-province','west-province','north-province','area'],q:'Pokemon Scarlet Violet South Province theme'}
 ];
+const GEN_LABEL={1:'Génération 1',2:'Génération 2',3:'Génération 3',4:'Génération 4',5:'Génération 5',6:'Génération 6',7:'Génération 7',8:'Génération 8',9:'Génération 9'};
+function availableGenerations(p){
+ const first=({'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9})[p.gen]||1;
+ const found=new Set([first]);
+ for(const m of (p.moves||[]))for(const v of (m.version_group_details||[])){
+  for(const [g,groups] of Object.entries(GEN_VERSION_GROUPS))if(groups.includes(v.version_group?.name))found.add(Number(g));
+ }
+ return [...found].filter(g=>g>=first&&g<=9).sort((a,b)=>a-b);
+}
+function generationChooser(p,kind){
+ const gs=availableGenerations(p);if(gs.length<2)return '';
+ const id='genpick-'+kind+'-'+p.id+'-'+Math.random().toString(36).slice(2,7);
+ return '<label style="display:block;margin:6px 0">Génération du '+(kind==='cry'?'cri':'thème')+' : <select id="'+id+'" onchange="this.closest(\'.card\').dataset.mediaGeneration=this.value">'+gs.map(g=>'<option value="'+g+'">'+GEN_LABEL[g]+'</option>').join('')+'</select></label>';
+}
 function zoneMusicFor(p,locations){
  const ls=(locations||[]).map(x=>String(x).toLowerCase());
  const same=ZONE_MUSIC_THEMES.filter(x=>x.gen===p.gen);
@@ -1115,12 +1129,12 @@ async function rollCards(){
      const e=await encounterInfo(p),t=zoneMusicFor(p,e.locations);
      const a=await musicPreview([t.q,'Pokemon '+(e.locations?.[0]||'route')+' theme','Pokemon game route theme']);
      const zone=(e.details?.[0]||e.locations?.[0]||'Zone Pokémon').replace(/-/g,' ');
-     c=a?`🎵 <audio controls preload="none" src="${a.url}"></audio><br>Devine quel Pokémon peut être rencontré avec cette musique.`:'🎵 Musique indisponible';
+     c=a?`🎵 <audio controls preload="none" src="${a.url}"></audio><br>${generationChooser(p,'music')}Devine quel Pokémon peut être rencontré avec cette musique.`:'🎵 Musique indisponible';
      p._musicAnswer=zone+(a?.title?' — '+a.title:'');
    }
    if(gameMode.value==='pokemoncry'){
      const cry=p.cries?.latest||p.cries?.legacy;
-     c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br>À quel Pokémon appartient ce cri ?`:'🔊 Cri indisponible';
+     c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br>${generationChooser(p,'cry')}À quel Pokémon appartient ce cri ?`:'🔊 Cri indisponible';
    }
    current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null});
  }
