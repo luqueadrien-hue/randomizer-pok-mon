@@ -967,15 +967,40 @@ async function musicPreview(queries){
  }
  return null;
 }
+async function musicPreview(queries){
+ const qs=[...new Set((Array.isArray(queries)?queries:[queries]).filter(Boolean))];
+ for(const q of qs){
+  try{
+   const u='https://itunes.apple.com/search?term='+encodeURIComponent(q)+'&entity=song&limit=25';
+   const d=await fetch(u).then(r=>{if(!r.ok)throw new Error('audio '+r.status);return r.json()});
+   const hits=(d.results||[]).filter(x=>x.previewUrl&&/pokemon|pokémon/i.test((x.trackName||'')+' '+(x.collectionName||'')+' '+(x.artistName||'')));
+   if(hits.length){const hit=hits[Math.floor(Math.random()*hits.length)];return {url:hit.previewUrl,title:hit.trackName||'Thème Pokémon',album:hit.collectionName||'',query:q}}
+  }catch(e){}
+ }
+ return null;
+}
+const MUSIC_FALLBACK_BY_GEN={
+ 1:['Pokemon Red Blue Route 1 theme','Pokemon Red Blue soundtrack'],
+ 2:['Pokemon Gold Silver Route 29 theme','Pokemon Gold Silver soundtrack'],
+ 3:['Pokemon Ruby Sapphire Route 101 theme','Pokemon Ruby Sapphire soundtrack'],
+ 4:['Pokemon Diamond Pearl Route 201 theme','Pokemon Diamond Pearl soundtrack'],
+ 5:['Pokemon Black White Route 1 theme','Pokemon Black White soundtrack'],
+ 6:['Pokemon X Y Route 1 theme','Pokemon X Y soundtrack'],
+ 7:['Pokemon Sun Moon Route 1 theme','Pokemon Sun Moon soundtrack'],
+ 8:['Pokemon Sword Shield Route 1 theme','Pokemon Sword Shield Wild Area theme'],
+ 9:['Pokemon Scarlet Violet South Province theme','Pokemon Scarlet Violet soundtrack']
+};
 async function zoneMusicFor(p,e){
  const {latest,pool}=latestEncounterForMusic(e,p);
  const row=pool.length?pool[Math.floor(Math.random()*pool.length)]:null;
  const zone=cleanZoneName(row?.zone||e.locations?.[Math.floor(Math.random()*Math.max(1,e.locations?.length||0))]||'');
  const game=row?.game||'Pokémon';
  const qs=[];
- if(zone)qs.push('Pokemon '+game+' '+zone+' theme','Pokemon '+zone+' soundtrack');
- qs.push('Pokemon '+game+' route theme','Pokemon generation '+latest+' route theme');
- const audio=await musicPreview(qs);
+ if(zone)qs.push('Pokemon '+game+' '+zone+' theme','Pokemon '+zone+' theme','Pokemon '+zone+' soundtrack');
+ qs.push('Pokemon '+game+' route theme',...(MUSIC_FALLBACK_BY_GEN[latest]||[]),'Pokemon game soundtrack');
+ let audio=await musicPreview(qs);
+ // Dernier filet de sécurité : un thème Pokémon générique doit toujours être tenté.
+ if(!audio)audio=await musicPreview(['Pokemon soundtrack','Pokemon game music','Pokemon theme']);
  return {audio,zone:zone||'Zone non renseignée',game,gen:latest};
 }
 function clue(p,m){if(m==='egg')return 'Œuf '+frt(p.types[0]);if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind'){const g={'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9};return `Génération ${g[p.gen]||'?'}`;}if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
@@ -1116,8 +1141,9 @@ async function rollCards(){
    }
    if(gameMode.value==='zonemusic'){
      const e=await encounterInfo(p),m=await zoneMusicFor(p,e),a=m.audio;
-     c=a?`🎵 <audio controls preload="none" src="${a.url}"></audio>`:'🎵 Musique indisponible';
-     p._musicAnswer='Source : '+m.zone+' • '+m.game+' • '+GEN_LABEL[m.gen]+(a?.title?' • '+a.title:'');
+     if(!a){i--;used.delete(p.id);continue}
+     c=`🎵 <audio controls preload="metadata" src="${a.url}"></audio>`;
+     p._musicAnswer='Source : '+m.zone+' • '+m.game+' • '+GEN_LABEL[m.gen]+(a.title?' • '+a.title:'');
    }
    if(gameMode.value==='pokemoncry'){
      const cg=9;const cry=p.cries?.latest||p.cries?.legacy;
