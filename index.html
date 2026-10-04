@@ -1112,6 +1112,27 @@ async function applyLieMode(){
  const idx=Math.floor(Math.random()*current.length);
  const target=current[idx];
  const mode=gameMode.value;
+
+ // Avec 2 ou 3 choix, le mensonge porte uniquement sur le nom affiché.
+ // À partir de 4 choix, on conserve le système de faux indice / fausse information.
+ if(current.length<=3){
+   const usedNames=new Set(current.map(x=>x.p.name));
+   let fake=null;
+   const usedIds=new Set(current.map(x=>x.p.id));
+   for(let tries=0;tries<150&&!fake;tries++){
+     try{
+       const candidate=await draw(usedIds);
+       if(candidate.id!==target.p.id&&!usedNames.has(candidate.name))fake=candidate;
+     }catch(e){break}
+   }
+   if(!fake)return;
+   target.displayName=fake.name;
+   target.isLie=true;
+   target.lieText='FAUX NOM';
+   gmPanel.style.display='block';
+   gmInfo.textContent='Choix '+(idx+1)+' — le Pokémon réel est '+target.p.name+', mais le nom affiché est « '+fake.name+' ».';
+   return;
+ }
  const noExtraLie=new Set(['zonemusic','twotruths','progressive','buyhints','slotchallenge','boss','raritydraft','randomchallenge','ranking','weaknesses','resistances','effectiveness','evochain','egggroup','growth','encountermethod','capturelocation','regionaldex','olddesc','color','categoryheight','dominantstat','bstonly','multimove','randombox']);
  if(noExtraLie.has(mode)){gmPanel.style.display='none';return;}
 
@@ -1214,7 +1235,7 @@ function render(){
   return;
  }
  const hidden=revealMode.value==='hidden',deal=gameMode.value==='learnleave';
- cards.innerHTML=current.map((x,i)=>'<div class="card '+(hidden?'hiddenPoke':'')+'" id="c'+i+'"><img src="'+(x.p.img||'')+'"><div class="name">'+x.p.name+'</div><div>'+x.p.types.map(t=>'<span class="badge">'+frt(t)+'</span>').join('')+'</div><div class="gameClue">'+(x.clue||'')+'</div>'+(x.isLie?'<div class="offerTag lieflag" style="display:none">⚠️ '+(x.lieText||'LEURRE')+'</div>':'')+(deal?'<button onclick="pick('+i+')">✅ PRENDRE</button><button class="danger" onclick="discardDeal('+i+')">🗑️ SUPPRIMER</button>':'<button onclick="pick('+i+')">CHOISIR</button>')+'</div>').join('');
+ cards.innerHTML=current.map((x,i)=>'<div class="card '+(hidden?'hiddenPoke':'')+'" id="c'+i+'"><img src="'+(x.p.img||'')+'"><div class="name">'+(x.displayName||x.p.name)+'</div><div>'+x.p.types.map(t=>'<span class="badge">'+frt(t)+'</span>').join('')+'</div><div class="gameClue">'+(x.clue||'')+'</div>'+(x.isLie?'<div class="offerTag lieflag" style="display:none">⚠️ '+(x.lieText||'LEURRE')+'</div>':'')+(deal?'<button onclick="pick('+i+')">✅ PRENDRE</button><button class="danger" onclick="discardDeal('+i+')">🗑️ SUPPRIMER</button>':'<button onclick="pick('+i+')">CHOISIR</button>')+'</div>').join('');
 }
 function drawTeams(){[1,2].forEach(n=>document.getElementById('team'+n).innerHTML=teams[n].map(p=>'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>').join(''))}
 function pick(i){
