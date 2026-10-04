@@ -300,7 +300,7 @@ async function mpLeaveRoom(){
  if(mpSession&&mpListener)mpRoom(mpSession.room).off('value',mpListener);
  mpSession=null;mpListener=null;localStorage.removeItem('pkmn-mp-session');mpPlayers.innerHTML='';mpSetStatus('Hors salon — le randomizer reste utilisable en local.');
 }
-function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null}}
+function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
 async function mpSnapshot(){
  return {player,mode:gameMode.value,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(mpLite),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,turn:turn.textContent,updated:Date.now()};
 }
@@ -314,7 +314,7 @@ async function mpHydrateState(st){
   if(st.mode)gameMode.value=(st.mode==='olddesc'?'dexdesc':st.mode);
   const z=st.settings||{};for(const [k,v] of Object.entries(z)){const el=document.getElementById(k);if(el&&v!=null)el.value=v}
   if(typeof updateModePanels==='function')updateModePanels();
-  const arr=await Promise.all((st.current||[]).map(async x=>{const p=await getP(x.id);return {p,clue:x.clue||'',isLie:!!x.isLie,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null}}));
+  const arr=await Promise.all((st.current||[]).map(async x=>{const p=await getP(x.id);return {p,clue:x.clue||'',isLie:!!x.isLie,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}));
   current=arr;teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;
   if(st.turn)turn.textContent=st.turn;render();drawTeams();
  }catch(e){console.warn('Hydratation multijoueur',e)}finally{mpApplying=false}
@@ -967,36 +967,12 @@ function availableGenerations(p){
  for(const m of (p.moves||[]))for(const v of (m.version_group_details||[]))for(const [g,groups] of Object.entries(GEN_VERSION_GROUPS))if(groups.includes(v.version_group?.name))found.add(Number(g));
  return [...found].filter(g=>g>=first&&g<=9).sort((a,b)=>a-b);
 }
-function selectedMediaGeneration(p,kind){
- const el=document.querySelector('[data-media-kind="'+kind+'"][data-pokemon-id="'+p.id+'"]');return Number(el?.value)||availableGenerations(p).at(-1)||1;
-}
-function cryForGeneration(p,g){
- // PokéAPI ne publie que deux époques audio : legacy (jusqu'à la Gen 5) et latest.
- return g<=5?(p.cries?.legacy||p.cries?.latest):(p.cries?.latest||p.cries?.legacy);
-}
-function generationChooser(p,kind){
- const gs=availableGenerations(p);if(gs.length<2)return '';
- const id='genpick-'+kind+'-'+p.id+'-'+Math.random().toString(36).slice(2,7);
- return '<label style="display:block;margin:6px 0">Génération du '+(kind==='cry'?'cri':'thème')+' : <select id="'+id+'" onchange="this.closest(\'.card\').dataset.mediaGeneration=this.value">'+gs.map(g=>'<option value="'+g+'">'+GEN_LABEL[g]+'</option>').join('')+'</select></label>';
-}
-function updateMediaGeneration(sel){
- const card=sel.closest('.card');if(!card)return;
- const id=Number(sel.dataset.pokemonId),g=Number(sel.value),kind=sel.dataset.mediaKind;
- const item=current.find(x=>x.p.id===id);if(!item)return;
- if(kind==='cry'){
-  const audio=card.querySelector('audio');if(audio){audio.src=cryForGeneration(item.p,g);audio.load()}
-  const ans=card.querySelector('[data-media-answer]');if(ans)ans.textContent='Source du cri : '+GEN_LABEL[g]+(g<=5?' — cri historique':' — cri moderne');
- }else if(kind==='music'){
-  item.p._requestedMusicGen=g;
-  const ans=card.querySelector('[data-media-answer]');if(ans)ans.textContent='Génération musicale choisie : '+GEN_LABEL[g]+' — relance la génération pour charger un thème correspondant.';
- }
-}
 function zoneMusicFor(p,locations){
  const ls=(locations||[]).map(x=>String(x).toLowerCase());
  const wanted=availableGenerations(p).at(-1)||1;const same=ZONE_MUSIC_THEMES.filter(x=>x.gen==='generation-'+['i','ii','iii','iv','v','vi','vii','viii','ix'][wanted-1]);
  let t=same.find(x=>x.keys.some(k=>ls.some(l=>l.includes(k))));
  if(!t)t=same[0];
- return t||{q:'Pokemon game route theme'};
+ return t||same[0]||{q:'Pokemon Scarlet Violet soundtrack route theme'};
 }
 async function musicPreview(query){
  const queries=Array.isArray(query)?query:[query,'Pokemon game soundtrack route theme','Pokemon video game soundtrack'];
@@ -1149,9 +1125,9 @@ async function rollCards(){
    if(gameMode.value==='zonemusic'){
      const e=await encounterInfo(p),t=zoneMusicFor(p,e.locations);
      const a=await musicPreview([t.q,'Pokemon '+(e.locations?.[0]||'route')+' theme','Pokemon game route theme']);
-     const zone=(e.details?.[0]||e.locations?.[0]||'Zone Pokémon').replace(/-/g,' ');
+     const latestGen=availableGenerations(p).at(-1)||1;const zone=(e.details?.[0]||e.locations?.[0]||'Zone Pokémon').replace(/-/g,' ');
      c=a?`🎵 <audio controls preload="none" src="${a.url}"></audio>`:'🎵 Musique indisponible';
-     p._musicAnswer=zone+(a?.title?' — '+a.title:'');
+     p._musicAnswer='Source : '+zone+' • '+GEN_LABEL[latestGen]+(a?.title?' • '+a.title:'');
    }
    if(gameMode.value==='pokemoncry'){
      const cg=9;const cry=p.cries?.latest||p.cries?.legacy;
@@ -1317,7 +1293,7 @@ function render(){
   return;
  }
  const hidden=revealMode.value==='hidden',deal=gameMode.value==='learnleave';
- cards.innerHTML=current.map((x,i)=>'<div class="card '+(hidden?'hiddenPoke':'')+'" id="c'+i+'"><img src="'+(x.p.img||'')+'"><div class="name">'+(x.displayName||x.p.name)+'</div><div>'+x.p.types.map(t=>'<span class="badge">'+frt(t)+'</span>').join('')+'</div><div class="gameClue">'+(x.clue||'')+'</div>'+(x.isLie?'<div class="offerTag lieflag" style="display:none">⚠️ '+(x.lieText||'LEURRE')+'</div>':'')+(deal?'<button onclick="pick('+i+')">✅ PRENDRE</button><button class="danger" onclick="discardDeal('+i+')">🗑️ SUPPRIMER</button>':'<button onclick="pick('+i+')">CHOISIR</button>')+'</div>').join('');
+ cards.innerHTML=current.map((x,i)=>'<div class="card '+(hidden?'hiddenPoke':'')+'" id="c'+i+'"><img src="'+(x.p.img||'')+'"><div class="name">'+(x.displayName||x.p.name)+'</div><div>'+x.p.types.map(t=>'<span class="badge">'+frt(t)+'</span>').join('')+'</div><div class="gameClue">'+(x.clue||'')+'</div>'+(x.musicAnswer?'<div class="offerTag musicAnswer" style="display:none">🎵 '+x.musicAnswer+'</div>':'')+(x.isLie?'<div class="offerTag lieflag" style="display:none">⚠️ '+(x.lieText||'LEURRE')+'</div>':'')+(deal?'<button onclick="pick('+i+')">✅ PRENDRE</button><button class="danger" onclick="discardDeal('+i+')">🗑️ SUPPRIMER</button>':'<button onclick="pick('+i+')">CHOISIR</button>')+'</div>').join('');
 }
 function drawTeams(){[1,2].forEach(n=>document.getElementById('team'+n).innerHTML=teams[n].map(p=>'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>').join(''))}
 function pick(i){
@@ -1328,8 +1304,8 @@ function pick(i){
 }
 async function discardDeal(i){if(gameMode.value!=='learnleave'||!current[i])return;current.splice(i,1);render();mpSyncState()}
 roll.addEventListener('click',()=>rollCards().catch(e=>{console.error(e);alert(e.message||'Erreur')}));
-reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag').forEach(x=>x.style.display='block')});
-hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag').forEach(x=>x.style.display='none')});
+reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer').forEach(x=>x.style.display='block')});
+hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer').forEach(x=>x.style.display='none')});
 reset.addEventListener('click',()=>{player=1;teams={1:[],2:[]};current=[];batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
 gameMode.addEventListener('change',()=>{batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';auctionPanel.style.display=gameMode.value==='auction'?'block':'none';turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
 ['teamSize','choiceCount','legend','generation','typeMode','revealMode','lieMode','boxSize'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
