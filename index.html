@@ -261,7 +261,7 @@ const mpJoin=document.getElementById('mpJoin');
 const mpLeave=document.getElementById('mpLeave');
 const mpCopy=document.getElementById('mpCopy');
 const mpPlayers=document.getElementById('mpPlayers');
-let mpSession=null,mpApplying=false,mpListener=null;
+let mpSession=null,mpApplying=false,mpListener=null,mpPrivateBatchOwner=null;
 function mpEsc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function mpRoom(c){return MPDB.ref('rooms/'+c)}
 function mpCodeNew(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return chars[Math.floor(Math.random()*chars.length)]}
@@ -302,7 +302,7 @@ async function mpLeaveRoom(){
 }
 function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
 async function mpSnapshot(){
- return {player,mode:gameMode.value,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(mpLite),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,turn:turn.textContent,updated:Date.now()};
+ return {player,mode:gameMode.value,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(mpLite),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,turn:turn.textContent,updated:Date.now()};
 }
 async function mpSyncState(){
  if(!mpSession||mpApplying)return;
@@ -314,9 +314,15 @@ async function mpHydrateState(st){
   if(st.mode)gameMode.value=(st.mode==='olddesc'?'dexdesc':st.mode);
   const z=st.settings||{};for(const [k,v] of Object.entries(z)){const el=document.getElementById(k);if(el&&v!=null)el.value=v}
   if(typeof updateModePanels==='function')updateModePanels();
-  const arr=await Promise.all((st.current||[]).map(async x=>{const p=await getP(x.id);return {p,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}));
-  current=arr;teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;
-  if(st.turn)turn.textContent=st.turn;render();drawTeams();
+  const mine=!st.proposalOwnerId||!mpSession||st.proposalOwnerId===mpSession.id;
+  mpPrivateBatchOwner=st.proposalOwnerId||null;
+  if(mine){
+   current=await Promise.all((st.current||[]).map(async x=>{const p=await getP(x.id);return {p,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}));
+  }else current=[];
+  teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;
+  if(st.turn)turn.textContent=st.turn;
+  if(mine)render();else cards.innerHTML='<div class="loaderGen"><div>🔒 Propositions privées</div><div>Seule la personne qui a lancé le randomizer peut voir les Pokémon proposés.</div></div>';
+  drawTeams();
  }catch(e){console.warn('Hydratation multijoueur',e)}finally{mpApplying=false}
 }
 function mpReceive(r){
@@ -1073,6 +1079,7 @@ async function generateDealChoices(){
 }
 
 async function rollCards(){
+ if(mpSession)mpPrivateBatchOwner=mpSession.id; else mpPrivateBatchOwner=null;
  const requestedCount=gameMode.value==='randombox'?Number(boxSize.value):Number(choiceCount.value);
  
  if(gameMode.value==='learnleave'){
@@ -1310,6 +1317,11 @@ function render(){
  }
  const hidden=revealMode.value==='hidden',deal=gameMode.value==='learnleave';
  cards.innerHTML=current.map((x,i)=>'<div class="card '+(hidden?'hiddenPoke':'')+'" id="c'+i+'"><img src="'+(x.p.img||'')+'"><div class="name">'+(x.displayName||x.p.name)+'</div><div>'+x.p.types.map(t=>'<span class="badge">'+frt(t)+'</span>').join('')+'</div><div class="gameClue">'+(x.clue||'')+'</div>'+(x.musicAnswer?'<div class="offerTag musicAnswer" style="display:none">🎵 '+x.musicAnswer+'</div>':'')+(x.isLie?'<div class="offerTag lieflag" style="display:none">⚠️ '+(x.lieText||'LEURRE')+'</div>':'')+(deal?'<button onclick="pick('+i+')">✅ PRENDRE</button><button class="danger" onclick="discardDeal('+i+')">🗑️ SUPPRIMER</button>':'<button onclick="pick('+i+')">CHOISIR</button>')+'</div>').join('');
+ cards.insertAdjacentHTML('beforeend','<div style="grid-column:1/-1;text-align:center"><button type="button" onclick="hidePrivateProposals()">🔒 Masquer mes propositions</button></div>');
+}
+function hidePrivateProposals(){
+ if(!current.length)return;
+ cards.innerHTML='<div class="loaderGen"><div>🔒 Propositions masquées</div><div>Appuie sur « Afficher mes propositions » uniquement quand c’est à toi de regarder.</div><button type="button" onclick="render()">Afficher mes propositions</button></div>';
 }
 function drawTeams(){[1,2].forEach(n=>document.getElementById('team'+n).innerHTML=teams[n].map(p=>'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>').join(''))}
 function pick(i){
@@ -1322,7 +1334,7 @@ async function discardDeal(i){if(gameMode.value!=='learnleave'||!current[i])retu
 roll.addEventListener('click',()=>rollCards().catch(e=>{console.error(e);alert(e.message||'Erreur')}));
 reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer').forEach(x=>x.style.display='block')});
 hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer').forEach(x=>x.style.display='none')});
-reset.addEventListener('click',()=>{player=1;teams={1:[],2:[]};current=[];batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
+reset.addEventListener('click',()=>{player=1;teams={1:[],2:[]};current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
 gameMode.addEventListener('change',()=>{batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';auctionPanel.style.display=gameMode.value==='auction'?'block':'none';turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
 ['teamSize','choiceCount','legend','generation','typeMode','revealMode','lieMode','boxSize'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
 </script>
