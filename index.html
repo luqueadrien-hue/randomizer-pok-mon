@@ -148,6 +148,7 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <option value="regionaldex">🌎 Numéro Pokédex régional</option>
 
 <option value="color">🎨 Couleur Pokédex</option>
+<option value="shinypalette">✨🎨 Palette Shiny</option>
 
 <option value="progressive">🔢 Devine la génération</option>
 <option value="randombox">📦 Boîte Pokémon aléatoire</option>
@@ -348,7 +349,7 @@ async function getP(id){
  const fr=s.names.find(x=>x.language.name==='fr');const genus=s.genera.find(x=>x.language.name==='fr')?.genus||'Pokémon';
  const sv=((p.moves.some(m=>m.version_group_details.some(v=>v.version_group.name==='scarlet-violet'))||id>=906)||(id>=899&&id<=905));
  const flavorTexts=(s.flavor_text_entries||[]).filter(x=>x.language?.name==='fr').map(x=>({text:(x.flavor_text||'').replace(/[\n\f\r]+/g,' ').replace(/\s+/g,' ').trim(),version:x.version?.name||'Pokédex'})).filter(x=>x.text);
- const o={id,apiName:s.name,name:fr?.name||('Pokémon n°'+id),img:p.sprites.other?.['official-artwork']?.front_default||p.sprites.front_default,sprite:p.sprites.front_default||p.sprites.other?.['official-artwork']?.front_default,types:p.types.map(x=>x.type.name),legendary:!!(s.is_legendary||s.is_mythical),sv,height:p.height/10,weight:p.weight/10,total:p.stats.reduce((a,x)=>a+x.base_stat,0),stats:Object.fromEntries(p.stats.map(x=>[x.stat.name,x.base_stat])),genus,gen:s.generation?.name||'',moves:p.moves.map(m=>({name:m.move.name,url:m.move.url,version_group_details:(m.version_group_details||[]).map(v=>({level_learned_at:v.level_learned_at||0,move_learn_method:{name:v.move_learn_method?.name||''},version_group:{name:v.version_group?.name||''}}))})),
+ const o={id,apiName:s.name,name:fr?.name||('Pokémon n°'+id),img:p.sprites.other?.['official-artwork']?.front_default||p.sprites.front_default,sprite:p.sprites.front_default||p.sprites.other?.['official-artwork']?.front_default,shiny:p.sprites.other?.['official-artwork']?.front_shiny||p.sprites.front_shiny||null,types:p.types.map(x=>x.type.name),legendary:!!(s.is_legendary||s.is_mythical),sv,height:p.height/10,weight:p.weight/10,total:p.stats.reduce((a,x)=>a+x.base_stat,0),stats:Object.fromEntries(p.stats.map(x=>[x.stat.name,x.base_stat])),genus,gen:s.generation?.name||'',moves:p.moves.map(m=>({name:m.move.name,url:m.move.url,version_group_details:(m.version_group_details||[]).map(v=>({level_learned_at:v.level_learned_at||0,move_learn_method:{name:v.move_learn_method?.name||''},version_group:{name:v.version_group?.name||''}}))})),
  abilities:p.abilities.map(a=>({name:a.ability.name,url:a.ability.url,hidden:!!a.is_hidden,slot:a.slot})),flavorTexts,
  color:s.color?.name||'unknown',
  shape:s.shape?.name||null,
@@ -1009,7 +1010,19 @@ async function zoneMusicFor(p,e){
  if(!audio)audio=await musicPreview(['Pokemon soundtrack','Pokemon game music','Pokemon theme']);
  return {audio,zone:zone||'Zone non renseignée',game,gen:latest};
 }
-function clue(p,m){if(m==='egg')return 'Œuf '+frt(p.types[0]);if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind'){const g={'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9};return `Génération ${g[p.gen]||'?'}`;}if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
+async function shinyPalette(p,count=5){
+ if(!p.shiny)return [];
+ try{
+  const img=new Image();img.crossOrigin='anonymous';img.src=p.shiny;await img.decode();
+  const cv=document.createElement('canvas'),cx=cv.getContext('2d',{willReadFrequently:true}),sz=72;cv.width=cv.height=sz;cx.drawImage(img,0,0,sz,sz);
+  const d=cx.getImageData(0,0,sz,sz).data,bins=new Map();
+  for(let i=0;i<d.length;i+=16){if(d[i+3]<100)continue;const r=Math.round(d[i]/32)*32,g=Math.round(d[i+1]/32)*32,b=Math.round(d[i+2]/32)*32;if(r>240&&g>240&&b>240)continue;const k=[Math.min(r,255),Math.min(g,255),Math.min(b,255)].join(',');bins.set(k,(bins.get(k)||0)+1)}
+  const out=[];for(const [k,n] of [...bins].sort((a,b)=>b[1]-a[1])){const rgb=k.split(',').map(Number);if(out.every(o=>Math.hypot(o[0]-rgb[0],o[1]-rgb[1],o[2]-rgb[2])>55))out.push(rgb);if(out.length>=count)break}
+  return out.map(x=>'rgb('+x.join(',')+')');
+ }catch(e){return []}
+}
+function shinyPaletteHtml(cols){return '<div style="display:flex;justify-content:center;gap:8px;margin:10px 0">'+cols.map(c=>'<span title="'+c+'" style="width:38px;height:38px;border-radius:50%;display:inline-block;background:'+c+';border:2px solid rgba(255,255,255,.75);box-shadow:0 1px 5px #0008"></span>').join('')+'</div>'}
+function clue(p,m){if(m==='egg')return 'Œuf '+frt(p.types[0]);if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='shinypalette')return 'Palette Shiny en préparation…';if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind'){const g={'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9};return `Génération ${g[p.gen]||'?'}`;}if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
 if(m==='dominantstat')return dominantStat(p);
 if(m==='bstonly')return `BST : ${p.total}`;
 if(m==='egggroup')return (p.eggGroups||[]).map(extraFr).join(' / ')||'Groupe d’Œuf inconnu';
@@ -1152,11 +1165,16 @@ async function rollCards(){
      c=`🎵 <audio controls preload="metadata" src="${a.url}"></audio>`;
      p._musicAnswer='Source : '+m.zone+' • '+m.game+' • '+GEN_LABEL[m.gen]+(a.title?' • '+a.title:'');
    }
+   if(gameMode.value==='shinypalette'){
+     const pal=await shinyPalette(p,5);
+     if(!pal.length){i--;used.delete(p.id);continue}
+     c=shinyPaletteHtml(pal);p._shinyPalette=pal;
+   }
    if(gameMode.value==='pokemoncry'){
      const cg=9;const cry=p.cries?.latest||p.cries?.legacy;
      c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br><small data-media-answer>Source : cri le plus récent disponible</small>`:'🔊 Cri indisponible';
    }
-   current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null});
+   current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null,shinyAnswer:gameMode.value==='shinypalette'});
  }
  if(gameMode.value==='ranking'){
    current.forEach((x,i)=>{
@@ -1214,7 +1232,7 @@ async function applyLieMode(){
    gmInfo.textContent='Choix '+(idx+1)+' — nom leurre : '+fake.name+' (vrai nom : '+target.p.name+').';
    return;
  }
- const noExtraLie=new Set(['zonemusic','pokemoncry','progressive','buyhints','slotchallenge','boss','raritydraft','randomchallenge','ranking','weaknesses','resistances','effectiveness','evochain','egggroup','growth','encountermethod','capturelocation','regionaldex','color','categoryheight','dominantstat','bstonly','multimove','randombox']);
+ const noExtraLie=new Set(['zonemusic','pokemoncry','shinypalette','progressive','buyhints','slotchallenge','boss','raritydraft','randomchallenge','ranking','weaknesses','resistances','effectiveness','evochain','egggroup','growth','encountermethod','capturelocation','regionaldex','color','categoryheight','dominantstat','bstonly','multimove','randombox']);
  if(noExtraLie.has(mode)){gmPanel.style.display='none';return;}
 
  target.isLie=true;
@@ -1316,7 +1334,7 @@ function render(){
   return;
  }
  const hidden=revealMode.value==='hidden',deal=gameMode.value==='learnleave';
- cards.innerHTML=current.map((x,i)=>'<div class="card '+(hidden?'hiddenPoke':'')+'" id="c'+i+'"><img src="'+(x.p.img||'')+'"><div class="name">'+(x.displayName||x.p.name)+'</div><div>'+x.p.types.map(t=>'<span class="badge">'+frt(t)+'</span>').join('')+'</div><div class="gameClue">'+(x.clue||'')+'</div>'+(x.musicAnswer?'<div class="offerTag musicAnswer" style="display:none">🎵 '+x.musicAnswer+'</div>':'')+(x.isLie?'<div class="offerTag lieflag" style="display:none">⚠️ '+(x.lieText||'LEURRE')+'</div>':'')+(deal?'<button onclick="pick('+i+')">✅ PRENDRE</button><button class="danger" onclick="discardDeal('+i+')">🗑️ SUPPRIMER</button>':'<button onclick="pick('+i+')">CHOISIR</button>')+'</div>').join('');
+ cards.innerHTML=current.map((x,i)=>'<div class="card '+(hidden?'hiddenPoke':'')+'" id="c'+i+'"><img src="'+(x.p.img||'')+'"><div class="name">'+(x.displayName||x.p.name)+'</div><div>'+x.p.types.map(t=>'<span class="badge">'+frt(t)+'</span>').join('')+'</div><div class="gameClue">'+(x.clue||'')+'</div>'+(x.shinyAnswer?'<div class="offerTag shinyAnswer" style="display:none"><img src="'+x.p.shiny+'" style="max-width:150px;display:block;margin:8px auto"><b>✨ '+x.p.name+' chromatique</b></div>':'')+(x.musicAnswer?'<div class="offerTag musicAnswer" style="display:none">🎵 '+x.musicAnswer+'</div>':'')+(x.isLie?'<div class="offerTag lieflag" style="display:none">⚠️ '+(x.lieText||'LEURRE')+'</div>':'')+(deal?'<button onclick="pick('+i+')">✅ PRENDRE</button><button class="danger" onclick="discardDeal('+i+')">🗑️ SUPPRIMER</button>':'<button onclick="pick('+i+')">CHOISIR</button>')+'</div>').join('');
  cards.insertAdjacentHTML('beforeend','<div style="grid-column:1/-1;text-align:center"><button type="button" onclick="hidePrivateProposals()">🔒 Masquer mes propositions</button></div>');
 }
 function hidePrivateProposals(){
@@ -1332,8 +1350,8 @@ function pick(i){
 }
 async function discardDeal(i){if(gameMode.value!=='learnleave'||!current[i])return;current.splice(i,1);render();mpSyncState()}
 roll.addEventListener('click',()=>rollCards().catch(e=>{console.error(e);alert(e.message||'Erreur')}));
-reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer').forEach(x=>x.style.display='block')});
-hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer').forEach(x=>x.style.display='none')});
+reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer').forEach(x=>x.style.display='block')});
+hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer').forEach(x=>x.style.display='none')});
 reset.addEventListener('click',()=>{player=1;teams={1:[],2:[]};current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
 gameMode.addEventListener('change',()=>{batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';auctionPanel.style.display=gameMode.value==='auction'?'block':'none';turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
 ['teamSize','choiceCount','legend','generation','typeMode','revealMode','lieMode','boxSize'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
