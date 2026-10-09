@@ -345,7 +345,7 @@ function mpReceive(r){
  const activeName=ps[activeGenerator]?.name||'Non attribué';
  document.getElementById('mpRoleStatus').textContent=mpLobbyStarted?'🎲 Générateur : '+activeName+' → fait deviner au Joueur '+player+' ('+(ps[mpSeats[player]]?.name||'?')+')':'Les rôles de génération seront définis avant le lancement.';
  const btn=document.getElementById('mpStartChallenge');
- btn.style.display=isHost?'':'none';btn.disabled=!isHost||mpLobbyStarted||!mpSeats[1]||!mpSeats[2]||mpSeats[1]===mpSeats[2]||!ps[mpSeats[1]]?.online||!ps[mpSeats[2]]?.online;
+ btn.style.display=isHost?'':'none';btn.disabled=!isHost||mpLobbyStarted||entries.length<2;btn.title=entries.length<2?'Il faut au moins deux participants connectés':'';
  const p1=ps[mpSeats[1]]?.name||'JOUEUR 1',p2=ps[mpSeats[2]]?.name||'JOUEUR 2';
  document.getElementById('team1').parentElement.querySelector('h2').textContent='JOUEUR 1 — '+p1;
  document.getElementById('team2').parentElement.querySelector('h2').textContent='JOUEUR 2 — '+p2;
@@ -358,7 +358,21 @@ window.addEventListener('DOMContentLoaded',()=>{
  mpCreate.addEventListener('click',()=>mpCreateRoom().catch(e=>{console.error('Création salon Firebase',e);mpSetStatus('❌ '+mpEsc(e.code||e.message||e))}));
  mpJoin.addEventListener('click',()=>mpJoinRoom().catch(e=>{console.error('Connexion salon Firebase',e);mpSetStatus('❌ '+mpEsc(e.code||e.message||e))}));
  mpLeave.onclick=()=>mpLeaveRoom();
- document.getElementById('mpStartChallenge').onclick=async()=>{if(!mpSession||mpSession.role!=='host')return;try{await mpRoom(mpSession.room).child('started').set(true);mpSetStatus('▶ Challenge lancé : les joueurs peuvent commencer !')}catch(e){mpSetStatus('❌ '+mpEsc(e.message))}};
+ document.getElementById('mpStartChallenge').onclick=async()=>{
+ if(!mpSession||mpSession.role!=='host')return;
+ try{
+  const roomRef=mpRoom(mpSession.room),snap=await roomRef.once('value'),room=snap.val()||{};
+  const connected=Object.entries(room.players||{}).filter(([id,p])=>p&&p.online!==false);
+  if(connected.length<2)throw Error('Deux participants connectés sont nécessaires.');
+  let seats={...(room.seats||{})};
+  const ids=connected.map(([id])=>id);
+  if(!ids.includes(seats[1]))seats[1]=mpSession.id;
+  if(!ids.includes(seats[2])||seats[2]===seats[1])seats[2]=ids.find(id=>id!==seats[1]);
+  if(!seats[1]||!seats[2]||seats[1]===seats[2])throw Error('Impossible d’attribuer deux joueurs distincts.');
+  await roomRef.update({seats,started:true});
+  mpSetStatus('▶ Challenge lancé ! Joueur 1 et Joueur 2 ont été attribués.');
+ }catch(e){mpSetStatus('❌ '+mpEsc(e.message))}
+};
  mpCopy.onclick=async()=>{if(!mpSession){mpSetStatus('Crée ou rejoins un salon pour obtenir un lien.');return}const url=new URL(location.href);url.searchParams.set('salon',mpSession.room);try{await navigator.clipboard.writeText(url.toString());mpSetStatus('✅ Lien copié : envoie-le à tes amis pour jouer à distance.')}catch(e){mpSetStatus('🔗 Lien du salon : '+mpEsc(url.toString()))}};
  const invite=new URLSearchParams(location.search).get('salon');if(invite){mpCode.value=invite.toUpperCase();mpSetStatus('🔗 Invitation reçue pour le salon '+mpEsc(mpCode.value)+'. Entre ton pseudo puis clique sur Rejoindre.')}else{let old=null;try{old=JSON.parse(localStorage.getItem('pkmn-mp-session')||'null')}catch(e){}if(old?.room)mpRoom(old.room).once('value').then(s=>s.exists()?mpEnter(old):localStorage.removeItem('pkmn-mp-session')).catch(e=>mpSetStatus('⚠️ Reconnexion impossible : '+mpEsc(e.code||e.message||e)))}
 });
