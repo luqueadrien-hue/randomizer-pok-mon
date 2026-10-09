@@ -102,7 +102,7 @@ async function mpLeaveRoom(){
 }
 function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
 async function mpSnapshot(){
- return {player,mode:gameMode.value,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(mpLite),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,turn:turn.textContent,updated:Date.now()};
+ return {player,mode:gameMode.value,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(x=>({clue:x.clue||'',offerLabel:x.offerLabel||null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,turn:turn.textContent,updated:Date.now()};
 }
 async function mpSyncState(){
  if(!mpSession||mpApplying)return;
@@ -116,12 +116,11 @@ async function mpHydrateState(st){
   if(typeof updateModePanels==='function')updateModePanels();
   const mine=!st.proposalOwnerId||!mpSession||st.proposalOwnerId===mpSession.id;
   mpPrivateBatchOwner=st.proposalOwnerId||null;
-  if(mine){
-   current=await Promise.all((st.current||[]).map(async x=>{const p=await getP(x.id);return {p,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}));
-  }else current=[];
+  // Les identités restent uniquement dans la mémoire du navigateur générateur.
+  if(!mine)current=[];
   teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;
   if(st.turn)turn.textContent=st.turn;
-  if(mine)render();else cards.innerHTML='<div class="loaderGen"><div>🔒 Propositions privées</div><div>Seule la personne qui a lancé le randomizer peut voir les Pokémon proposés.</div></div>';
+  if(mine)render();else cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Indices de la manche — Pokémon masqués</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div><div class="gameClue">'+(x.clue||'Indice indisponible')+'</div></div>').join('');
   drawTeams();
  }catch(e){console.warn('Hydratation multijoueur',e)}finally{mpApplying=false}
 }
