@@ -309,7 +309,7 @@ async function mpLeaveRoom(){
 }
 function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
 async function mpSnapshot(){
- return {player,mode:gameMode.value,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(x=>({clue:x.clue||'',offerLabel:x.offerLabel||null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,turn:turn.textContent,updated:Date.now()};
+ return {player,mode:gameMode.value,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(x=>({clue:x.clue||'',offerLabel:x.offerLabel||null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
 }
 async function mpSyncState(){
  if(!mpSession||mpApplying)return;
@@ -326,7 +326,15 @@ async function mpHydrateState(st){
   if(!mine)current=[];
   teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;
   if(st.turn)turn.textContent=st.turn;
-  if(mine)render();else cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Indices de la manche — Pokémon masqués</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div><div class="gameClue">'+(x.clue||'Indice indisponible')+'</div></div>').join('');
+  if(st.mode==='learnleave'){
+   dealPanel.style.display='block';
+   if(!mine){
+    starterOffer.innerHTML=st.dealStage===1?'<div class="card" style="max-width:320px;margin:auto"><div class="name">❓ Premier Pokémon mystère</div><div class="gameClue">'+(st.dealFirstClue||'Indice en préparation…')+'</div></div>':'';
+    dealInfo.textContent=st.dealStage===1?'Étape 1 : examine l’indice du premier Pokémon.':st.dealStage===2?'Étape 2 : trois propositions à examiner.':st.dealStage===3?'Étape 3 : nouvelle proposition.':'';
+   }
+  }else if(!mine){starterOffer.innerHTML=''}
+  if(mine){if(st.mode!=='learnleave'||st.dealStage!==1)render();else cards.innerHTML='';}
+  else cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Indices de la manche — Pokémon masqués</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div><div class="gameClue">'+(x.clue||'Indice indisponible')+'</div></div>').join('');
   drawTeams();
  }catch(e){console.warn('Hydratation multijoueur',e)}finally{mpApplying=false}
 }
@@ -1122,6 +1130,7 @@ function dealButtons(){
 }
 async function startDealGame(){
  dealClueFixed=document.getElementById('dealClueMode').value;
+ if(mpSession)mpPrivateBatchOwner=mpSession.id;
  dealUsed=new Set([...teams[1],...teams[2]].map(p=>p.id));
  dealRemaining=[];dealStage=1;dealStarted=true;batchLocked=false;
  starterPokemon=await draw(dealUsed);
