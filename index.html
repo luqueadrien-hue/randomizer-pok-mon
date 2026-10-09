@@ -133,9 +133,8 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <option value="dominantstat">🏆 Stat dominante</option>
 <option value="bstonly">📊 Total de stats (BST)</option>
 <option value="ranking">📈 Classement mystère</option>
-<option value="multimove">⚔️ Attaques mystères (movepool + CT/DT)</option>
-<option value="evolevel">⬆️ Niveau d’évolution</option>
-<option value="evomethod">🧬 Méthode d’évolution mystère</option>
+<option value="multimove">⚔️ Movepool</option>
+<option value="evomethod">🧬 Évolution : méthode et niveau</option>
 <option value="firstregion">🗺️ Première région d’apparition</option>
 <option value="trainerteam">🧢 Équipe de dresseur</option>
 <option value="wildgift">🎁 Pokémon sauvage ou cadeau ?</option>
@@ -1101,7 +1100,7 @@ async function rollCards(){
    if(gameMode.value==='dexdesc'){const d=await getDexDescription(p);c=d.text;p._dexSource=d.source;}
    if(gameMode.value==='evolution'){const e=await getEvolutionClue(p);c=e.text;p._evoFinal=e.final;}
    if(gameMode.value==='evolevel')c=await evolutionModeClue(p,'level');
-   if(gameMode.value==='evomethod')c=await evolutionModeClue(p,'method');
+   if(gameMode.value==='evomethod'){const method=await evolutionModeClue(p,'method'),level=await evolutionModeClue(p,'level');c=method+'<br>'+level;}
    if(gameMode.value==='firstregion')c='Première région : '+(REGION_BY_GEN[p.gen]||'Inconnue');
    if(gameMode.value==='trainerteam')c=trainerTeamClue(p);
    if(gameMode.value==='wildgift')c=await wildGiftClue(p);
@@ -1121,9 +1120,10 @@ async function rollCards(){
      const g=String(generation.value||'all');
      if(g!=='all'&&GEN_VERSION_GROUPS[g])pool=pool.filter(m=>(m.version_group_details||[]).some(v=>GEN_VERSION_GROUPS[g].includes(v.version_group?.name)));
      const machine=pool.filter(m=>(m.version_group_details||[]).some(v=>['machine','tutor'].includes(v.move_learn_method?.name)));
-     const source=machine.length?machine:pool;
-     const ms=[];for(let z=0;z<3&&source.length;z++){const m=source[Math.floor(Math.random()*source.length)];ms.push(await moveFr(m))}
-     c='⚔️ Movepool / CT-DT : '+[...new Set(ms)].join(' • ');
+     const source=[...new Map((machine.length?machine:pool).map(m=>[m.name,m])).values()];
+     for(let z=source.length-1;z>0;z--){const j=Math.floor(Math.random()*(z+1));[source[z],source[j]]=[source[j],source[z]]}
+     const ms=await Promise.all(source.slice(0,4).map(moveFr));
+     c='⚔️ Movepool : '+ms.join(' • ');
    }
    if(['weaknesses','resistances','effectiveness'].includes(gameMode.value)){
      const prof=await defensiveProfile(p);
