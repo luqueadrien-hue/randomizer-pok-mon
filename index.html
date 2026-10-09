@@ -148,6 +148,7 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 
 <option value="color">🎨 Couleur Pokédex</option>
 <option value="shinypalette">✨🎨 Palette Shiny</option>
+<option value="hangman">🎭 Pendu Pokémon</option>
 
 <option value="progressive">🔢 Génération mystère (indices progressifs)</option>
 <option value="randombox">📦 Boîte Pokémon aléatoire</option>
@@ -1174,7 +1175,7 @@ async function rollCards(){
    return;
  }
  dealPanel.style.display='none';
- let n=parseInt(choiceCount.value)||3;n=Math.max(2,Math.min(12,n));choiceCount.value=n;
+ let n=parseInt(choiceCount.value)||3;n=Math.max(2,Math.min(12,n));if(gameMode.value==='hangman')n=3;else choiceCount.value=n;hangmanState=null;
  const used=new Set();current=[];batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML='<div class="loaderGen"><div class="loaderBall"></div><div>Génération en cours<span class="loaderDots"></span></div></div>';
  for(let i=0;i<n;i++){
    const p=await draw(used);
@@ -1400,7 +1401,23 @@ async function applyLieMode(){
  gmInfo.textContent='Choix '+(idx+1)+' — '+target.p.name+' est le leurre de cette sélection.';
 }
 
+let hangmanState=null;
+function hangmanNormalize(t){return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()}
+function hangmanStart(i){if(!current[i]||hangmanState?.phase)return;hangmanState={phase:'guess',target:i,letters:[],errors:0,max:7};renderHangman()}
+function hangmanLetter(letter){const h=hangmanState;if(!h||h.phase!=='guess'||h.letters.includes(letter))return;h.letters.push(letter);const word=hangmanNormalize(current[h.target].p.name);if(!word.includes(letter))h.errors++;if([...word].every(c=>!/[A-Z]/.test(c)||h.letters.includes(c)))h.phase='win';else if(h.errors>=h.max)h.phase='lose';renderHangman()}
+function hangmanChoose(i){if(!hangmanState||!['win','lose'].includes(hangmanState.phase)||!current[i])return;const result=hangmanState.phase;hangmanState=null;pick(i);gmInfo.textContent=(result==='win'?'🏆 Pendu gagné : Pokémon choisi par le joueur.':'💀 Pendu perdu : Pokémon imposé par le générateur.') }
+function renderHangman(){
+ const h=hangmanState;if(!h){cards.innerHTML='<div style="grid-column:1/-1"><h3>🎭 Pendu Pokémon</h3><p>Trois Pokémon ont été tirés. L’adversaire choisit celui dont il veut deviner le nom.</p></div>'+current.map((x,i)=>'<div class="card"><h3>Pokémon '+(i+1)+'</h3><p>❔ Nom caché</p><button onclick="hangmanStart('+i+')">Deviner celui-ci</button></div>').join('');return}
+ const p=current[h.target].p,word=hangmanNormalize(p.name),masked=[...word].map(c=>/[A-Z]/.test(c)?(h.letters.includes(c)?c:'_'):c).join(' ');
+ let html='<div style="grid-column:1/-1;text-align:center"><h3>🎭 Pendu Pokémon</h3><p style="font-size:1.5em;letter-spacing:.15em">'+masked+'</p><p>Erreurs : '+h.errors+' / '+h.max+'</p>';
+ if(h.phase==='guess')html+='<div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center">'+[...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map(c=>'<button type="button" '+(h.letters.includes(c)?'disabled':'')+' onclick="hangmanLetter(\''+c+'\')">'+c+'</button>').join('')+'</div>';
+ else html+='<h3>'+(h.phase==='win'?'🏆 Gagné ! Le joueur choisit son Pokémon.':'💀 Perdu ! Le générateur impose un Pokémon.')+'</h3><p>Réponse : '+p.name+'</p>';
+ html+='</div>';
+ if(h.phase!=='guess')html+=current.map((x,i)=>'<div class="card"><img src="'+(x.p.img||'')+'"><div class="name">'+x.p.name+'</div><button onclick="hangmanChoose('+i+')">'+(h.phase==='win'?'Choisir ce Pokémon':'Imposer ce Pokémon')+'</button></div>').join('');
+ cards.innerHTML=html;
+}
 function render(){
+ if(gameMode.value==='hangman'){renderHangman();return;}
  cards.classList.toggle('boxModeGrid',gameMode.value==='randombox');
  if(gameMode.value==='randombox'){
   let slots='';
