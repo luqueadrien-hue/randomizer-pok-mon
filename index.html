@@ -104,7 +104,7 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <div><input id="mpCode" placeholder="Code du salon (1 caractère ou +)"><button id="mpJoin">🎮 Rejoindre</button></div>
 </div>
 <div id="mpStatus" class="mpstate">🌐 Pour jouer à distance, crée un salon puis partage son lien avec tes amis.</div>
-<div id="mpPlayers" class="mpplayers"></div>
+<div id="mpPlayers" class="mpplayers"></div><div id="mpLobby" class="mpstate" style="margin-top:8px">Les participants apparaîtront ici.</div><div class="actions"><button id="mpStartChallenge" class="primary" disabled>▶ Lancer le challenge</button></div>
 <div class="actions"><button id="mpCopy">🔗 Copier le lien d’invitation</button><button id="mpLeave" class="danger">Quitter le salon</button></div>
 </div>
 
@@ -198,7 +198,7 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 </div>
 <div id="dealPanel" class="panel" style="display:none;margin-top:18px">
   <h2 style="text-align:center;margin-top:0">📦 À prendre ou à laisser</h2>
-  <label>Information de la manche <select id="dealClueMode"><option value="egg">🥚 Œuf : type et groupe</option><option value="stats">📊 Total de stats (BST)</option><option value="stat-hp">❤️ PV à l'aveugle</option><option value="stat-speed">💨 Vitesse à l'aveugle</option><option value="stat-attack">⚔️ Attaque physique à l'aveugle</option><option value="stat-special-attack">✨ Attaque spéciale à l'aveugle</option><option value="stat-defense">🛡️ Défense physique à l'aveugle</option><option value="stat-special-defense">🔮 Défense spéciale à l'aveugle</option><option value="species">🧬 Espèce / catégorie Pokémon</option><option value="height">📏 Taille</option><option value="weight">⚖️ Poids</option><option value="typeblind">❓ Type à l'aveugle</option><option value="dexnumber">🔢 Numéro du Pokédex</option><option value="movelearn">⚔️ Choisir via une attaque apprise</option><option value="dexdesc">📖 Description Pokédex</option><option value="evolution">🧬 Deviner l’évolution et sa chaîne</option><option value="ability">✨ Deviner par le talent</option><option value="dominantstat">🏆 Stat dominante</option><option value="bstonly">📊 Total de stats (BST)</option><option value="multimove">⚔️ Movepool</option><option value="evomethod">🧬 Évolution : méthode et niveau</option><option value="firstregion">🗺️ Première région d’apparition</option><option value="trainerteam">🧢 Équipe de dresseur</option><option value="wildgift">🎁 Pokémon sauvage ou cadeau ?</option><option value="weaknesses">🎯 Faiblesses</option><option value="resistances">🛡️ Résistances / immunités</option><option value="effectiveness">💥 Efficacité mystère</option><option value="capturelocation">📍 Lieu de capture</option><option value="regionaldex">🌎 Numéro Pokédex régional</option><option value="color">🎨 Couleur Pokédex</option><option value="shinypalette">✨🎨 Palette Shiny</option><option value="progressive">🔢 Génération mystère (indices progressifs)</option><option value="zonemusic">🎵 Pokémon par musique de zone</option><option value="pokemoncry">🔊 Devine le Pokémon par son cri</option></select></label><div id="starterOffer" style="text-align:center;color:#c7bacf;margin-bottom:12px"></div>
+  <label style="display:block;margin:12px 0">Information de la manche <select id="dealClueMode" style="display:block;width:100%;margin-top:6px"><option value="egg">🥚 Œuf : type et groupe</option><option value="stats">📊 Total de stats (BST)</option><option value="stat-hp">❤️ PV à l'aveugle</option><option value="stat-speed">💨 Vitesse à l'aveugle</option><option value="stat-attack">⚔️ Attaque physique à l'aveugle</option><option value="stat-special-attack">✨ Attaque spéciale à l'aveugle</option><option value="stat-defense">🛡️ Défense physique à l'aveugle</option><option value="stat-special-defense">🔮 Défense spéciale à l'aveugle</option><option value="species">🧬 Espèce / catégorie Pokémon</option><option value="height">📏 Taille</option><option value="weight">⚖️ Poids</option><option value="typeblind">❓ Type à l'aveugle</option><option value="dexnumber">🔢 Numéro du Pokédex</option><option value="movelearn">⚔️ Choisir via une attaque apprise</option><option value="dexdesc">📖 Description Pokédex</option><option value="evolution">🧬 Deviner l’évolution et sa chaîne</option><option value="ability">✨ Deviner par le talent</option><option value="dominantstat">🏆 Stat dominante</option><option value="bstonly">📊 Total de stats (BST)</option><option value="multimove">⚔️ Movepool</option><option value="evomethod">🧬 Évolution : méthode et niveau</option><option value="firstregion">🗺️ Première région d’apparition</option><option value="trainerteam">🧢 Équipe de dresseur</option><option value="wildgift">🎁 Pokémon sauvage ou cadeau ?</option><option value="weaknesses">🎯 Faiblesses</option><option value="resistances">🛡️ Résistances / immunités</option><option value="effectiveness">💥 Efficacité mystère</option><option value="capturelocation">📍 Lieu de capture</option><option value="regionaldex">🌎 Numéro Pokédex régional</option><option value="color">🎨 Couleur Pokédex</option><option value="shinypalette">✨🎨 Palette Shiny</option><option value="progressive">🔢 Génération mystère (indices progressifs)</option><option value="zonemusic">🎵 Pokémon par musique de zone</option><option value="pokemoncry">🔊 Devine le Pokémon par son cri</option></select></label><div id="starterOffer" style="text-align:center;color:#c7bacf;margin-bottom:12px"></div>
   <div class="actions">
     <button id="keepStarter">✅ Garder le Pokémon de départ</button>
     <button id="discardStarter">🗑️ Refuser le Pokémon de départ</button>
@@ -268,7 +268,7 @@ const mpJoin=document.getElementById('mpJoin');
 const mpLeave=document.getElementById('mpLeave');
 const mpCopy=document.getElementById('mpCopy');
 const mpPlayers=document.getElementById('mpPlayers');
-let mpSession=null,mpApplying=false,mpListener=null,mpPrivateBatchOwner=null;
+let mpSession=null,mpApplying=false,mpListener=null,mpPrivateBatchOwner=null,mpLobbyStarted=false,mpSeats={};
 function mpEsc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function mpRoom(c){mpRequireDB();return MPDB.ref('rooms/'+c)}
 function mpCodeNew(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('')}
@@ -290,7 +290,7 @@ async function mpJoinRoom(){
  const id=mpId();
  const room=s.val()||{},players=room.players||{};
  const hostCount=Object.values(players).filter(p=>p&&p.role==='host').length;
- const role=hostCount<4?'host':'player';
+ const role='player';
  await mpRoom(code).child('players/'+id).set({name,role,online:true});
  if(role==='host')await mpRoom(code).child('hostIds/'+id).set(true);
  await mpEnter({room:code,id,name,role});
@@ -331,15 +331,31 @@ async function mpHydrateState(st){
  }catch(e){console.warn('Hydratation multijoueur',e)}finally{mpApplying=false}
 }
 function mpReceive(r){
- if(!r)return;const ps=r.players||{};mpPlayers.innerHTML=Object.values(ps).map(p=>'<span class="mpbadge">'+(p.role==='host'?'👑 ':'')+mpEsc(p.name)+(p.online===false?' ⚫':' 🟢')+'</span>').join('');
+ if(!r)return;
+ const ps=r.players||{},entries=Object.entries(ps).filter(([id,p])=>p&&p.online!==false);
+ mpSeats=r.seats||{};mpLobbyStarted=!!r.started;
+ mpPlayers.innerHTML=entries.map(([id,p])=>'<span class="mpbadge">'+(p.role==='host'?'👑 ':'')+mpEsc(p.name)+(p.online===false?' ⚫':' 🟢')+'</span>').join('');
+ const isHost=mpSession?.role==='host';
+ const assigned=Object.values(mpSeats);
+ const options=entries.map(([id,p])=>'<option value="'+mpEsc(id)+'">'+mpEsc(p.name)+'</option>').join('');
+ const select=(n)=>'<label>Joueur '+n+' <select id="mpSeat'+n+'" '+(!isHost||mpLobbyStarted?'disabled':'')+'><option value="">— Choisir un pseudo —</option>'+options+'</select></label>';
+ document.getElementById('mpLobby').innerHTML='<div class="controls">'+select(1)+select(2)+'</div><div class="turn">'+(mpLobbyStarted?'🟢 Challenge commencé':'⏳ En attente du lancement par l’organisateur')+'</div>';
+ [1,2].forEach(n=>{const el=document.getElementById('mpSeat'+n);if(el){el.value=mpSeats[n]||'';el.onchange=()=>{if(!mpSession||mpSession.role!=='host')return;const other=n===1?2:1;if(el.value&&el.value===mpSeats[other]){el.value=mpSeats[n]||'';return}mpRoom(mpSession.room).child('seats/'+n).set(el.value||null).catch(e=>mpSetStatus('❌ '+mpEsc(e.message)))}}});
+ const btn=document.getElementById('mpStartChallenge');
+ btn.style.display=isHost?'':'none';btn.disabled=!isHost||mpLobbyStarted||!mpSeats[1]||!mpSeats[2]||mpSeats[1]===mpSeats[2]||!ps[mpSeats[1]]?.online||!ps[mpSeats[2]]?.online;
+ const p1=ps[mpSeats[1]]?.name||'JOUEUR 1',p2=ps[mpSeats[2]]?.name||'JOUEUR 2';
+ document.getElementById('team1').parentElement.querySelector('h2').textContent='JOUEUR 1 — '+p1;
+ document.getElementById('team2').parentElement.querySelector('h2').textContent='JOUEUR 2 — '+p2;
  if(r.state)mpHydrateState(r.state);
 }
+
 window.addEventListener('DOMContentLoaded',()=>{
  if(MPDB)MPDB.ref('.info/connected').on('value',snap=>{if(!snap.val()&&!mpSession)mpSetStatus('🔴 Firebase déconnecté : vérifie Internet ou les autorisations de la base.');else if(snap.val()&&!mpSession&&!new URLSearchParams(location.search).has('salon'))mpSetStatus('🟢 Serveur disponible — crée un salon pour jouer à distance.')});
  if(!MPDB)mpSetStatus('⚠️ Firebase ne s’est pas chargé. Le jeu solo reste disponible ; vérifie les extensions de blocage ou la connexion.');
  mpCreate.addEventListener('click',()=>mpCreateRoom().catch(e=>{console.error('Création salon Firebase',e);mpSetStatus('❌ '+mpEsc(e.code||e.message||e))}));
  mpJoin.addEventListener('click',()=>mpJoinRoom().catch(e=>{console.error('Connexion salon Firebase',e);mpSetStatus('❌ '+mpEsc(e.code||e.message||e))}));
  mpLeave.onclick=()=>mpLeaveRoom();
+ document.getElementById('mpStartChallenge').onclick=async()=>{if(!mpSession||mpSession.role!=='host')return;try{await mpRoom(mpSession.room).child('started').set(true);mpSetStatus('▶ Challenge lancé : les joueurs peuvent commencer !')}catch(e){mpSetStatus('❌ '+mpEsc(e.message))}};
  mpCopy.onclick=async()=>{if(!mpSession){mpSetStatus('Crée ou rejoins un salon pour obtenir un lien.');return}const url=new URL(location.href);url.searchParams.set('salon',mpSession.room);try{await navigator.clipboard.writeText(url.toString());mpSetStatus('✅ Lien copié : envoie-le à tes amis pour jouer à distance.')}catch(e){mpSetStatus('🔗 Lien du salon : '+mpEsc(url.toString()))}};
  const invite=new URLSearchParams(location.search).get('salon');if(invite){mpCode.value=invite.toUpperCase();mpSetStatus('🔗 Invitation reçue pour le salon '+mpEsc(mpCode.value)+'. Entre ton pseudo puis clique sur Rejoindre.')}else{let old=null;try{old=JSON.parse(localStorage.getItem('pkmn-mp-session')||'null')}catch(e){}if(old?.room)mpRoom(old.room).once('value').then(s=>s.exists()?mpEnter(old):localStorage.removeItem('pkmn-mp-session')).catch(e=>mpSetStatus('⚠️ Reconnexion impossible : '+mpEsc(e.code||e.message||e)))}
 });
@@ -1116,6 +1132,7 @@ async function dealKeep(){
 }
 
 async function rollCards(){
+ if(mpSession&&!mpLobbyStarted){alert('Attends que l’organisateur attribue les pseudos et lance le challenge.');return}
  if(mpSession)mpPrivateBatchOwner=mpSession.id; else mpPrivateBatchOwner=null;
  const requestedCount=gameMode.value==='randombox'?Number(boxSize.value):Number(choiceCount.value);
  
@@ -1369,7 +1386,7 @@ function hidePrivateProposals(){
 }
 function drawTeams(){[1,2].forEach(n=>document.getElementById('team'+n).innerHTML=teams[n].map(p=>'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>').join(''))}
 function pick(i){
- if(batchLocked||!current[i])return;if(gameMode.value==='learnleave'&&dealStage!==4)return;batchLocked=true;teams[player].push(current[i].p);if(gameMode.value==='learnleave'){dealStage=0;dealStarted=false;dealRemaining=[];starterOffer.innerHTML='';dealInfo.textContent='Manche terminée. Lance une nouvelle manche.';dealButtons();}drawTeams();
+ if(mpSession&&!mpLobbyStarted)return;if(batchLocked||!current[i])return;if(gameMode.value==='learnleave'&&dealStage!==4)return;batchLocked=true;teams[player].push(current[i].p);if(gameMode.value==='learnleave'){dealStage=0;dealStarted=false;dealRemaining=[];starterOffer.innerHTML='';dealInfo.textContent='Manche terminée. Lance une nouvelle manche.';dealButtons();}drawTeams();
  const max=+teamSize.value;if(teams[1].length>=max&&teams[2].length>=max){turn.textContent='ÉQUIPES COMPLÈTES';roll.disabled=true;mpSyncState();return}
  player=player===1?2:1;if(teams[player].length>=max)player=player===1?2:1;
  turn.textContent='Sélection verrouillée — génère une nouvelle sélection pour le JOUEUR '+player;render();mpSyncState();
