@@ -104,7 +104,7 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <div><input id="mpCode" placeholder="Code du salon (1 caractère ou +)"><button id="mpJoin">🎮 Rejoindre</button></div>
 </div>
 <div id="mpStatus" class="mpstate">🌐 Pour jouer à distance, crée un salon puis partage son lien avec tes amis.</div>
-<div id="mpPlayers" class="mpplayers"></div><div id="mpLobby" class="mpstate" style="margin-top:8px">Les participants apparaîtront ici.</div><div class="actions"><button id="mpStartChallenge" class="primary" disabled>▶ Lancer le challenge</button></div>
+<div id="mpPlayers" class="mpplayers"></div><div id="mpRoleStatus" class="turn">Attribution des rôles en attente.</div><div id="mpLobby" class="mpstate" style="margin-top:8px">Les participants apparaîtront ici.</div><div class="actions"><button id="mpStartChallenge" class="primary" disabled>▶ Lancer le challenge</button></div>
 <div class="actions"><button id="mpCopy">🔗 Copier le lien d’invitation</button><button id="mpLeave" class="danger">Quitter le salon</button></div>
 </div>
 
@@ -268,7 +268,7 @@ const mpJoin=document.getElementById('mpJoin');
 const mpLeave=document.getElementById('mpLeave');
 const mpCopy=document.getElementById('mpCopy');
 const mpPlayers=document.getElementById('mpPlayers');
-let mpSession=null,mpApplying=false,mpListener=null,mpPrivateBatchOwner=null,mpLobbyStarted=false,mpSeats={};
+let mpSession=null,mpApplying=false,mpListener=null,mpPrivateBatchOwner=null,mpLobbyStarted=false,mpSeats={},mpGenerators={};
 function mpEsc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function mpRoom(c){mpRequireDB();return MPDB.ref('rooms/'+c)}
 function mpCodeNew(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('')}
@@ -333,14 +333,19 @@ async function mpHydrateState(st){
 function mpReceive(r){
  if(!r)return;
  const ps=r.players||{},entries=Object.entries(ps).filter(([id,p])=>p&&p.online!==false);
- mpSeats=r.seats||{};mpLobbyStarted=!!r.started;
+ mpSeats=r.seats||{};mpGenerators=r.generators||{};mpLobbyStarted=!!r.started;
  mpPlayers.innerHTML=entries.map(([id,p])=>'<span class="mpbadge">'+(p.role==='host'?'👑 ':'')+mpEsc(p.name)+(p.online===false?' ⚫':' 🟢')+'</span>').join('');
  const isHost=mpSession?.role==='host';
  const assigned=Object.values(mpSeats);
  const options=entries.map(([id,p])=>'<option value="'+mpEsc(id)+'">'+mpEsc(p.name)+'</option>').join('');
  const select=(n)=>'<label>Joueur '+n+' <select id="mpSeat'+n+'" '+(!isHost||mpLobbyStarted?'disabled':'')+'><option value="">— Choisir un pseudo —</option>'+options+'</select></label>';
- document.getElementById('mpLobby').innerHTML='<div class="controls">'+select(1)+select(2)+'</div><div class="turn">'+(mpLobbyStarted?'🟢 Challenge commencé':'⏳ En attente du lancement par l’organisateur')+'</div>';
+ const genSelect=n=>'<label>Qui génère pour le joueur '+n+' ? <select id="mpGen'+n+'" '+(!isHost?'disabled':'')+'><option value="">— Choisir un pseudo —</option>'+options+'</select></label>';
+ document.getElementById('mpLobby').innerHTML='<div class="controls">'+select(1)+select(2)+genSelect(1)+genSelect(2)+'</div><div class="turn">'+(mpLobbyStarted?'🟢 Challenge commencé':'⏳ En attente du lancement par l’organisateur')+'</div>';
  [1,2].forEach(n=>{const el=document.getElementById('mpSeat'+n);if(el){el.value=mpSeats[n]||'';el.onchange=()=>{if(!mpSession||mpSession.role!=='host')return;const other=n===1?2:1;if(el.value&&el.value===mpSeats[other]){el.value=mpSeats[n]||'';return}mpRoom(mpSession.room).child('seats/'+n).set(el.value||null).catch(e=>mpSetStatus('❌ '+mpEsc(e.message)))}}});
+ [1,2].forEach(n=>{const el=document.getElementById('mpGen'+n);if(el){el.value=mpGenerators[n]||mpSeats[n===1?2:1]||'';el.onchange=()=>{if(!mpSession||mpSession.role!=='host')return;mpRoom(mpSession.room).child('generators/'+n).set(el.value||null).catch(e=>mpSetStatus('❌ '+mpEsc(e.message)))}}});
+ const activeGenerator=mpGenerators[player]||mpSeats[player===1?2:1];
+ const activeName=ps[activeGenerator]?.name||'Non attribué';
+ document.getElementById('mpRoleStatus').textContent=mpLobbyStarted?'🎲 Générateur : '+activeName+' → fait deviner au Joueur '+player+' ('+(ps[mpSeats[player]]?.name||'?')+')':'Les rôles de génération seront définis avant le lancement.';
  const btn=document.getElementById('mpStartChallenge');
  btn.style.display=isHost?'':'none';btn.disabled=!isHost||mpLobbyStarted||!mpSeats[1]||!mpSeats[2]||mpSeats[1]===mpSeats[2]||!ps[mpSeats[1]]?.online||!ps[mpSeats[2]]?.online;
  const p1=ps[mpSeats[1]]?.name||'JOUEUR 1',p2=ps[mpSeats[2]]?.name||'JOUEUR 2';
@@ -1133,6 +1138,7 @@ async function dealKeep(){
 
 async function rollCards(){
  if(mpSession&&!mpLobbyStarted){alert('Attends que l’organisateur attribue les pseudos et lance le challenge.');return}
+ if(mpSession){const generator=mpGenerators[player]||mpSeats[player===1?2:1];if(mpSession.id!==generator){alert('C’est au générateur désigné de lancer les propositions pour ce tour.');return}}
  if(mpSession)mpPrivateBatchOwner=mpSession.id; else mpPrivateBatchOwner=null;
  const requestedCount=gameMode.value==='randombox'?Number(boxSize.value):Number(choiceCount.value);
  
@@ -1386,12 +1392,12 @@ function hidePrivateProposals(){
 }
 function drawTeams(){[1,2].forEach(n=>document.getElementById('team'+n).innerHTML=teams[n].map(p=>'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>').join(''))}
 function pick(i){
- if(mpSession&&!mpLobbyStarted)return;if(batchLocked||!current[i])return;if(gameMode.value==='learnleave'&&dealStage!==4)return;batchLocked=true;teams[player].push(current[i].p);if(gameMode.value==='learnleave'){dealStage=0;dealStarted=false;dealRemaining=[];starterOffer.innerHTML='';dealInfo.textContent='Manche terminée. Lance une nouvelle manche.';dealButtons();}drawTeams();
+ if(mpSession&&!mpLobbyStarted)return;if(mpSession&&mpSession.id!==(mpGenerators[player]||mpSeats[player===1?2:1]))return;if(batchLocked||!current[i])return;if(gameMode.value==='learnleave'&&dealStage!==4)return;batchLocked=true;teams[player].push(current[i].p);if(gameMode.value==='learnleave'){dealStage=0;dealStarted=false;dealRemaining=[];starterOffer.innerHTML='';dealInfo.textContent='Manche terminée. Lance une nouvelle manche.';dealButtons();}drawTeams();
  const max=+teamSize.value;if(teams[1].length>=max&&teams[2].length>=max){turn.textContent='ÉQUIPES COMPLÈTES';roll.disabled=true;mpSyncState();return}
  player=player===1?2:1;if(teams[player].length>=max)player=player===1?2:1;
  turn.textContent='Sélection verrouillée — génère une nouvelle sélection pour le JOUEUR '+player;render();mpSyncState();
 }
-async function discardDeal(i){if(gameMode.value!=='learnleave'||!current[i])return;if(dealStage===2){dealRemaining=current.filter((_,j)=>j!==i);dealStage=3;current=[await dealDraw()];starterOffer.innerHTML='<div class="card"><b>Nouvelle proposition</b></div>';dealInfo.textContent='Étape 3 : accepte ce nouveau Pokémon ou refuse-le pour retrouver les deux autres.';}else if(dealStage===4){current.splice(i,1);dealRemaining=[...current];dealInfo.textContent='Choisis le Pokémon restant.';}else return;render();dealButtons();mpSyncState()}
+async function discardDeal(i){if(gameMode.value!=='learnleave'||!current[i])return;if(mpSession&&mpSession.id!==(mpGenerators[player]||mpSeats[player===1?2:1]))return;if(dealStage===2){dealRemaining=current.filter((_,j)=>j!==i);dealStage=3;current=[await dealDraw()];starterOffer.innerHTML='<div class="card"><b>Nouvelle proposition</b></div>';dealInfo.textContent='Étape 3 : accepte ce nouveau Pokémon ou refuse-le pour retrouver les deux autres.';}else if(dealStage===4){current.splice(i,1);dealRemaining=[...current];dealInfo.textContent='Choisis le Pokémon restant.';}else return;render();dealButtons();mpSyncState()}
 document.getElementById('keepStarter').addEventListener('click',()=>dealKeep().catch(console.error));
 document.getElementById('discardStarter').addEventListener('click',()=>dealRefuse().catch(console.error));
 roll.addEventListener('click',()=>rollCards().catch(e=>{console.error(e);alert(e.message||'Erreur')}));
