@@ -308,7 +308,7 @@ async function mpSyncState(){
  if(!mpSession||mpApplying)return;
  try{await mpRoom(mpSession.room).child('state').set(await mpSnapshot())}catch(e){console.warn('Sync Firebase',e)}
 }
-async async function mpHydrateState(st){
+async function mpHydrateState(st){
  if(!st||mpApplying)return;mpApplying=true;
  try{
   if(st.mode)gameMode.value=(st.mode==='olddesc'?'dexdesc':st.mode);
