@@ -104,7 +104,7 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <div><input id="mpCode" placeholder="Code du salon (1 caractère ou +)"><button id="mpJoin">🎮 Rejoindre</button></div>
 </div>
 <div id="mpStatus" class="mpstate">🌐 Pour jouer à distance, crée un salon puis partage son lien avec tes amis.</div>
-<div id="mpPlayers" class="mpplayers"></div><div id="mpRoleStatus" class="turn">Attribution des rôles en attente.</div><div id="mpLobbyHelp" class="mpstate" style="margin-top:8px">Connecte-toi comme organisateur pour attribuer les joueurs.</div><div id="mpLobby" class="mpstate" style="margin-top:8px">Les participants apparaîtront ici.</div><div class="actions"><button id="mpStartChallenge" class="primary" disabled>▶ Lancer le challenge</button></div>
+<div id="mpPlayers" class="mpplayers"></div><div id="mpRoleStatus" class="turn">Attribution des rôles en attente.</div><div id="mpLobbyHelp" class="mpstate" style="margin-top:8px">Connecte-toi comme organisateur pour attribuer les joueurs.</div><div id="mpLobby" class="mpstate" style="margin-top:8px">Les participants apparaîtront ici.</div><div class="actions"><button id="mpStartChallenge" class="primary">▶ Lancer le challenge</button></div>
 <div class="actions"><button id="mpCopy">🔗 Copier le lien d’invitation</button><button id="mpLeave" class="danger">Quitter le salon</button></div>
 </div>
 
@@ -347,7 +347,7 @@ function mpReceive(r){
  const activeName=ps[activeGenerator]?.name||'Non attribué';
  document.getElementById('mpRoleStatus').textContent=mpLobbyStarted?'🎲 Générateur : '+activeName+' → fait deviner au Joueur '+player+' ('+(ps[mpSeats[player]]?.name||'?')+')':'Les rôles de génération seront définis avant le lancement.';
  const btn=document.getElementById('mpStartChallenge');
- btn.style.display='';btn.disabled=!isHost||mpLobbyStarted||entries.length<2;btn.title=!isHost?'Seul le créateur du salon peut lancer le challenge':mpLobbyStarted?'Challenge déjà lancé':entries.length<2?'Il faut au moins deux participants connectés':'';
+ btn.style.display='';btn.disabled=false;btn.textContent=mpLobbyStarted?'↻ Relancer le challenge':'▶ Lancer le challenge';btn.title='Cliquer pour démarrer ou afficher le problème éventuel';
  const explanation=document.getElementById('mpLobbyHelp');if(explanation)explanation.textContent=!isHost?'Les attributions sont réservées à l’organisateur du salon.':entries.length<2?'En attente du deuxième participant connecté.':'Choisis les deux pseudos puis lance le challenge.';
  const p1=ps[mpSeats[1]]?.name||'JOUEUR 1',p2=ps[mpSeats[2]]?.name||'JOUEUR 2';
  document.getElementById('team1').parentElement.querySelector('h2').textContent='JOUEUR 1 — '+p1;
@@ -362,15 +362,16 @@ window.addEventListener('DOMContentLoaded',()=>{
  mpJoin.addEventListener('click',()=>mpJoinRoom().catch(e=>{console.error('Connexion salon Firebase',e);mpSetStatus('❌ '+mpEsc(e.code||e.message||e))}));
  mpLeave.onclick=()=>mpLeaveRoom();
  document.getElementById('mpStartChallenge').onclick=async()=>{
- if(!mpSession)return;
+ if(!mpSession){mpSetStatus('❌ Crée ou rejoins un salon avant de lancer le challenge.');return}
+ mpSetStatus('🟡 Vérification des participants…');
  try{
   const roomRef=mpRoom(mpSession.room),snap=await roomRef.once('value'),room=snap.val()||{};
   if(!(mpSession.role==='host'||room.hostIds?.[mpSession.id]||room.players?.[mpSession.id]?.role==='host'))throw Error('Seul l’organisateur peut lancer le challenge.');
   const connected=Object.entries(room.players||{}).filter(([id,p])=>p&&p.online!==false);
-  if(connected.length<2)throw Error('Deux participants connectés sont nécessaires.');
+  if(connected.length<2)throw Error('Deux participants connectés sont nécessaires. Actuellement : '+connected.length+'. Demande au second joueur de rejoindre ce salon et de rester connecté.');
   let seats={...(room.seats||{})};
   const ids=connected.map(([id])=>id);
-  if(!ids.includes(seats[1]))seats[1]=mpSession.id;
+  if(!ids.includes(seats[1]))seats[1]=ids.includes(mpSession.id)?mpSession.id:ids[0];
   if(!ids.includes(seats[2])||seats[2]===seats[1])seats[2]=ids.find(id=>id!==seats[1]);
   if(!seats[1]||!seats[2]||seats[1]===seats[2])throw Error('Impossible d’attribuer deux joueurs distincts.');
   await roomRef.update({seats,started:true});
