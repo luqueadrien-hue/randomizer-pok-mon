@@ -104,7 +104,7 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <div><input id="mpCode" placeholder="Code du salon (1 caractère ou +)"><button id="mpJoin">🎮 Rejoindre</button></div>
 </div>
 <div id="mpStatus" class="mpstate">🌐 Pour jouer à distance, crée un salon puis partage son lien avec tes amis.</div>
-<div id="mpPlayers" class="mpplayers"></div><div id="mpRoleStatus" class="turn">Attribution des rôles en attente.</div><div id="mpLobby" class="mpstate" style="margin-top:8px">Les participants apparaîtront ici.</div><div class="actions"><button id="mpStartChallenge" class="primary" disabled>▶ Lancer le challenge</button></div>
+<div id="mpPlayers" class="mpplayers"></div><div id="mpRoleStatus" class="turn">Attribution des rôles en attente.</div><div id="mpLobbyHelp" class="mpstate" style="margin-top:8px">Connecte-toi comme organisateur pour attribuer les joueurs.</div><div id="mpLobby" class="mpstate" style="margin-top:8px">Les participants apparaîtront ici.</div><div class="actions"><button id="mpStartChallenge" class="primary" disabled>▶ Lancer le challenge</button></div>
 <div class="actions"><button id="mpCopy">🔗 Copier le lien d’invitation</button><button id="mpLeave" class="danger">Quitter le salon</button></div>
 </div>
 
@@ -339,13 +339,16 @@ function mpReceive(r){
  const assigned=Object.values(mpSeats);
  const options=entries.map(([id,p])=>'<option value="'+mpEsc(id)+'">'+mpEsc(p.name)+'</option>').join('');
  const select=(n)=>'<label>Joueur '+n+' <select id="mpSeat'+n+'" '+(!isHost?'disabled':'')+'><option value="">— Choisir un pseudo —</option>'+options+'</select></label>';
- document.getElementById('mpLobby').innerHTML='<div class="controls">'+select(1)+select(2)+'</div><div class="turn">🔄 Joueur 1 génère pour Joueur 2 · Joueur 2 génère pour Joueur 1</div><div class="turn">'+(mpLobbyStarted?'🟢 Challenge commencé':'⏳ En attente du lancement par l’organisateur')+'</div>';
+ const lobby=document.getElementById('mpLobby');
+ const lobbyMarkup='<div class="controls">'+select(1)+select(2)+'</div><div class="turn">🔄 Joueur 1 génère pour Joueur 2 · Joueur 2 génère pour Joueur 1</div><div class="turn">'+(mpLobbyStarted?'🟢 Challenge commencé':'⏳ En attente du lancement par l’organisateur')+'</div>';
+ if(lobby.innerHTML!==lobbyMarkup)lobby.innerHTML=lobbyMarkup;
  [1,2].forEach(n=>{const el=document.getElementById('mpSeat'+n);if(el){el.value=mpSeats[n]||'';el.onchange=()=>{if(!isHost)return;const other=n===1?2:1;if(el.value&&el.value===mpSeats[other]){el.value=mpSeats[n]||'';return}mpRoom(mpSession.room).child('seats/'+n).set(el.value||null).then(()=>mpSetStatus('✅ Joueur '+n+' attribué.')).catch(e=>mpSetStatus('❌ '+mpEsc(e.message)))}}});
  const activeGenerator=mpSeats[player===1?2:1];
  const activeName=ps[activeGenerator]?.name||'Non attribué';
  document.getElementById('mpRoleStatus').textContent=mpLobbyStarted?'🎲 Générateur : '+activeName+' → fait deviner au Joueur '+player+' ('+(ps[mpSeats[player]]?.name||'?')+')':'Les rôles de génération seront définis avant le lancement.';
  const btn=document.getElementById('mpStartChallenge');
- btn.style.display=isHost?'':'none';btn.disabled=!isHost||mpLobbyStarted||entries.length<2;btn.title=entries.length<2?'Il faut au moins deux participants connectés':'';
+ btn.style.display='';btn.disabled=!isHost||mpLobbyStarted||entries.length<2;btn.title=!isHost?'Seul le créateur du salon peut lancer le challenge':mpLobbyStarted?'Challenge déjà lancé':entries.length<2?'Il faut au moins deux participants connectés':'';
+ const explanation=document.getElementById('mpLobbyHelp');if(explanation)explanation.textContent=!isHost?'Les attributions sont réservées à l’organisateur du salon.':entries.length<2?'En attente du deuxième participant connecté.':'Choisis les deux pseudos puis lance le challenge.';
  const p1=ps[mpSeats[1]]?.name||'JOUEUR 1',p2=ps[mpSeats[2]]?.name||'JOUEUR 2';
  document.getElementById('team1').parentElement.querySelector('h2').textContent='JOUEUR 1 — '+p1;
  document.getElementById('team2').parentElement.querySelector('h2').textContent='JOUEUR 2 — '+p2;
