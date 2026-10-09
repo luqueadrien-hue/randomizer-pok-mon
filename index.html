@@ -98,14 +98,14 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <h1>🎲 Pokémon Randomizer Multi-Jeux</h1>
 <div class="sub">Œufs, stats, espèce, taille, poids, apprendre ou laisser, silhouette et plus.</div>
 <div class="panel" id="multiplayerPanel" style="margin-bottom:18px">
-<h2 style="text-align:center;margin-top:0">🌐 Multijoueur Firebase</h2>
+<h2 style="text-align:center;margin-top:0">🌐 Multijoueur en ligne</h2>
 <div class="mpbar">
 <div><input id="mpName" placeholder="Pseudo" maxlength="24"><button id="mpCreate" class="primary">👑 Créer un salon</button></div>
 <div><input id="mpCode" placeholder="Code du salon (1 caractère ou +)"><button id="mpJoin">🎮 Rejoindre</button></div>
 </div>
-<div id="mpStatus" class="mpstate">Hors salon — le randomizer reste utilisable en local.</div>
+<div id="mpStatus" class="mpstate">🌐 Pour jouer à distance, crée un salon puis partage son lien avec tes amis.</div>
 <div id="mpPlayers" class="mpplayers"></div>
-<div class="actions"><button id="mpCopy">📋 Copier le code</button><button id="mpLeave" class="danger">Quitter le salon</button></div>
+<div class="actions"><button id="mpCopy">🔗 Copier le lien d’invitation</button><button id="mpLeave" class="danger">Quitter le salon</button></div>
 </div>
 
 <div class="panel">
@@ -264,7 +264,7 @@ const mpPlayers=document.getElementById('mpPlayers');
 let mpSession=null,mpApplying=false,mpListener=null,mpPrivateBatchOwner=null;
 function mpEsc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function mpRoom(c){return MPDB.ref('rooms/'+c)}
-function mpCodeNew(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return chars[Math.floor(Math.random()*chars.length)]}
+function mpCodeNew(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('')}
 function mpId(){return (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)).replace(/-/g,'').slice(0,12)}
 function mpSetStatus(t){const e=document.getElementById('mpStatus');if(e)e.innerHTML=t}
 async function mpCreateRoom(){
@@ -293,7 +293,7 @@ async function mpEnter(s){
  const online=mpRoom(s.room).child('players/'+s.id+'/online');await online.set(true);online.onDisconnect().set(false);
  if(mpListener)mpRoom(s.room).off('value',mpListener);
  mpListener=mpRoom(s.room).on('value',snap=>mpReceive(snap.val()));
- mpSetStatus('🟢 Salon <b>'+mpEsc(s.room)+'</b> — '+(s.role==='host'?'Hôte':'Joueur'));
+ mpSetStatus('🟢 Salon en ligne <b>'+mpEsc(s.room)+'</b> — '+(s.role==='host'?'Hôte':'Joueur')+' · Partage le lien pour inviter un ami.');
 }
 async function mpLeaveRoom(){
  if(mpSession){try{await mpRoom(mpSession.room).child('players/'+mpSession.id).remove()}catch(e){}}
@@ -328,11 +328,12 @@ function mpReceive(r){
  if(r.state)mpHydrateState(r.state);
 }
 window.addEventListener('DOMContentLoaded',()=>{
+ MPDB.ref('.info/connected').on('value',snap=>{if(!snap.val()&&!mpSession)mpSetStatus('🔴 Firebase déconnecté : vérifie Internet ou les autorisations de la base.');else if(snap.val()&&!mpSession&&!new URLSearchParams(location.search).has('salon'))mpSetStatus('🟢 Serveur disponible — crée un salon pour jouer à distance.')});
  mpCreate.addEventListener('click',()=>mpCreateRoom().catch(e=>{console.error('Création salon Firebase',e);mpSetStatus('❌ '+mpEsc(e.code||e.message||e))}));
  mpJoin.addEventListener('click',()=>mpJoinRoom().catch(e=>{console.error('Connexion salon Firebase',e);mpSetStatus('❌ '+mpEsc(e.code||e.message||e))}));
  mpLeave.onclick=()=>mpLeaveRoom();
- mpCopy.onclick=()=>{if(mpSession)navigator.clipboard?.writeText(mpSession.room)};
- const old=JSON.parse(localStorage.getItem('pkmn-mp-session')||'null');if(old?.room)mpRoom(old.room).once('value').then(s=>s.exists()?mpEnter(old):localStorage.removeItem('pkmn-mp-session')).catch(()=>{});
+ mpCopy.onclick=async()=>{if(!mpSession){mpSetStatus('Crée ou rejoins un salon pour obtenir un lien.');return}const url=new URL(location.href);url.searchParams.set('salon',mpSession.room);try{await navigator.clipboard.writeText(url.toString());mpSetStatus('✅ Lien copié : envoie-le à tes amis pour jouer à distance.')}catch(e){mpSetStatus('🔗 Lien du salon : '+mpEsc(url.toString()))}};
+ const invite=new URLSearchParams(location.search).get('salon');if(invite){mpCode.value=invite.toUpperCase();mpSetStatus('🔗 Invitation reçue pour le salon '+mpEsc(mpCode.value)+'. Entre ton pseudo puis clique sur Rejoindre.')}else{let old=null;try{old=JSON.parse(localStorage.getItem('pkmn-mp-session')||'null')}catch(e){}if(old?.room)mpRoom(old.room).once('value').then(s=>s.exists()?mpEnter(old):localStorage.removeItem('pkmn-mp-session')).catch(e=>mpSetStatus('⚠️ Reconnexion impossible : '+mpEsc(e.code||e.message||e)))}
 });
 const TYPES=[['normal','Normal'],['fire','Feu'],['water','Eau'],['electric','Électrik'],['grass','Plante'],['ice','Glace'],['fighting','Combat'],['poison','Poison'],['ground','Sol'],['flying','Vol'],['psychic','Psy'],['bug','Insecte'],['rock','Roche'],['ghost','Spectre'],['dragon','Dragon'],['dark','Ténèbres'],['steel','Acier'],['fairy','Fée']].map(x=>({en:x[0],fr:x[1]}));
 const GEN={1:[1,151],2:[152,251],3:[252,386],4:[387,493],5:[494,649],6:[650,721],7:[722,809],8:[810,905],9:[1,1025]};
