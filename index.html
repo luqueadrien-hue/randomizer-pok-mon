@@ -335,12 +335,12 @@ function mpReceive(r){
  const ps=r.players||{},entries=Object.entries(ps).filter(([id,p])=>p&&p.online!==false);
  mpSeats=r.seats||{};mpGenerators={1:mpSeats[2]||'',2:mpSeats[1]||''};mpLobbyStarted=!!r.started;
  mpPlayers.innerHTML=entries.map(([id,p])=>'<span class="mpbadge">'+(p.role==='host'?'👑 ':'')+mpEsc(p.name)+(p.online===false?' ⚫':' 🟢')+'</span>').join('');
- const isHost=mpSession?.role==='host';
+ const isHost=!!mpSession&&(mpSession.role==='host'||!!r.hostIds?.[mpSession.id]||ps[mpSession.id]?.role==='host');
  const assigned=Object.values(mpSeats);
  const options=entries.map(([id,p])=>'<option value="'+mpEsc(id)+'">'+mpEsc(p.name)+'</option>').join('');
- const select=(n)=>'<label>Joueur '+n+' <select id="mpSeat'+n+'" '+(!isHost||mpLobbyStarted?'disabled':'')+'><option value="">— Choisir un pseudo —</option>'+options+'</select></label>';
+ const select=(n)=>'<label>Joueur '+n+' <select id="mpSeat'+n+'" '+(!isHost?'disabled':'')+'><option value="">— Choisir un pseudo —</option>'+options+'</select></label>';
  document.getElementById('mpLobby').innerHTML='<div class="controls">'+select(1)+select(2)+'</div><div class="turn">🔄 Joueur 1 génère pour Joueur 2 · Joueur 2 génère pour Joueur 1</div><div class="turn">'+(mpLobbyStarted?'🟢 Challenge commencé':'⏳ En attente du lancement par l’organisateur')+'</div>';
- [1,2].forEach(n=>{const el=document.getElementById('mpSeat'+n);if(el){el.value=mpSeats[n]||'';el.onchange=()=>{if(!mpSession||mpSession.role!=='host')return;const other=n===1?2:1;if(el.value&&el.value===mpSeats[other]){el.value=mpSeats[n]||'';return}mpRoom(mpSession.room).child('seats/'+n).set(el.value||null).catch(e=>mpSetStatus('❌ '+mpEsc(e.message)))}}});
+ [1,2].forEach(n=>{const el=document.getElementById('mpSeat'+n);if(el){el.value=mpSeats[n]||'';el.onchange=()=>{if(!isHost)return;const other=n===1?2:1;if(el.value&&el.value===mpSeats[other]){el.value=mpSeats[n]||'';return}mpRoom(mpSession.room).child('seats/'+n).set(el.value||null).then(()=>mpSetStatus('✅ Joueur '+n+' attribué.')).catch(e=>mpSetStatus('❌ '+mpEsc(e.message)))}}});
  const activeGenerator=mpSeats[player===1?2:1];
  const activeName=ps[activeGenerator]?.name||'Non attribué';
  document.getElementById('mpRoleStatus').textContent=mpLobbyStarted?'🎲 Générateur : '+activeName+' → fait deviner au Joueur '+player+' ('+(ps[mpSeats[player]]?.name||'?')+')':'Les rôles de génération seront définis avant le lancement.';
@@ -359,9 +359,10 @@ window.addEventListener('DOMContentLoaded',()=>{
  mpJoin.addEventListener('click',()=>mpJoinRoom().catch(e=>{console.error('Connexion salon Firebase',e);mpSetStatus('❌ '+mpEsc(e.code||e.message||e))}));
  mpLeave.onclick=()=>mpLeaveRoom();
  document.getElementById('mpStartChallenge').onclick=async()=>{
- if(!mpSession||mpSession.role!=='host')return;
+ if(!mpSession)return;
  try{
   const roomRef=mpRoom(mpSession.room),snap=await roomRef.once('value'),room=snap.val()||{};
+  if(!(mpSession.role==='host'||room.hostIds?.[mpSession.id]||room.players?.[mpSession.id]?.role==='host'))throw Error('Seul l’organisateur peut lancer le challenge.');
   const connected=Object.entries(room.players||{}).filter(([id,p])=>p&&p.online!==false);
   if(connected.length<2)throw Error('Deux participants connectés sont nécessaires.');
   let seats={...(room.seats||{})};
