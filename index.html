@@ -252,8 +252,15 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
 <script>
 const firebaseConfig={apiKey:"AIzaSyB6cWUJru6vpfdpj5aE59jKAXA523Eka1E",authDomain:"pokemon-randomizer-f3b0f.firebaseapp.com",databaseURL:"https://pokemon-randomizer-f3b0f-default-rtdb.firebaseio.com",projectId:"pokemon-randomizer-f3b0f",storageBucket:"pokemon-randomizer-f3b0f.firebasestorage.app",messagingSenderId:"1031451577108",appId:"1:1031451577108:web:428ade1b96ab7e85489001"};
-firebase.initializeApp(firebaseConfig);
-const MPDB=firebase.database();
+let MPDB=null;
+try{
+ if(typeof firebase!=='undefined'&&firebase.database){
+  if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+  MPDB=firebase.database();
+ }
+}catch(e){console.error('Initialisation Firebase',e)}
+function mpRequireDB(){if(!MPDB)throw Error('Firebase indisponible : le serveur multijoueur ne répond pas. Désactive les bloqueurs de scripts ou recharge la page.')}
+
 const mpName=document.getElementById('mpName');
 const mpCode=document.getElementById('mpCode');
 const mpCreate=document.getElementById('mpCreate');
@@ -263,7 +270,7 @@ const mpCopy=document.getElementById('mpCopy');
 const mpPlayers=document.getElementById('mpPlayers');
 let mpSession=null,mpApplying=false,mpListener=null,mpPrivateBatchOwner=null;
 function mpEsc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-function mpRoom(c){return MPDB.ref('rooms/'+c)}
+function mpRoom(c){mpRequireDB();return MPDB.ref('rooms/'+c)}
 function mpCodeNew(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('')}
 function mpId(){return (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)).replace(/-/g,'').slice(0,12)}
 function mpSetStatus(t){const e=document.getElementById('mpStatus');if(e)e.innerHTML=t}
@@ -328,7 +335,8 @@ function mpReceive(r){
  if(r.state)mpHydrateState(r.state);
 }
 window.addEventListener('DOMContentLoaded',()=>{
- MPDB.ref('.info/connected').on('value',snap=>{if(!snap.val()&&!mpSession)mpSetStatus('🔴 Firebase déconnecté : vérifie Internet ou les autorisations de la base.');else if(snap.val()&&!mpSession&&!new URLSearchParams(location.search).has('salon'))mpSetStatus('🟢 Serveur disponible — crée un salon pour jouer à distance.')});
+ if(MPDB)MPDB.ref('.info/connected').on('value',snap=>{if(!snap.val()&&!mpSession)mpSetStatus('🔴 Firebase déconnecté : vérifie Internet ou les autorisations de la base.');else if(snap.val()&&!mpSession&&!new URLSearchParams(location.search).has('salon'))mpSetStatus('🟢 Serveur disponible — crée un salon pour jouer à distance.')});
+ if(!MPDB)mpSetStatus('⚠️ Firebase ne s’est pas chargé. Le jeu solo reste disponible ; vérifie les extensions de blocage ou la connexion.');
  mpCreate.addEventListener('click',()=>mpCreateRoom().catch(e=>{console.error('Création salon Firebase',e);mpSetStatus('❌ '+mpEsc(e.code||e.message||e))}));
  mpJoin.addEventListener('click',()=>mpJoinRoom().catch(e=>{console.error('Connexion salon Firebase',e);mpSetStatus('❌ '+mpEsc(e.code||e.message||e))}));
  mpLeave.onclick=()=>mpLeaveRoom();
