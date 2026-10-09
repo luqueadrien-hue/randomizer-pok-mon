@@ -111,7 +111,7 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <div class="panel">
 <div class="controls">
 <label>Jeu<select id="gameMode">
-<option value="egg">🥚 Œuf par type</option>
+<option value="egg">🥚 Œuf : type et groupe</option>
 <option value="stats">📊 Total de stats (BST)</option>
 <option value="stat-hp">❤️ PV à l'aveugle</option>
 <option value="stat-speed">💨 Vitesse à l'aveugle</option>
@@ -124,11 +124,11 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <option value="weight">⚖️ Poids</option>
 <option value="learnleave">📦 À prendre ou à laisser</option>
 <option value="typeblind">❓ Type à l'aveugle</option>
-<option value="generationblind">🕰 Génération à l'aveugle</option><option value="dexnumber">🔢 Numéro du Pokédex</option>
+<option value="dexnumber">🔢 Numéro du Pokédex</option>
 <option value="movelearn">⚔️ Choisir via une attaque apprise</option>
 <option value="auction">💰 Enchères Pokémon</option>
 <option value="dexdesc">📖 Description Pokédex</option>
-<option value="evolution">🧬 Deviner l’évolution</option>
+<option value="evolution">🧬 Deviner l’évolution et sa chaîne</option>
 <option value="ability">✨ Deviner par le talent</option>
 <option value="dominantstat">🏆 Stat dominante</option>
 <option value="bstonly">📊 Total de stats (BST)</option>
@@ -141,15 +141,15 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <option value="weaknesses">🎯 Faiblesses</option>
 <option value="resistances">🛡️ Résistances / immunités</option>
 <option value="effectiveness">💥 Efficacité mystère</option>
-<option value="evochain">🧬 Chaîne d’évolution</option>
-<option value="egggroup">🥚 Groupe d’Œuf</option>
+
+
 <option value="capturelocation">📍 Lieu de capture</option>
 <option value="regionaldex">🌎 Numéro Pokédex régional</option>
 
 <option value="color">🎨 Couleur Pokédex</option>
 <option value="shinypalette">✨🎨 Palette Shiny</option>
 
-<option value="progressive">🔢 Devine la génération</option>
+<option value="progressive">🔢 Génération mystère (indices progressifs)</option>
 <option value="randombox">📦 Boîte Pokémon aléatoire</option>
 <option value="zonemusic">🎵 Pokémon par musique de zone</option>
 <option value="pokemoncry">🔊 Devine le Pokémon par son cri</option>
@@ -1013,7 +1013,7 @@ async function shinyPalette(p,count=5){
  }catch(e){return []}
 }
 function shinyPaletteHtml(cols){return '<div style="display:flex;justify-content:center;gap:8px;margin:10px 0">'+cols.map(c=>'<span title="'+c+'" style="width:38px;height:38px;border-radius:50%;display:inline-block;background:'+c+';border:2px solid rgba(255,255,255,.75);box-shadow:0 1px 5px #0008"></span>').join('')+'</div>'}
-function clue(p,m){if(m==='egg')return 'Œuf '+frt(p.types[0]);if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='shinypalette')return 'Palette Shiny en préparation…';if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind'){const g={'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9};return `Génération ${g[p.gen]||'?'}`;}if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
+function clue(p,m){if(m==='egg')return '🥚 Type : '+p.types.map(frt).join(' / ')+'<br>Groupe d’Œuf : '+((p.eggGroups||[]).map(extraFr).join(' / ')||'Inconnu');if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='shinypalette')return 'Palette Shiny en préparation…';if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind'){const g={'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9};return `Génération ${g[p.gen]||'?'}`;}if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
 if(m==='dominantstat')return dominantStat(p);
 if(m==='bstonly')return `BST : ${p.total}`;
 if(m==='egggroup')return (p.eggGroups||[]).map(extraFr).join(' / ')||'Groupe d’Œuf inconnu';
@@ -1098,7 +1098,7 @@ async function rollCards(){
    let c=clue(p,gameMode.value);
    if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
    if(gameMode.value==='dexdesc'){const d=await getDexDescription(p);c=d.text;p._dexSource=d.source;}
-   if(gameMode.value==='evolution'){const e=await getEvolutionClue(p);c=e.text;p._evoFinal=e.final;}
+   if(gameMode.value==='evolution'){const e=await getEvolutionClue(p);c='🧬 Chaîne d’évolution : '+e.text;p._evoFinal=e.final;}
    if(gameMode.value==='evolevel')c=await evolutionModeClue(p,'level');
    if(gameMode.value==='evomethod'){const method=await evolutionModeClue(p,'method'),level=await evolutionModeClue(p,'level');c=method+'<br>'+level;}
    if(gameMode.value==='firstregion')c='Première région : '+(REGION_BY_GEN[p.gen]||'Inconnue');
