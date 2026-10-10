@@ -399,13 +399,19 @@ window.addEventListener('DOMContentLoaded',()=>{
 });
 const TYPES=[['normal','Normal'],['fire','Feu'],['water','Eau'],['electric','Électrik'],['grass','Plante'],['ice','Glace'],['fighting','Combat'],['poison','Poison'],['ground','Sol'],['flying','Vol'],['psychic','Psy'],['bug','Insecte'],['rock','Roche'],['ghost','Spectre'],['dragon','Dragon'],['dark','Ténèbres'],['steel','Acier'],['fairy','Fée']].map(x=>({en:x[0],fr:x[1]}));
 const GEN={1:[1,151],2:[152,251],3:[252,386],4:[387,493],5:[494,649],6:[650,721],7:[722,809],8:[810,905],9:[1,1025]};
-const cache=new Map();const moveCache=new Map();let player=1,teams={1:[],2:[]},current=[];let starterPokemon=null;let dealStarted=false;let dealStage=0,dealRemaining=[],dealUsed=new Set(),dealClueFixed="height";let batchLocked=false;let auctionState={active:false,pokemon:null,bids:{1:0,2:0},passed:{1:false,2:false},budget:{1:100,2:100},malus:null};
+const cache=new Map();
+const pokePending=new Map();const moveCache=new Map();let player=1,teams={1:[],2:[]},current=[];let starterPokemon=null;let dealStarted=false;let dealStage=0,dealRemaining=[],dealUsed=new Set(),dealClueFixed="height";let batchLocked=false;let auctionState={active:false,pokemon:null,bids:{1:0,2:0},passed:{1:false,2:false},budget:{1:100,2:100},malus:null};
 function range(){return generation.value==='all'?[1,1025]:GEN[generation.value]}
 function tfilter(){const m=typeMode.value;if(m.startsWith('mono-'))return m.slice(5);return null}
 function frt(t){return TYPES.find(x=>x.en===t)?.fr||t}
 async function getP(id){
  if(cache.has(id))return cache.get(id);
- const [p,s]=await Promise.all([fetch('https://pokeapi.co/api/v2/pokemon/'+id).then(r=>r.json()),fetch('https://pokeapi.co/api/v2/pokemon-species/'+id).then(r=>r.json())]);
+ if(pokePending.has(id))return pokePending.get(id);
+ const task=getPUncached(id);pokePending.set(id,task);
+ try{return await task}finally{pokePending.delete(id)}
+}
+async function getPUncached(id){
+ const [p,s]=await Promise.all([fetch('https://pokeapi.co/api/v2/pokemon/'+id).then(r=>{if(!r.ok)throw Error('Pokémon indisponible : '+id);return r.json()}),fetch('https://pokeapi.co/api/v2/pokemon-species/'+id).then(r=>{if(!r.ok)throw Error('Espèce indisponible : '+id);return r.json()})]);
  const fr=s.names.find(x=>x.language.name==='fr');const genus=s.genera.find(x=>x.language.name==='fr')?.genus||'Pokémon';
  const sv=((p.moves.some(m=>m.version_group_details.some(v=>v.version_group.name==='scarlet-violet'))||id>=906)||(id>=899&&id<=905));
  const flavorTexts=(s.flavor_text_entries||[]).filter(x=>x.language?.name==='fr').map(x=>({text:(x.flavor_text||'').replace(/[\n\f\r]+/g,' ').replace(/\s+/g,' ').trim(),version:x.version?.name||'Pokédex'})).filter(x=>x.text);
@@ -548,11 +554,11 @@ async function getDexDescription(p){
  for(const x of (p.flavorTexts||[])){
   const text=(x.text||'').replace(/\s+/g,' ').trim();if(!text)continue;
   const key=text.toLowerCase();if(seen.has(key))continue;seen.add(key);
-  const game=VERSION_FR[x.version]||'Jeu principal',gen=GEN_NUM[x.version];
+  const game=VERSION_FR[x.version]||String(x.version||'Jeu principal').replace(/-/g,' '),gen=GEN_NUM[x.version];
   choices.push({text,source:game+(gen?' — Génération '+gen:'')});
  }
  for(const x of await getSpinOffDexDescriptions(p)){const key=x.text.toLowerCase();if(!seen.has(key)){seen.add(key);choices.push(x)}}
- if(!choices.length)return {text:'Description Pokédex française indisponible pour ce Pokémon.',source:'Pokédex'};
+ if(!choices.length)return {text:'Description Pokédex française indisponible pour ce Pokémon.',source:'Source indisponible'};
  return choices[Math.floor(Math.random()*choices.length)];
 }
 
@@ -934,7 +940,7 @@ async function encounterInfo(p){
  const cacheKey=p.id+'|'+generation.value;
  if(ENCOUNTER_CACHE.has(cacheKey))return ENCOUNTER_CACHE.get(cacheKey);
  try{
-   const arr=await fetch(p.encounterUrl).then(r=>r.json());
+   const arr=await fetch(p.encounterUrl).then(r=>{if(!r.ok)throw Error('Rencontres indisponibles');return r.json()});
    const locations=[],details=[];const methods=new Set();
    for(const e of arr||[]){
      let areaName=String(e.location_area?.name||'').replace(/-/g,' ');
@@ -960,7 +966,8 @@ const METHOD_FR={walk:'Herbes / marche','old-rod':'Canne','good-rod':'Super Cann
 function methodFr(x){return METHOD_FR[x]||String(x||'Rencontre spéciale').replace(/-/g,' ')}
 function regionalDexClue(p){
  const banned=new Set(['national']);
- const n=(p.pokedexNumbers||[]).find(x=>!banned.has(x.dex));
+ const preferred={1:['kanto'],2:['original-johto','updated-johto'],3:['hoenn','updated-hoenn'],4:['original-sinnoh','extended-sinnoh'],5:['original-unova','updated-unova'],6:['kalos-central','kalos-coastal','kalos-mountain'],7:['original-alola','updated-alola'],8:['galar','isle-of-armor','crown-tundra'],9:['paldea','kitakami','blueberry']};
+ const g=Number(generation.value);const entries=(p.pokedexNumbers||[]).filter(x=>!banned.has(x.dex));const n=(preferred[g]||[]).map(k=>entries.find(x=>x.dex===k)).find(Boolean)||entries[0];
  const dexFr={'kanto':'Kanto','original-johto':'Johto','updated-johto':'Johto','hoenn':'Hoenn','updated-hoenn':'Hoenn','original-sinnoh':'Sinnoh','extended-sinnoh':'Sinnoh','original-unova':'Unys','updated-unova':'Unys','kalos-central':'Kalos Centre','kalos-coastal':'Kalos Côte','kalos-mountain':'Kalos Monts','original-alola':'Alola','updated-alola':'Alola','galar':'Galar','isle-of-armor':'Île Solitaire de l’Armure','crown-tundra':'Couronneige','paldea':'Paldea','kitakami':'Septentria','blueberry':'Institut Myrtille'};return n?`${dexFr[n.dex]||'Pokédex régional'} — N° ${String(n.entry).padStart(3,'0')}`:`Pokédex National — N° ${String(p.id).padStart(4,'0')}`;
 }
 function oldDescription(p){
