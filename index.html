@@ -1178,7 +1178,7 @@ async function dealKeep(){
 }
 
 async function rollCards(){
- if(gameMode.value==='triochoice'){if(trioDone)return alert('Tes deux manches sont terminées.');if(trioRound>0)return alert('Utilise Accepter ou Refuser pour continuer cette manche.');return trioGenerate()}
+ if(gameMode.value==='triochoice')return trioEntry()
  if(mpSession&&!mpLobbyStarted){alert('Attends que l’organisateur attribue les pseudos et lance le challenge.');return}
  if(mpSession){const generator=mpSeats[player===1?2:1];if(mpSession.id!==generator){alert('C’est au générateur désigné de lancer les propositions pour ce tour.');return}}
  if(mpSession)mpPrivateBatchOwner=mpSession.id; else mpPrivateBatchOwner=null;
@@ -1446,7 +1446,7 @@ async function trioGenerate(){
  finally{trioBusy=false}
 }
 function renderTrio(){
- if(trioManches>=2){cards.innerHTML='<div class="card" style="grid-column:1/-1;text-align:center"><h3>🏁 Deux manches terminées</h3><p>Équipe de six Pokémon validée.</p>'+trioTeam.map(p=>'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>').join('')+(mpSession?'<p>Ton équipe reste sur cet appareil. Les autres joueurs ne peuvent pas la consulter dans le salon.</p>':'')+'</div>';return}
+ if(trioManches>=2){cards.innerHTML='<div class="card" style="grid-column:1/-1;text-align:center"><h3>🏁 Deux manches terminées</h3><p>Équipe de six Pokémon validée.</p>'+trioTeam.map(p=>'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>').join('')+(mpSession?'<p>Ton équipe reste sur cet appareil. Les autres joueurs ne la voient pas dans cette interface. La confidentialité réelle dépend des règles Firebase.</p>':'')+'</div>';return}
  if(trioRound===0){cards.innerHTML='<div class="card"><button onclick="trioGenerate()">🎲 Commencer la manche '+(trioManches+1)+'</button></div>';return}
  if(current.length!==3){cards.innerHTML='<div class="card">Tirage interrompu. <button onclick="trioRetry()">Reprendre le tirage</button></div>';return}
  cards.innerHTML='<div style="grid-column:1/-1;text-align:center"><h3>🎰 Manche '+(trioManches+1)+'/2 — Trio '+trioRound+'/3</h3><p>'+(trioRound===3?'Dernier trio : acceptation obligatoire.':'Refuser élimine définitivement ce trio.')+'</p></div>'+current.map(x=>'<div class="card"><img src="'+(x.p.img||'')+'"><div class="name">'+x.p.name+'</div></div>').join('')+'<div style="grid-column:1/-1;text-align:center"><button onclick="trioAccept()">✅ Accepter les 3</button> '+(trioRound<3?'<button class="danger" onclick="trioReject()">❌ Refuser définitivement</button>':'')+'</div>';
