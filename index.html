@@ -1403,30 +1403,51 @@ async function applyLieMode(){
  gmInfo.textContent='Choix '+(idx+1)+' — '+target.p.name+' est le leurre de cette sélection.';
 }
 
-let trioRound=0,trioHistory=new Set(),trioDone=false,trioManches=0,trioTeam=[];
+let trioRound=0,trioHistory=new Set(),trioDone=false,trioManches=0,trioTeam=[],trioBusy=false,trioRevealed=false;
+const trioKey=()=> 'pokemon-trio-v2-'+(mpSession?'room-'+mpSession.room+'-'+mpSession.id:'solo-'+player);
+function trioSave(){try{localStorage.setItem(trioKey(),JSON.stringify({round:trioRound,history:[...trioHistory],done:trioDone,manches:trioManches,team:trioTeam.map(p=>p.id),offer:current.map(x=>x.p.id),revealed:trioRevealed}))}catch(e){}}
+async function trioRestore(){
+ try{const d=JSON.parse(localStorage.getItem(trioKey())||'null');if(!d)return false;
+ trioRound=d.round||0;trioHistory=new Set(d.history||[]);trioDone=!!d.done;trioManches=Math.min(2,d.manches||0);trioRevealed=!!d.revealed;
+ trioTeam=await Promise.all((d.team||[]).map(getP));current=(await Promise.all((d.offer||[]).map(getP))).map(p=>({p,clue:''}));return true
+ }catch(e){return false}
+}
+async function trioEntry(){
+ if(mpSession&&!mpLobbyStarted){alert('Attends le lancement du salon.');return}
+ if(trioBusy)return;
+ const restored=await trioRestore();
+ if(restored){renderTrio();return}
+ if(trioManches>=2){renderTrio();return}
+ await trioGenerate();
+}
 async function trioGenerate(){
- if(trioDone||trioManches>=2){alert('Les deux manches sont terminées.');return}
- trioRound++;current=[];const used=new Set(trioHistory);cards.innerHTML='<div class="loaderGen"><div class="loaderBall"></div><div>Préparation du trio '+trioRound+'/3…</div></div>';
- try{for(let i=0;i<3;i++){const p=await draw(used);used.add(p.id);trioHistory.add(p.id);current.push({p,clue:''})}}catch(e){cards.textContent='Impossible de générer le trio. Réessaie.';trioRound--;return}
- renderTrio();
+ if(trioBusy||trioDone||trioManches>=2||trioRound>=3)return;
+ trioBusy=true;trioRound++;current=[];trioSave();
+ const used=new Set(trioHistory);cards.innerHTML='<div class="loaderGen"><div class="loaderBall"></div><div>Préparation du trio '+trioRound+'/3…</div></div>';
+ try{for(let i=0;i<3;i++){const p=await draw(used);used.add(p.id);trioHistory.add(p.id);current.push({p,clue:''})}trioSave();renderTrio()}
+ catch(e){cards.textContent='Impossible de générer le trio. Réessaie.';trioRound--;trioSave()}
+ finally{trioBusy=false}
 }
 function renderTrio(){
- cards.innerHTML='<div style="grid-column:1/-1;text-align:center"><h3>🎰 Trio '+trioRound+' / 3</h3><p>'+(trioRound===3?'Dernier trio : il est obligatoire.':'Accepte les trois Pokémon ou refuse-les définitivement.')+'</p></div>'+current.map(x=>'<div class="card"><img src="'+(x.p.img||'')+'"><div class="name">'+x.p.name+'</div></div>').join('')+'<div style="grid-column:1/-1;text-align:center"><button onclick="trioAccept()">✅ Accepter les 3</button> '+(trioRound<3?'<button class="danger" onclick="trioReject()">❌ Refuser définitivement</button>':'')+'</div>';
+ if(trioManches>=2){cards.innerHTML='<div class="card" style="grid-column:1/-1;text-align:center"><h3>🏁 Deux manches terminées</h3><p>Équipe de six Pokémon validée.</p>'+trioTeam.map(p=>'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>').join('')+(mpSession?'<p>Ton équipe reste sur cet appareil. Les autres joueurs ne peuvent pas la consulter dans le salon.</p>':'')+'</div>';return}
+ if(trioRound===0){cards.innerHTML='<div class="card"><button onclick="trioGenerate()">🎲 Commencer la manche '+(trioManches+1)+'</button></div>';return}
+ if(current.length!==3){cards.innerHTML='<div class="card">Tirage interrompu. <button onclick="trioRetry()">Reprendre le tirage</button></div>';return}
+ cards.innerHTML='<div style="grid-column:1/-1;text-align:center"><h3>🎰 Manche '+(trioManches+1)+'/2 — Trio '+trioRound+'/3</h3><p>'+(trioRound===3?'Dernier trio : acceptation obligatoire.':'Refuser élimine définitivement ce trio.')+'</p></div>'+current.map(x=>'<div class="card"><img src="'+(x.p.img||'')+'"><div class="name">'+x.p.name+'</div></div>').join('')+'<div style="grid-column:1/-1;text-align:center"><button onclick="trioAccept()">✅ Accepter les 3</button> '+(trioRound<3?'<button class="danger" onclick="trioReject()">❌ Refuser définitivement</button>':'')+'</div>';
 }
-function trioNextManche(){if(trioManches!==1||trioDone)return;trioRound=0;trioHistory=new Set();current=[];trioGenerate()}
+function trioRetry(){if(trioBusy||current.length===3)return;trioRound=Math.max(0,trioRound-1);trioSave();trioGenerate()}
+function trioNextManche(){if(trioManches!==1||trioDone||trioBusy)return;trioRound=0;trioHistory=new Set();current=[];trioSave();trioGenerate()}
 async function trioSyncPrivate(){
  if(!mpSession)return;
  try{await mpRoom(mpSession.room).child('trioProgress/'+mpSession.id).set({manches:trioManches,finished:trioDone,updated:Date.now()})}catch(e){console.warn('Progression trio',e)}
 }
-function trioReject(){if(gameMode.value!=='triochoice'||trioDone||trioRound>=3)return;current=[];trioGenerate()}
+function trioReject(){if(gameMode.value!=='triochoice'||trioBusy||trioDone||trioRound>=3||current.length!==3)return;current=[];trioSave();trioGenerate()}
 function trioAccept(){
- if(gameMode.value!=='triochoice'||trioDone||current.length!==3)return;
+ if(gameMode.value!=='triochoice'||trioBusy||trioDone||current.length!==3||trioManches>=2)return;
  if(!mpSession&&teams[player].length+3>Number(teamSize.value)){alert('Il faut trois places disponibles dans ton équipe.');return}
- trioManches++;trioTeam.push(...current.map(x=>x.p));trioDone=trioManches>=2;batchLocked=true;
- if(!mpSession){teams[player].push(...current.map(x=>x.p));drawTeams()}
- cards.innerHTML='<div class="card" style="grid-column:1/-1;text-align:center"><h3>✅ Manche '+trioManches+'/2 validée</h3><p>'+ (trioDone?'Tes six Pokémon sont sélectionnés.':'Trois Pokémon sélectionnés. Prépare la deuxième manche.')+'</p>'+(trioDone?'':'<button onclick="trioNextManche()">🎲 Manche 2</button>')+'</div>';
- turn.textContent='Trio : manche '+trioManches+'/2 terminée';
- if(mpSession)trioSyncPrivate();else mpSyncState();
+ trioManches++;trioTeam.push(...current.map(x=>x.p));trioDone=trioManches>=2;trioRound=0;current=[];batchLocked=true;trioSave();
+ if(!mpSession){teams[player].push(...trioTeam.slice(-3));drawTeams()}
+ cards.innerHTML='<div class="card" style="grid-column:1/-1;text-align:center"><h3>✅ Manche '+trioManches+'/2 validée</h3>'+(trioDone?'<p>Équipe complète : six Pokémon.</p>':'<button onclick="trioNextManche()">🎲 Manche 2</button>')+'</div>';
+ if(mpSession)trioSyncPrivate();
 }
 let hangmanState=null;
 function hangmanNormalize(t){return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()}
