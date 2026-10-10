@@ -149,6 +149,7 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <option value="color">🎨 Couleur Pokédex</option>
 <option value="shinypalette">✨🎨 Palette Shiny</option>
 <option value="hangman">🎭 Pendu Pokémon</option>
+<option value="triochoice">🎰 Trio : accepter ou refuser</option>
 
 <option value="progressive">🔢 Génération mystère (indices progressifs)</option>
 <option value="randombox">📦 Boîte Pokémon aléatoire</option>
@@ -313,13 +314,13 @@ async function mpSnapshot(){
  return {player,mode:gameMode.value,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(x=>({clue:x.clue||'',offerLabel:x.offerLabel||null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
 }
 async function mpSyncState(){
- if(!mpSession||mpApplying)return;
+ if(!mpSession||mpApplying||gameMode.value==='triochoice')return;
  try{await mpRoom(mpSession.room).child('state').set(await mpSnapshot())}catch(e){console.warn('Sync Firebase',e)}
 }
 async function mpHydrateState(st){
  if(!st||mpApplying)return;mpApplying=true;
  try{
-  if(st.mode)gameMode.value=(st.mode==='olddesc'?'dexdesc':st.mode);
+  if(st.mode&&st.mode!=='triochoice')gameMode.value=(st.mode==='olddesc'?'dexdesc':st.mode);
   const z=st.settings||{};for(const [k,v] of Object.entries(z)){const el=document.getElementById(k);if(el&&v!=null)el.value=v}
   if(typeof updateModePanels==='function')updateModePanels();
   const mine=!st.proposalOwnerId||!mpSession||st.proposalOwnerId===mpSession.id;
@@ -1164,6 +1165,7 @@ async function dealKeep(){
 }
 
 async function rollCards(){
+ if(gameMode.value==='triochoice'){if(!trioRound){trioDone=false;trioHistory.clear()}return trioGenerate()}
  if(mpSession&&!mpLobbyStarted){alert('Attends que l’organisateur attribue les pseudos et lance le challenge.');return}
  if(mpSession){const generator=mpSeats[player===1?2:1];if(mpSession.id!==generator){alert('C’est au générateur désigné de lancer les propositions pour ce tour.');return}}
  if(mpSession)mpPrivateBatchOwner=mpSession.id; else mpPrivateBatchOwner=null;
@@ -1401,6 +1403,23 @@ async function applyLieMode(){
  gmInfo.textContent='Choix '+(idx+1)+' — '+target.p.name+' est le leurre de cette sélection.';
 }
 
+let trioRound=0,trioHistory=new Set(),trioDone=false;
+async function trioGenerate(){
+ if(trioDone){alert('Ce trio a déjà été validé.');return}
+ trioRound++;current=[];const used=new Set(trioHistory);cards.innerHTML='<div class="loaderGen"><div class="loaderBall"></div><div>Préparation du trio '+trioRound+'/3…</div></div>';
+ try{for(let i=0;i<3;i++){const p=await draw(used);used.add(p.id);trioHistory.add(p.id);current.push({p,clue:''})}}catch(e){cards.textContent='Impossible de générer le trio. Réessaie.';trioRound--;return}
+ renderTrio();
+}
+function renderTrio(){
+ cards.innerHTML='<div style="grid-column:1/-1;text-align:center"><h3>🎰 Trio '+trioRound+' / 3</h3><p>'+(trioRound===3?'Dernier trio : il est obligatoire.':'Accepte les trois Pokémon ou refuse-les définitivement.')+'</p></div>'+current.map(x=>'<div class="card"><img src="'+(x.p.img||'')+'"><div class="name">'+x.p.name+'</div></div>').join('')+'<div style="grid-column:1/-1;text-align:center"><button onclick="trioAccept()">✅ Accepter les 3</button> '+(trioRound<3?'<button class="danger" onclick="trioReject()">❌ Refuser définitivement</button>':'')+'</div>';
+}
+function trioReject(){if(gameMode.value!=='triochoice'||trioDone||trioRound>=3)return;current=[];trioGenerate()}
+function trioAccept(){
+ if(gameMode.value!=='triochoice'||trioDone||current.length!==3)return;
+ if(teams[player].length+3>Number(teamSize.value)){alert('Il faut trois places disponibles dans ton équipe.');return}
+ trioDone=true;batchLocked=true;teams[player].push(...current.map(x=>x.p));drawTeams();cards.innerHTML='<div class="card" style="grid-column:1/-1;text-align:center"><h3>✅ Trio validé</h3><p>Les trois Pokémon rejoignent ton équipe.</p></div>';turn.textContent='Trio confirmé pour le joueur '+player;
+ if(!mpSession)mpSyncState();
+}
 let hangmanState=null;
 function hangmanNormalize(t){return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()}
 function hangmanStart(i){if(!current[i]||hangmanState?.phase)return;hangmanState={phase:'guess',target:i,letters:[],errors:0,max:7};renderHangman()}
@@ -1417,6 +1436,7 @@ function renderHangman(){
  cards.innerHTML=html;
 }
 function render(){
+ if(gameMode.value==='triochoice'){renderTrio();return;}
  if(gameMode.value==='hangman'){renderHangman();return;}
  cards.classList.toggle('boxModeGrid',gameMode.value==='randombox');
  if(gameMode.value==='randombox'){
