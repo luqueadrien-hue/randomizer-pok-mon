@@ -252,13 +252,15 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 </div>
 <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-auth-compat.js"></script>
 <script>
 const firebaseConfig={apiKey:"AIzaSyB6cWUJru6vpfdpj5aE59jKAXA523Eka1E",authDomain:"pokemon-randomizer-f3b0f.firebaseapp.com",databaseURL:"https://pokemon-randomizer-f3b0f-default-rtdb.firebaseio.com",projectId:"pokemon-randomizer-f3b0f",storageBucket:"pokemon-randomizer-f3b0f.firebasestorage.app",messagingSenderId:"1031451577108",appId:"1:1031451577108:web:428ade1b96ab7e85489001"};
-let MPDB=null;
+let MPDB=null,MPAUTH=null,mpAuthReady=Promise.resolve(null);
 try{
  if(typeof firebase!=='undefined'&&firebase.database){
   if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
   MPDB=firebase.database();
+  if(firebase.auth){MPAUTH=firebase.auth();mpAuthReady=MPAUTH.signInAnonymously().then(x=>x.user).catch(e=>{console.warn('Authentification Firebase',e);return null})}
  }
 }catch(e){console.error('Initialisation Firebase',e)}
 function mpRequireDB(){if(!MPDB)throw Error('Firebase indisponible : le serveur multijoueur ne répond pas. Désactive les bloqueurs de scripts ou recharge la page.')}
@@ -277,20 +279,23 @@ function mpCodeNew(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array
 function mpId(){return (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)).replace(/-/g,'').slice(0,12)}
 function mpSetStatus(t){const e=document.getElementById('mpStatus');if(e)e.innerHTML=t}
 async function mpCreateRoom(){
+ await mpAuthReady;
  mpSetStatus('🟡 Création du salon…');
  const name=(mpName.value.trim()||'Hôte').slice(0,24);let code=(mpCode.value.trim().toUpperCase()||mpCodeNew()),s;
  if(!/^[A-Z0-9+]+$/.test(code))throw Error('Code invalide : utilise au moins 1 caractère (A-Z, 0-9 ou +)');
  s=await mpRoom(code).once('value');
  if(s.exists())throw Error('Ce code est déjà utilisé : choisis un autre code');
- const id=mpId();await mpRoom(code).set({created:Date.now(),hostIds:{[id]:true},players:{[id]:{name,role:'host',online:true}}});
+ const id=MPAUTH?.currentUser?.uid||mpId();await mpRoom(code).set({created:Date.now(),hostIds:{[id]:true},players:{[id]:{name,role:'host',online:true}}});
  await mpEnter({room:code,id,name,role:'host'}); await mpSyncState();
 }
 async function mpJoinRoom(){
+ await mpAuthReady;
  const name=(mpName.value.trim()||'Joueur').slice(0,24),code=mpCode.value.trim().toUpperCase();
  if(!/^[A-Z0-9+]+$/.test(code))throw Error('Code invalide : entre au moins 1 caractère (A-Z, 0-9 ou +)');
  const s=await mpRoom(code).once('value');if(!s.exists())throw Error('Salon introuvable');
- const id=mpId();
+ const id=MPAUTH?.currentUser?.uid||mpId();
  const room=s.val()||{},players=room.players||{};
+ if(players[id])throw Error('Tu participes déjà à ce salon sur cet appareil : recharge la page pour reprendre ta session.');
  const hostCount=Object.values(players).filter(p=>p&&p.role==='host').length;
  const role='player';
  await mpRoom(code).child('players/'+id).set({name,role,online:true});
@@ -298,6 +303,7 @@ async function mpJoinRoom(){
  await mpEnter({room:code,id,name,role});
 }
 async function mpEnter(s){
+ await mpAuthReady;
  mpSession=s;localStorage.setItem('pkmn-mp-session',JSON.stringify(s));mpCode.value=s.room;
  const online=mpRoom(s.room).child('players/'+s.id+'/online');await online.set(true);online.onDisconnect().set(false);
  if(mpListener)mpRoom(s.room).off('value',mpListener);
@@ -1405,9 +1411,13 @@ async function applyLieMode(){
 
 let trioRound=0,trioHistory=new Set(),trioDone=false,trioManches=0,trioTeam=[],trioBusy=false,trioRevealed=false;
 const trioKey=()=> 'pokemon-trio-v2-'+(mpSession?'room-'+mpSession.room+'-'+mpSession.id:'solo-'+player);
-function trioSave(){try{localStorage.setItem(trioKey(),JSON.stringify({round:trioRound,history:[...trioHistory],done:trioDone,manches:trioManches,team:trioTeam.map(p=>p.id),offer:current.map(x=>x.p.id),revealed:trioRevealed}))}catch(e){}}
+function trioSave(){const data={round:trioRound,history:[...trioHistory],done:trioDone,manches:trioManches,team:trioTeam.map(p=>p.id),offer:current.map(x=>x.p.id),revealed:trioRevealed};try{localStorage.setItem(trioKey(),JSON.stringify(data))}catch(e){}
+ if(mpSession&&MPAUTH?.currentUser)mpRoom(mpSession.room).child('trioPrivate/'+MPAUTH.currentUser.uid).set(data).catch(e=>console.warn('Sauvegarde privée',e))
+}
 async function trioRestore(){
- try{const d=JSON.parse(localStorage.getItem(trioKey())||'null');if(!d)return false;
+ try{let raw=localStorage.getItem(trioKey());
+ if(mpSession&&MPAUTH?.currentUser){try{const snap=await mpRoom(mpSession.room).child('trioPrivate/'+MPAUTH.currentUser.uid).once('value');if(snap.exists())raw=JSON.stringify(snap.val())}catch(e){console.warn('Restauration privée',e)}}
+ const d=JSON.parse(raw||'null');if(!d)return false;
  trioRound=d.round||0;trioHistory=new Set(d.history||[]);trioDone=!!d.done;trioManches=Math.min(2,d.manches||0);trioRevealed=!!d.revealed;
  trioTeam=await Promise.all((d.team||[]).map(getP));current=(await Promise.all((d.offer||[]).map(getP))).map(p=>({p,clue:''}));return true
  }catch(e){return false}
