@@ -111,6 +111,7 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <div class="panel">
 <div class="controls">
 <label>Jeu<select id="gameMode">
+<option value="surprise">🎲 Randomizer multi-jeux : jeu surprise</option>
 <option value="egg">🥚 Œuf : type et groupe</option>
 <option value="stats">📊 Total de stats (BST)</option>
 <option value="stat-hp">❤️ PV à l'aveugle</option>
@@ -155,7 +156,8 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 <option value="randombox">📦 Boîte Pokémon aléatoire</option>
 <option value="zonemusic">🎵 Pokémon par musique de zone</option>
 <option value="pokemoncry">🔊 Devine le Pokémon par son cri</option>
-</select></label>
+</select>
+<div id="surpriseNotice" aria-live="polite" style="margin:8px 0"></div></label>
 
 <label>Taille équipe<select id="teamSize"><option>3</option><option>4</option><option>5</option><option selected>6</option></select></label>
 <label>Nombre de choix<input id="choiceCount" type="number" min="2" max="12" value="3"></label>
@@ -1177,7 +1179,25 @@ async function dealKeep(){
  dealInfo.textContent='Pokémon conservé. Lance une nouvelle manche.';dealButtons();mpSyncState();
 }
 
+const SURPRISE_MODES=['egg','stats','stat-hp','stat-speed','stat-attack','stat-special-attack','stat-defense','stat-special-defense','species','height','weight','typeblind','dexnumber','movelearn','dexdesc','evolution','ability','dominantstat','bstonly','multimove','evomethod','firstregion','wildgift','weaknesses','resistances','effectiveness','capturelocation','regionaldex','color','shinypalette','progressive','pokemoncry'];
+let surprisePrevious=null;
+function surpriseMode(){
+ const pool=SURPRISE_MODES.filter(x=>x!==surprisePrevious&&[...gameMode.options].some(o=>o.value===x));
+ const mode=pool[Math.floor(Math.random()*pool.length)];surprisePrevious=mode;return mode;
+}
+function surpriseRoll(){
+ if(mpSession&&!mpLobbyStarted)return alert('Attends le lancement du salon.');
+ if(mpSession&&mpSession.id!==mpSeats[player===1?2:1])return alert('Seul le joueur qui fait deviner peut tirer le jeu.');
+ const mode=surpriseMode();gameMode.value=mode;
+ choiceCount.value='3';
+ const label=gameMode.selectedOptions[0]?.textContent||mode;
+ const notice=document.getElementById('surpriseNotice');
+ if(notice)notice.innerHTML='🎲 Jeu tiré : <strong>'+label+'</strong> — 3 propositions à faire deviner. <button type="button" onclick="surpriseNext()">🎲 Tirer un autre jeu</button>';
+ return rollCards();
+}
+function surpriseNext(){gameMode.value='surprise';rollCards()}
 async function rollCards(){
+ if(gameMode.value==='surprise')return surpriseRoll();
  if(gameMode.value==='triochoice')return trioEntry()
  if(mpSession&&!mpLobbyStarted){alert('Attends que l’organisateur attribue les pseudos et lance le challenge.');return}
  if(mpSession){const generator=mpSeats[player===1?2:1];if(mpSession.id!==generator){alert('C’est au générateur désigné de lancer les propositions pour ce tour.');return}}
@@ -1513,7 +1533,7 @@ roll.addEventListener('click',()=>rollCards().catch(e=>{console.error(e);alert(e
 reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer').forEach(x=>x.style.display='block')});
 hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer').forEach(x=>x.style.display='none')});
 reset.addEventListener('click',()=>{dealStage=0;dealStarted=false;dealRemaining=[];dealUsed=new Set();starterOffer.innerHTML='';dealButtons();player=1;teams={1:[],2:[]};current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
-gameMode.addEventListener('change',()=>{dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';auctionPanel.style.display=gameMode.value==='auction'?'block':'none';turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
+gameMode.addEventListener('change',()=>{const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';auctionPanel.style.display=gameMode.value==='auction'?'block':'none';turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
 ['teamSize','choiceCount','legend','generation','typeMode','revealMode','lieMode','boxSize'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
 </script>
 </body>
