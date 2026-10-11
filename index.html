@@ -1225,10 +1225,17 @@ async function dealKeep(){
 }
 
 const SURPRISE_MODES=['egg','stats','stat-hp','stat-speed','stat-attack','stat-special-attack','stat-defense','stat-special-defense','species','height','weight','typeblind','dexnumber','movelearn','dexdesc','evolution','ability','dominantstat','bstonly','multimove','evomethod','firstregion','wildgift','weaknesses','resistances','effectiveness','capturelocation','regionaldex','color','shinypalette','progressive','pokemoncry'];
-let surprisePrevious=null,surpriseActive=false;
+let surprisePrevious=null,surpriseActive=false,surpriseRemaining=[];
 function surpriseMode(){
- const pool=SURPRISE_MODES.filter(x=>x!==surprisePrevious&&[...gameMode.options].some(o=>o.value===x));
- const mode=pool[Math.floor(Math.random()*pool.length)];surprisePrevious=mode;return mode;
+ const available=SURPRISE_MODES.filter(x=>[...gameMode.options].some(o=>o.value===x));
+ if(!surpriseRemaining.length){
+  surpriseRemaining=available.filter(x=>x!==surprisePrevious);
+  if(!surpriseRemaining.length)surpriseRemaining=available.slice();
+ }
+ const index=Math.floor(Math.random()*surpriseRemaining.length);
+ const mode=surpriseRemaining.splice(index,1)[0];
+ surprisePrevious=mode;
+ return mode;
 }
 function surpriseRoll(){
  if(mpSession&&!mpLobbyStarted)return alert('Attends le lancement du salon.');
@@ -1238,7 +1245,7 @@ function surpriseRoll(){
  choiceCount.value='3';
  const label=gameMode.selectedOptions[0]?.textContent||mode;
  const notice=document.getElementById('surpriseNotice');
- if(notice)notice.innerHTML='🎲 Jeu tiré : <strong>'+label+'</strong> — 3 propositions à faire deviner. <button type="button" onclick="surpriseNext()">🎲 Tirer un autre jeu</button>';
+ if(notice)notice.innerHTML='🎲 Jeu tiré : <strong>'+label+'</strong> — 3 propositions à faire deviner. '+surpriseRemaining.length+' jeu(x) encore disponibles avant renouvellement. <button type="button" onclick="surpriseNext()">🎲 Tirer un autre jeu</button>';
  return rollCards();
 }
 function surpriseNext(){gameMode.value='surprise';rollCards()}
