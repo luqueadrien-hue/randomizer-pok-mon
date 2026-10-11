@@ -91,6 +91,26 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 @media(max-width:650px){.mpbar{grid-template-columns:1fr}}
 
 .loaderGen{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:180px;font-weight:800}.loaderBall{width:58px;height:58px;border:5px solid currentColor;border-radius:50%;position:relative;animation:pokeSpin .85s linear infinite}.loaderBall:before{content:'';position:absolute;left:-5px;right:-5px;top:21px;border-top:5px solid currentColor}.loaderBall:after{content:'';position:absolute;width:15px;height:15px;border:5px solid currentColor;border-radius:50%;left:16px;top:11px;background:var(--card,#fff)}@keyframes pokeSpin{to{transform:rotate(360deg)}}.loaderDots:after{content:'…';animation:loaderDots 1.2s steps(4,end) infinite}@keyframes loaderDots{0%{content:''}25%{content:'.'}50%{content:'..'}75%,100%{content:'...'}}
+
+/* Responsive : ordinateur, tablette et téléphone */
+*,*::before,*::after{box-sizing:border-box}
+html{overflow-x:hidden;-webkit-text-size-adjust:100%}
+body{min-width:0;overflow-x:hidden}
+.wrap{width:100%;max-width:1150px;margin-inline:auto;padding:clamp(10px,2.5vw,22px)}
+.panel,.team,.card,.controls>*,.mpbar>*,.teams>*{min-width:0;max-width:100%}
+select,input,button,textarea{max-width:100%;font:inherit}
+select{min-width:0;text-overflow:ellipsis}
+button{min-height:44px;touch-action:manipulation}
+img,video,canvas,svg{max-width:100%}
+.card img{max-width:100%;height:auto;max-height:180px;object-fit:contain}
+.cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))}
+.teamgrid{grid-template-columns:repeat(auto-fit,minmax(min(100%,105px),1fr))}
+.gameClue,.card,.mpstate{overflow-wrap:anywhere}
+.shareOptions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.shareOptions a,.shareOptions button{display:inline-flex;align-items:center;justify-content:center;flex:1 1 135px;min-width:0;padding:11px;border-radius:10px;background:#382446;border:1px solid #73568a;color:white;text-decoration:none;text-align:center;font-weight:700}
+@media(max-width:850px){.wrap{padding:14px}.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.mpbar{grid-template-columns:1fr 1fr}.cards{gap:10px}}
+@media(max-width:600px){.wrap{padding:10px}.controls,.mpbar,.teams{grid-template-columns:minmax(0,1fr)}.panel,.team,.card{padding:12px;border-radius:14px}.cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr))}.card img{max-height:145px}.name{font-size:clamp(15px,4vw,20px)}h1{font-size:clamp(23px,6vw,34px)}.actions button{min-width:min(100%,140px)}}
+@media(max-width:360px){.cards{grid-template-columns:1fr}.teamgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -105,7 +125,7 @@ button{font-weight:700;cursor:pointer}.primary{background:#e2b744;color:#21152c}
 </div>
 <div id="mpStatus" class="mpstate">🌐 Pour jouer à distance, crée un salon puis partage son lien avec tes amis.</div>
 <div id="mpPlayers" class="mpplayers"></div><div id="mpRoleStatus" class="turn">Attribution des rôles en attente.</div><div id="mpLobbyHelp" class="mpstate" style="margin-top:8px">Connecte-toi comme organisateur pour attribuer les joueurs.</div><div id="mpLobby" class="mpstate" style="margin-top:8px">Les participants apparaîtront ici.</div><div class="actions"><button id="mpStartChallenge" class="primary">▶ Lancer le challenge</button></div>
-<div class="actions"><button id="mpCopy">🔗 Copier le lien d’invitation</button><button id="mpLeave" class="danger">Quitter le salon</button></div>
+<div class="actions"><button id="mpCopy">🔗 Copier le lien d’invitation</button><button id="mpShare" type="button" class="primary">📤 Partager le salon</button><button id="mpLeave" class="danger">Quitter le salon</button></div><div id="mpShareOptions" class="shareOptions" hidden></div>
 </div>
 
 <div class="panel">
@@ -396,6 +416,31 @@ window.addEventListener('DOMContentLoaded',()=>{
   mpSetStatus('▶ Challenge lancé ! Joueur 1 et Joueur 2 ont été attribués.');
  }catch(e){mpSetStatus('❌ '+mpEsc(e.message))}
 };
+ function mpShareLink(){
+  const url=new URL(location.href);url.hash='';
+  if(mpSession?.room)url.searchParams.set('salon',mpSession.room);
+  else url.searchParams.delete('salon');
+  return url.toString();
+ }
+ function mpShareFallback(){
+  const url=mpShareLink(),message='Rejoins-moi sur Pokémon Randomizer ! '+url;
+  const box=document.getElementById('mpShareOptions');box.hidden=false;
+  box.innerHTML='<a target="_blank" rel="noopener noreferrer" href="https://wa.me/?text='+encodeURIComponent(message)+'">🟢 WhatsApp</a>'+
+   '<a href="sms:?body='+encodeURIComponent(message)+'">💬 SMS / Messages</a>'+
+   '<a href="mailto:?subject='+encodeURIComponent('Invitation Pokémon Randomizer')+'&body='+encodeURIComponent(message)+'">✉️ E-mail</a>'+
+   '<button type="button" id="shareCopyFallback">📋 Copier le lien</button>';
+  document.getElementById('shareCopyFallback').onclick=async()=>{
+   try{await navigator.clipboard.writeText(url);mpSetStatus('✅ Lien copié.')}catch(e){window.prompt('Copie le lien :',url)}
+  };
+ }
+ document.getElementById('mpShare').onclick=async()=>{
+  const url=mpShareLink();
+  if(navigator.share){
+   try{await navigator.share({title:'Pokémon Randomizer',text:mpSession?'Rejoins mon salon Pokémon Randomizer !':'Viens jouer au Pokémon Randomizer !',url});return}
+   catch(e){if(e.name==='AbortError')return}
+  }
+  mpShareFallback();
+ };
  mpCopy.onclick=async()=>{if(!mpSession){mpSetStatus('Crée ou rejoins un salon pour obtenir un lien.');return}const url=new URL(location.href);url.searchParams.set('salon',mpSession.room);try{await navigator.clipboard.writeText(url.toString());mpSetStatus('✅ Lien copié : envoie-le à tes amis pour jouer à distance.')}catch(e){mpSetStatus('🔗 Lien du salon : '+mpEsc(url.toString()))}};
  const invite=new URLSearchParams(location.search).get('salon');if(invite){mpCode.value=invite.toUpperCase();mpSetStatus('🔗 Invitation reçue pour le salon '+mpEsc(mpCode.value)+'. Entre ton pseudo puis clique sur Rejoindre.')}else{let old=null;try{old=JSON.parse(localStorage.getItem('pkmn-mp-session')||'null')}catch(e){}if(old?.room)mpRoom(old.room).once('value').then(s=>s.exists()?mpEnter(old):localStorage.removeItem('pkmn-mp-session')).catch(e=>mpSetStatus('⚠️ Reconnexion impossible : '+mpEsc(e.code||e.message||e)))}
 });
