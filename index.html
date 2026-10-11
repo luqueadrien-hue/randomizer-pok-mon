@@ -646,7 +646,7 @@ function frTrigger(t){
 function describeEvolutionDetail(d){
  const trigger=d.trigger?.name||'other';
  if(trigger==='level-up'){
-   if(d.min_level) return `Montée de niveau — niveau ${d.min_level}`;
+   if(d.min_level){const extras=[];if(d.time_of_day)extras.push(d.time_of_day==='day'?'de jour':d.time_of_day==='night'?'de nuit':d.time_of_day);if(d.min_happiness!=null)extras.push('bonheur ≥ '+d.min_happiness);if(d.known_move?.name)extras.push('attaque '+d.known_move.name);if(d.held_item?.name)extras.push('objet tenu '+frItemName(d.held_item.name));return 'Montée de niveau — niveau '+d.min_level+(extras.length?' ('+extras.join(', ')+')':'');}
    const extras=[];
    if(d.min_happiness!=null) extras.push(`bonheur ≥ ${d.min_happiness}`);
    if(d.time_of_day) extras.push(`de ${d.time_of_day==='day'?'jour':'nuit'}`);
@@ -833,39 +833,42 @@ const TRAINER_HINTS={
 function trainerTeamClue(p){const a=TRAINER_HINTS[p.id];if(!a)return 'Aucun dresseur nommé vérifié dans la base pour ce Pokémon';const x=a[Math.floor(Math.random()*a.length)];return 'Dresseur : '+x[0]+' • Support : '+x[1]+' • '+x[2];}
 
 async function getEvolutionClue(p){
- if(evoCache.has(p.id)) return evoCache.get(p.id);
+ if(evoCache.has(p.id))return evoCache.get(p.id);
  try{
-   const s=await fetch(`https://pokeapi.co/api/v2/pokemon-species/${p.id}`).then(r=>r.json());
-   const chainUrl=s.evolution_chain?.url;
-   if(!chainUrl) throw new Error('Pas de chaîne');
-   const chain=await fetch(chainUrl).then(r=>r.json());
-   const node=findEvolutionNode(chain.chain,s.name);
-   if(!node) throw new Error('Nœud introuvable');
-   const next=node.evolves_to||[];
-   if(!next.length){
-     const out={text:'Ce Pokémon est au stade final de sa lignée évolutive.',final:true,source:'PokéAPI'};
-     evoCache.set(p.id,out); return out;
-   }
-   const methods=[];
-   for(const evo of next){
-     let target='une évolution'; try{const es=await fetch(evo.species.url).then(r=>r.json());target=es.names?.find(x=>x.language?.name==='fr')?.name||target}catch(_){}
-     const details=evo.evolution_details||[];
-     if(!details.length){
-       methods.push(`Vers ${target} — condition spéciale`);
-     }else{
-       for(const d of details){
-         methods.push(`Vers ${target} — ${describeEvolutionDetail(d)}`);
-       }
-     }
-   }
-   const out={text:methods.join(' | '),final:false,source:'PokéAPI'};
-   evoCache.set(p.id,out); return out;
+  const sp=await fetch('https://pokeapi.co/api/v2/pokemon-species/'+p.id).then(r=>{if(!r.ok)throw Error('Espèce indisponible');return r.json()});
+  if(!sp.evolution_chain?.url)throw Error('Chaîne absente');
+  const ch=await fetch(sp.evolution_chain.url).then(r=>{if(!r.ok)throw Error('Chaîne indisponible');return r.json()});
+  const path=[];
+  function walk(node){
+   if(!node)return false;
+   path.push(node);
+   if(node.species?.name===sp.name)return true;
+   for(const next of node.evolves_to||[])if(walk(next))return true;
+   path.pop();return false;
+  }
+  if(!walk(ch.chain))throw Error('Pokémon absent de la chaîne');
+  const names=await Promise.all(path.map(async node=>{
+   try{const x=await fetch(node.species.url).then(r=>r.json());return x.names?.find(n=>n.language?.name==='fr')?.name||node.species.name}
+   catch(e){return node.species.name}
+  }));
+  const steps=[];
+  for(let i=1;i<path.length;i++){
+   const details=path[i].evolution_details||[];
+   const methods=[...new Set(details.map(describeEvolutionDetail))];
+   steps.push(names[i-1]+' → '+names[i]+' : '+(methods.length?methods.join(' OU '):'condition non renseignée'));
+  }
+  const next=path[path.length-1].evolves_to||[];
+  let text;
+  if(steps.length)text='Depuis la forme de base : '+steps.join(' | ');
+  else if(next.length)text='Forme de base : '+names[0]+'. Évolution(s) suivante(s) possible(s).';
+  else text='Ce Pokémon ne possède pas d’évolution connue.';
+  if(steps.length&&next.length)text+=' | Ce Pokémon peut encore évoluer.';
+  const out={text,final:!next.length,source:'PokéAPI'};
+  evoCache.set(p.id,out);return out;
  }catch(e){
-   const out={text:'Méthode d’évolution indisponible.',final:false,source:'PokéAPI'};
-   evoCache.set(p.id,out); return out;
+  return {text:'Méthode d’évolution indisponible.',final:false,source:'PokéAPI'};
  }
 }
-
 
 
 function typeTheme(types){
