@@ -169,6 +169,7 @@ img,video,canvas,svg{max-width:100%}
 <option value="learnleave">📦 Apprendre ou à laisser</option>
 <option value="randombox">📦 Boîte randomisée</option>
 <option value="auction">💰 Enchères Pokémon</option>
+<option value="blinddraft">🕶️ Draft à l’aveugle — 6 manches par joueur</option>
 <option value="hangman">🎭 Pendu Pokémon</option>
 <option value="surprise">🎲 Randomizer multi-jeux : jeu aléatoire</option>
 </select>
@@ -387,7 +388,9 @@ function mpReceive(r){
  document.getElementById('team2').parentElement.querySelector('h2').textContent='JOUEUR 2 — '+p2;
  if(r.state&&r.state.mode!=='hangman')mpHydrateState(r.state);
  if(r.state?.mode==='hangman'){gameMode.value='hangman';player=r.state.player||player;}
+ if(r.state?.mode==='blinddraft')gameMode.value='blinddraft';
  if(r.hangman)hangmanReceive(r.hangman);
+ if(r.blindDraft)blindDraftReceive(r.blindDraft);
 }
 
 window.addEventListener('DOMContentLoaded',()=>{
@@ -1252,6 +1255,7 @@ function surpriseNext(){gameMode.value='surprise';rollCards()}
 async function rollCards(){
  if(gameMode.value==='surprise')return surpriseRoll();
  if(gameMode.value==='triochoice')return trioEntry()
+ if(gameMode.value==='blinddraft')return blindDraftRoll()
  if(mpSession&&!mpLobbyStarted){alert('Attends que l’organisateur attribue les pseudos et lance le challenge.');return}
  if(mpSession){const generator=mpSeats[player===1?2:1];if(mpSession.id!==generator){alert('C’est au générateur désigné de lancer les propositions pour ce tour.');return}}
  if(mpSession)mpPrivateBatchOwner=mpSession.id; else mpPrivateBatchOwner=null;
@@ -1635,6 +1639,7 @@ function renderHangman(){
 
 function render(){
  if(gameMode.value==='triochoice'){renderTrio();return;}
+ if(gameMode.value==='blinddraft'){renderBlindDraft();return;}
  if(gameMode.value==='hangman'){renderHangman();return;}
  cards.classList.toggle('boxModeGrid',gameMode.value==='randombox');
  if(gameMode.value==='randombox'){
@@ -1651,6 +1656,71 @@ function render(){
 function hidePrivateProposals(){
  if(!current.length)return;
  cards.innerHTML='<div class="loaderGen"><div>🔒 Propositions masquées</div><div>Appuie sur « Afficher mes propositions » uniquement quand c’est à toi de regarder.</div><button type="button" onclick="render()">Afficher mes propositions</button></div>';
+}
+let blindDraft={turn:0,entries:[],offers:[],locked:false},blindDraftLoading=false;
+function blindDraftChooser(){return blindDraft.turn<6?1:2}
+function blindDraftRecipient(){const n=blindDraft.turn%6+1,chooser=blindDraftChooser();return n%2===0?chooser:3-chooser}
+function blindDraftAllowed(){
+ if(!mpSession)return true;
+ return mpLobbyStarted&&mpSession.id===mpSeats[blindDraftChooser()];
+}
+async function blindDraftRoll(){
+ if(blindDraftLoading||blindDraft.locked||blindDraft.turn>=12)return;
+ if(!blindDraftAllowed())return alert('Ce n’est pas ton tour de choisir.');
+ blindDraftLoading=true;
+ try{
+  const used=new Set(blindDraft.entries.map(x=>x.id));
+  const offers=[];
+  for(let i=0;i<3;i++){const p=await draw(used);offers.push(p.id)}
+  blindDraft.offers=offers;
+  if(mpSession)await mpRoom(mpSession.room).child('blindDraft').set({...blindDraft,updated:Date.now()});
+  renderBlindDraft();
+ }finally{blindDraftLoading=false}
+}
+async function blindDraftPick(i){
+ if(!blindDraftAllowed()||blindDraft.locked||!blindDraft.offers[i])return;
+ const entry={id:blindDraft.offers[i],by:blindDraftChooser(),to:blindDraftRecipient()};
+ if(mpSession){
+  const ref=mpRoom(mpSession.room).child('blindDraft');
+  const result=await ref.transaction(v=>{
+   if(!v||v.turn!==blindDraft.turn||v.locked||v.offers?.[i]!==entry.id)return;
+   v.entries=[...(v.entries||[]),entry];v.turn++;v.offers=[];v.updated=Date.now();return v;
+  });
+  if(!result.committed)return;
+  blindDraft=result.snapshot.val();
+ }else{blindDraft.entries.push(entry);blindDraft.turn++;blindDraft.offers=[]}
+ renderBlindDraft();
+}
+async function blindDraftReceive(d){
+ if(!d||gameMode.value!=='blinddraft')return;
+ blindDraft=d;renderBlindDraft();
+}
+async function renderBlindDraft(){
+ if(gameMode.value!=='blinddraft')return;
+ const turnNo=blindDraft.turn,chooser=blindDraftChooser(),recipient=blindDraftRecipient(),canAct=blindDraftAllowed(),done=turnNo>=12;
+ let html='<div style="grid-column:1/-1"><h3>🕶️ Draft à l’aveugle — '+(done?'Terminé':('Manche '+(turnNo%6+1)+'/6 du joueur '+chooser))+'</h3><p>'+(done?'Les deux équipes de six Pokémon sont complètes.':'Joueur '+chooser+' choisit parmi trois Pokémon. Le Pokémon sera attribué '+(chooser===recipient?'à sa propre équipe.':'à son adversaire.'))+'</p></div>';
+ const entries=blindDraft.entries||[];
+ for(let team=1;team<=2;team++){
+  const own=entries.filter(x=>x.to===team);
+  html+='<div class="card"><h3>Équipe '+team+' ('+own.length+'/6)</h3>';
+  for(const e of own){
+   const show=done||!mpSession||mpSession.id===mpSeats[e.by];
+   html+='<div class="mini">'+(show?'<span data-draft-id="'+e.id+'">Pokémon #'+e.id+'</span>':'🔒 Pokémon attribué par l’adversaire')+'</div>';
+  }
+  html+='</div>';
+ }
+ if(!done){
+  if(!blindDraft.offers?.length)html+='<div style="grid-column:1/-1;text-align:center">'+(canAct?'<button onclick="blindDraftRoll()">🎲 Générer 3 Pokémon</button>':'⏳ En attente du joueur '+chooser)+'</div>';
+  else if(canAct){
+   html+='<div style="grid-column:1/-1"><h3>Choisis un Pokémon</h3></div>';
+   html+=blindDraft.offers.map((id,i)=>'<div class="card"><div data-draft-offer="'+id+'">Pokémon #'+id+'</div><button onclick="blindDraftPick('+i+')">Choisir</button></div>').join('');
+  }else html+='<div style="grid-column:1/-1;text-align:center">🔒 Trois propositions secrètes — en attente du choix du joueur '+chooser+'</div>';
+ }
+ cards.innerHTML=html;
+ for(const el of cards.querySelectorAll('[data-draft-id],[data-draft-offer]')){
+  const id=+(el.dataset.draftId||el.dataset.draftOffer);
+  getP(id).then(p=>{if(!el.isConnected)return;el.innerHTML='<img src="'+(p.img||'')+'" style="height:90px;display:block;margin:auto"><b>'+mpEsc(p.name)+'</b>'}).catch(()=>{});
+ }
 }
 function drawTeams(){[1,2].forEach(n=>document.getElementById('team'+n).innerHTML=teams[n].map(p=>'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>').join(''))}
 function pick(i){
