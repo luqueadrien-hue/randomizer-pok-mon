@@ -1797,7 +1797,7 @@ hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=
 reset.addEventListener('click',()=>{dealStage=0;dealStarted=false;dealRemaining=[];dealUsed=new Set();starterOffer.innerHTML='';dealButtons();player=1;teams={1:[],2:[]};current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
 let auctionRound={pokemon:null,highest:0,leader:0,turn:1,locked:false,balances:null,completed:0,loading:false};
 function auctionCanAct(n){return !mpSession||mpSession.id===mpSeats[n]}
-function auctionCounts(a){const awards=a.awards||{1:[],2:[]};return {1:(awards[1]||[]).length,2:(awards[2]||[]).length}}
+function auctionCounts(a){const awards=a.awards||(mpSession?{1:[],2:[]}:{1:teams[1],2:teams[2]});return {1:(awards[1]||[]).length,2:(awards[2]||[]).length}}
 function auctionNextPlayer(a){const counts=auctionCounts(a);return counts[1]>=6?2:counts[2]>=6?1:(a.completed%2+1)}
 function auctionFinalize(a,winner){
  const counts=auctionCounts(a);if(counts[winner]>=6)return false;
@@ -1810,7 +1810,7 @@ function auctionFinalize(a,winner){
 }
 function auctionAutoResolve(a){
  if(!a.leader)return false;
- const other=3-a.leader,counts=auctionCounts(a),step=Math.max(1,Number(a.step||document.getElementById('auctionStep').value)||1);
+ const other=3-a.leader,counts=auctionCounts(a),step=auctionEffectiveStep(a);
  if(counts[other]>=6||(a.balances?.[other]||0)<a.highest+step)return auctionFinalize(a,a.leader);
  return false;
 }
@@ -1853,13 +1853,13 @@ async function auctionReceive(v){
 async function auctionStart(){
  const a=auctionRound;
  if(a.pokemon||a.loading||a.completed>=12)return;
- if(mpSession&&(!mpLobbyStarted||mpSession.id!==mpSeats[a.completed%2+1]))return alert('Le joueur désigné doit lancer le Pokémon.');
+ if(mpSession&&(!mpLobbyStarted||mpSession.id!==mpSeats[auctionNextPlayer(a)]))return alert('Le joueur désigné doit lancer le Pokémon.');
  if(!a.balances)a.balances={1:auctionSelectedBudget(),2:auctionSelectedBudget()};
  a.loading=true;auctionRender();
  try{
   const p=await draw(new Set([...teams[1],...teams[2]].map(x=>x.id)));
   if(mpSession){
-   const ref=mpRoom(mpSession.room).child('auctionRound'),budget=auctionSelectedBudget(),step=Math.max(1,Number(document.getElementById('auctionStep').value)||1);
+   const ref=mpRoom(mpSession.room).child('auctionRound'),budget=auctionSelectedBudget(),step=auctionEffectiveStep(a);
    const tx=await ref.transaction(v=>{
     if(v?.pokemonId||v?.completed>=12)return;
     const balances=v?.balances||{1:budget,2:budget},completed=v?.completed||0,awards=v?.awards||{1:[],2:[]};
