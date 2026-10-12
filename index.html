@@ -1228,7 +1228,7 @@ async function dealKeep(){
 }
 
 const SURPRISE_MODES=['egg','stats','stat-hp','stat-speed','stat-attack','stat-special-attack','stat-defense','stat-special-defense','species','height','weight','typeblind','dexnumber','movelearn','dexdesc','evolution','ability','dominantstat','multimove','evomethod','firstregion','wildgift','weaknesses','resistances','effectiveness','capturelocation','regionaldex','color','shinypalette','progressive','pokemoncry'];
-let surprisePrevious=null,surpriseActive=false,surpriseRemaining=[];
+let surprisePrevious=null,surpriseActive=false,surpriseRemaining=[],surpriseRound=0;
 function surpriseMode(){
  const available=SURPRISE_MODES.filter(x=>[...gameMode.options].some(o=>o.value===x));
  if(!surpriseRemaining.length){
@@ -1238,20 +1238,24 @@ function surpriseMode(){
  const index=Math.floor(Math.random()*surpriseRemaining.length);
  const mode=surpriseRemaining.splice(index,1)[0];
  surprisePrevious=mode;
- return mode;
+ return {mode,number:available.indexOf(mode)+1,total:available.length};
 }
 function surpriseRoll(){
  if(mpSession&&!mpLobbyStarted)return alert('Attends le lancement du salon.');
- if(mpSession&&mpSession.id!==mpSeats[player===1?2:1])return alert('Seul le joueur qui fait deviner peut tirer le jeu.');
- const mode=surpriseMode();surpriseActive=true;gameMode.value=mode;
- revealMode.value='visible';
- choiceCount.value='3';
- const label=gameMode.selectedOptions[0]?.textContent||mode;
+ if(mpSession&&mpSession.id!==mpSeats[player===1?2:1])return alert('Seul le joueur qui fait deviner peut lancer le dé.');
+ const result=surpriseMode();surpriseActive=true;gameMode.value=result.mode;
+ revealMode.value='visible';choiceCount.value='3';surpriseRound++;
+ const label=gameMode.selectedOptions[0]?.textContent||result.mode;
  const notice=document.getElementById('surpriseNotice');
- if(notice)notice.innerHTML='🎲 Jeu tiré : <strong>'+label+'</strong> — 3 propositions à faire deviner. '+surpriseRemaining.length+' jeu(x) encore disponibles avant renouvellement. <button type="button" onclick="surpriseNext()">🎲 Tirer un autre jeu</button>';
+ if(notice)notice.innerHTML='<div style="padding:14px;border:1px solid #777;border-radius:12px;text-align:center"><div>🎲 LANCER DE DÉ — MANCHE '+surpriseRound+'</div><div style="font-size:48px;font-weight:900" aria-label="Face '+result.number+'">'+result.number+'</div><strong>Face '+result.number+' / '+result.total+' : '+label+'</strong><p>Aucun numéro répété avant épuisement des faces.</p><button type="button" onclick="surpriseNext()">🎲 Dé de la prochaine manche</button></div>';
  return rollCards();
 }
-function surpriseNext(){gameMode.value='surprise';rollCards()}
+function surpriseNext(){
+ if(mpSession&&!mpLobbyStarted)return alert('Le salon doit être lancé.');
+ if(mpSession&&mpSession.id!==mpSeats[player===1?2:1])return alert('Le prochain générateur doit lancer le dé.');
+ if(!batchLocked&&current.length)return alert('Termine la sélection de cette manche avant de relancer le dé.');
+ gameMode.value='surprise';return rollCards();
+}
 async function rollCards(){
  if(gameMode.value==='surprise')return surpriseRoll();
  if(gameMode.value==='triochoice')return trioEntry()
