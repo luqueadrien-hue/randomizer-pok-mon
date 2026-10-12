@@ -348,7 +348,7 @@ async function mpHydrateState(st){
   if(st.mode&&gameMode.value!=='triochoice'&&st.mode!=='triochoice'){if(gameMode.value!==st.mode)surpriseActive=false;gameMode.value=(st.mode==='olddesc'?'dexdesc':st.mode==='bstonly'?'stats':st.mode);}
   const z=st.settings||{};for(const [k,v] of Object.entries(z)){const el=document.getElementById(k);if(el&&v!=null)el.value=v}
   if(typeof updateModePanels==='function')updateModePanels();
-  const mine=!st.proposalOwnerId||!mpSession||st.proposalOwnerId===mpSession.id;
+  const mine=!!mpSession&&!!st.proposalOwnerId&&st.proposalOwnerId===mpSession.id;
   mpPrivateBatchOwner=st.proposalOwnerId||null;
   if(!mine)current=[];
   teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;sixRoundCounts=st.sixRoundCounts||sixRoundCounts;sixRoundOwners=st.sixRoundOwners||sixRoundOwners;
@@ -541,7 +541,7 @@ async function randomFalseMove(p){
      }
    }catch(e){}
  }
- return 'Spore';
+ return 'Attaque leurre indisponible';
 }
 
 
@@ -1337,7 +1337,7 @@ async function rollCards(){
  for(let i=0;i<n;i++){
    const p=await draw(used);
    let c=clue(p,gameMode.value);
-   if(gameMode.value==='bodyparts'){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);continue}p._bodyCrop=crop;c='🔍 Zone estimée : '+crop.part;}
+   if(gameMode.value==='bodyparts'){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);if(!window.__bodyCropFailures)window.__bodyCropFailures=0;if(++window.__bodyCropFailures>20)throw Error('Illustrations insuffisantes pour créer des extraits. Réessaie avec d’autres filtres.');continue}window.__bodyCropFailures=0;p._bodyCrop=crop;c='🔍 Extrait mystère (zone indicative : '+crop.part+')';}
    if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
    if(gameMode.value==='dexdesc'){const d=await getDexDescription(p);c=d.text;p._dexSource=d.source;}
    if(gameMode.value==='evolution'){const e=await getEvolutionClue(p);c='🧬 Chaîne d’évolution : '+e.text;p._evoFinal=e.final;}
