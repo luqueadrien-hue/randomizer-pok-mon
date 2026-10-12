@@ -247,13 +247,11 @@ img,video,canvas,svg{max-width:100%}
       <input id="auctionMalusValue" type="number" min="1" max="100" value="10">
     </label>
   </div>
-  <div class="actions">
-    <button id="startAuction" class="primary">🎯 Lancer une enchère</button>
-    <button id="bidP1">Joueur 1 : + mise</button>
-    <button id="bidP2">Joueur 2 : + mise</button>
-    <button id="passP1">Joueur 1 passe</button>
-    <button id="passP2">Joueur 2 passe</button>
-    <button id="awardAuction">🏆 Attribuer au plus offrant</button>
+  <div class="actions"><button id="startAuction" class="primary">🎯 Nouveau Pokémon aux enchères</button></div>
+  <div id="auctionPokemon" class="card" style="margin:12px auto;max-width:330px">Lance une enchère pour révéler un Pokémon.</div>
+  <div class="teams" style="margin-top:12px">
+   <div class="card"><h3>Joueur 1</h3><div id="auctionBalance1"></div><div class="actions"><button id="bidP1">💰 Miser</button><button id="raiseP1">📈 Relancer</button><button id="passP1">🤝 Laisser le Pokémon</button></div></div>
+   <div class="card"><h3>Joueur 2</h3><div id="auctionBalance2"></div><div class="actions"><button id="bidP2">💰 Miser</button><button id="raiseP2">📈 Relancer</button><button id="passP2">🤝 Laisser le Pokémon</button></div></div>
   </div>
   <div id="auctionInfo" class="turn"></div><div id="auctionShop" style="margin-top:16px"><h3>🛒 Boutique après constitution des équipes</h3><p>Six malus différents maximum par joueur, un usage par malus et un malus maximum par Pokémon. Les achats se font avec les crédits restant après les enchères.</p><div id="auctionShopPrices"></div></div>
 </div>
@@ -1755,6 +1753,55 @@ roll.addEventListener('click',()=>rollCards().catch(e=>{console.error(e);alert(e
 reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer').forEach(x=>x.style.display='block')});
 hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer').forEach(x=>x.style.display='none')});
 reset.addEventListener('click',()=>{dealStage=0;dealStarted=false;dealRemaining=[];dealUsed=new Set();starterOffer.innerHTML='';dealButtons();player=1;teams={1:[],2:[]};current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
+let auctionRound={pokemon:null,highest:0,leader:0,turn:1,locked:false,balances:null,completed:0,loading:false};
+function auctionCanAct(n){return !mpSession||mpSession.id===mpSeats[n]}
+function auctionRender(){
+ const a=auctionRound,step=Math.max(1,Number(document.getElementById('auctionStep').value)||1);
+ const info=document.getElementById('auctionInfo'),poke=document.getElementById('auctionPokemon');
+ if(a.pokemon)poke.innerHTML='<img src="'+(a.pokemon.img||'')+'" style="height:120px;max-width:100%;object-fit:contain"><h3>'+mpEsc(a.pokemon.name)+'</h3>';else poke.textContent='Lance une enchère pour révéler un Pokémon.';
+ const balances=a.balances||{1:auctionSelectedBudget(),2:auctionSelectedBudget()};
+ info.textContent=a.completed>=12?'12 enchères terminées.':a.pokemon?'Meilleure offre : '+a.highest+' C par '+(a.leader?'Joueur '+a.leader:'personne')+' — au joueur '+a.turn+' de jouer.':'Prêt pour une nouvelle enchère ('+a.completed+'/12).';
+ for(let n=1;n<=2;n++){
+  document.getElementById('auctionBalance'+n).textContent='Solde : '+balances[n]+' C';
+  const allowed=!!a.pokemon&&!a.locked&&a.turn===n&&auctionCanAct(n),first=a.highest===0;
+  document.getElementById('bidP'+n).disabled=!allowed||!first||balances[n]<step;
+  document.getElementById('raiseP'+n).disabled=!allowed||first||a.leader===n||balances[n]<a.highest+step;
+  document.getElementById('passP'+n).disabled=!allowed||first||a.leader===n;
+ }
+ document.getElementById('startAuction').disabled=!!a.pokemon||a.loading||a.completed>=12||!!mpSession;
+}
+async function auctionStart(){
+ const a=auctionRound;if(mpSession)return alert('La synchronisation des enchères en ligne doit encore être activée.');if(a.pokemon||a.loading||a.completed>=12)return;
+ if(!a.balances)a.balances={1:auctionSelectedBudget(),2:auctionSelectedBudget()};
+ a.loading=true;auctionRender();
+ try{a.pokemon=await draw(new Set([...teams[1],...teams[2]].map(p=>p.id)));a.highest=0;a.leader=0;a.turn=a.completed%2+1;a.locked=false;}
+ catch(e){alert('Impossible de générer le Pokémon : '+e.message)}
+ finally{a.loading=false;auctionRender()}
+}
+function auctionAction(n,action){
+ const a=auctionRound,step=Math.max(1,Number(document.getElementById('auctionStep').value)||1);
+ if(!a.pokemon||a.locked||a.turn!==n||!auctionCanAct(n))return;
+ if(action==='pass'){
+  if(!a.leader||a.leader===n)return;
+  const winner=a.leader,price=a.highest;
+  if(price>a.balances[winner])return;
+  a.balances[winner]-=price;
+  teams[winner].push(a.pokemon);a.completed++;
+  a.pokemon=null;a.highest=0;a.leader=0;a.locked=true;
+  drawTeams();auctionRender();return;
+ }
+ if(action==='bid'&&a.highest!==0)return;
+ if(action==='raise'&&(!a.highest||a.leader===n))return;
+ const price=a.highest+step;
+ if(price>a.balances[n])return alert('Crédits insuffisants.');
+ a.highest=price;a.leader=n;a.turn=3-n;auctionRender();
+}
+document.getElementById('startAuction').addEventListener('click',auctionStart);
+for(const n of [1,2]){
+ document.getElementById('bidP'+n).addEventListener('click',()=>auctionAction(n,'bid'));
+ document.getElementById('raiseP'+n).addEventListener('click',()=>auctionAction(n,'raise'));
+ document.getElementById('passP'+n).addEventListener('click',()=>auctionAction(n,'pass'));
+}
 const AUCTION_SHOP_ITEMS=[['Sans objet',15],['Attaque interdite',20],['Nature imposée',20],['Talent imposé',25],['Attaque obligatoire',25],['Objet imposé',25],['Évolution bloquée',30],['Téracristallisation imposée',30],['Sans Téracristallisation',35],['Handicap d’équipe (2 Pokémon sans objet)',40],['Joker de remplacement (choix parmi 3)',40],['Échange forcé entre équipes',60]];
 function auctionSelectedBudget(){const tier=document.getElementById('auctionBudget');const custom=document.getElementById('auctionCustomBudget');return tier.value==='custom'?Math.max(10,Math.min(1000000,Number(custom.value)||1000)):Number(tier.value)}
 function auctionUpdatePrices(){
@@ -1764,9 +1811,9 @@ function auctionUpdatePrices(){
  const step=document.getElementById('auctionStep');step.value=Math.max(1,Math.round(budget*.05));step.max=Math.max(999,budget);
  document.getElementById('auctionShopPrices').innerHTML='<p><strong>Budget choisi : '+budget.toLocaleString('fr-FR')+' C par joueur</strong> — prix proportionnels au palier (base 100 C).</p><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px">Malus ou joker</th><th style="text-align:right;padding:8px">Prix</th></tr></thead><tbody>'+AUCTION_SHOP_ITEMS.map(([name,base])=>'<tr><td style="padding:7px;border-top:1px solid #654e78">'+name+'</td><td style="padding:7px;border-top:1px solid #654e78;text-align:right">'+Math.max(1,Math.round(base*scale)).toLocaleString('fr-FR')+' C</td></tr>').join('')+'</tbody></table>';
 }
-document.getElementById('auctionBudget').addEventListener('change',auctionUpdatePrices);
+document.getElementById('auctionBudget').addEventListener('change',()=>{auctionUpdatePrices();if(!auctionRound.completed&&!auctionRound.pokemon)auctionRound.balances=null;auctionRender()});
 document.getElementById('auctionCustomBudget').addEventListener('input',auctionUpdatePrices);
-auctionUpdatePrices();
+auctionUpdatePrices();auctionRender();
 gameMode.addEventListener('change',()=>{surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';auctionPanel.style.display=gameMode.value==='auction'?'block':'none';turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
 ['teamSize','choiceCount','legend','generation','typeMode','revealMode','lieMode','boxSize'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
 </script>
