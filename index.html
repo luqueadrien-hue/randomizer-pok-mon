@@ -168,8 +168,8 @@ img,video,canvas,svg{max-width:100%}
 <option value="stat-speed">35. 💨 Vitesse à l'aveugle</option>
 <option value="learnleave">📦 Apprendre ou à laisser</option>
 <option value="randombox">📦 Boîte randomisée</option>
-<option value="auction">💰 Enchères Pokémon</option>
 <option value="blinddraft">🕶️ Draft à l’aveugle — 6 manches par joueur</option>
+<option value="auction">💰 Enchères Pokémon</option>
 <option value="hangman">🎭 Pendu Pokémon</option>
 <option value="surprise">🎲 Randomizer multi-jeux : jeu aléatoire</option>
 </select>
@@ -1667,13 +1667,14 @@ function blindDraftAllowed(){
 async function blindDraftRoll(){
  if(blindDraftLoading||blindDraft.locked||blindDraft.turn>=12)return;
  if(!blindDraftAllowed())return alert('Ce n’est pas ton tour de choisir.');
+ if(mpSession&&blindDraft.turn===0&&!blindDraft.entries.length){const snap=await mpRoom(mpSession.room).child('blindDraft').once('value');if(snap.exists())blindDraft=snap.val();}
  blindDraftLoading=true;
  try{
   const used=new Set(blindDraft.entries.map(x=>x.id));
   const offers=[];
   for(let i=0;i<3;i++){const p=await draw(used);offers.push(p.id)}
   blindDraft.offers=offers;
-  if(mpSession)await mpRoom(mpSession.room).child('blindDraft').set({...blindDraft,updated:Date.now()});
+  if(mpSession)await mpRoom(mpSession.room).child('blindDraft').update({...blindDraft,updated:Date.now()});
   renderBlindDraft();
  }finally{blindDraftLoading=false}
 }
