@@ -353,6 +353,7 @@ async function mpHydrateState(st){
   if(!mine)current=[];
   teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;sixRoundCounts=st.sixRoundCounts||sixRoundCounts;sixRoundOwners=st.sixRoundOwners||sixRoundOwners;
   if(st.turn)turn.textContent=st.turn;
+  if(!mine)roll.disabled=true;
   if(st.mode==='learnleave'){
    dealPanel.style.display='block';
    if(!mine){
@@ -525,7 +526,7 @@ async function randomRealMove(p){
  if(g!=='all'&&GEN_VERSION_GROUPS[g]){
    usable=usable.filter(m=>(m.version_group_details||[]).some(v=>GEN_VERSION_GROUPS[g].includes(v.version_group?.name)));
  }
- if(!usable.length)return 'Aucune attaque vérifiée pour cette génération';
+ if(!usable.length)return 'Aucune attaque répertoriée dans les données de cette génération';
  const m=usable[Math.floor(Math.random()*usable.length)];
  return await moveFr(m);
 }
@@ -1337,7 +1338,7 @@ async function rollCards(){
  for(let i=0;i<n;i++){
    const p=await draw(used);
    let c=clue(p,gameMode.value);
-   if(gameMode.value==='bodyparts'){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);if(!window.__bodyCropFailures)window.__bodyCropFailures=0;if(++window.__bodyCropFailures>20)throw Error('Illustrations insuffisantes pour créer des extraits. Réessaie avec d’autres filtres.');continue}window.__bodyCropFailures=0;p._bodyCrop=crop;c='🔍 Extrait mystère (zone indicative : '+crop.part+')';}
+   if(gameMode.value==='bodyparts'){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);if(!window.__bodyCropFailures)window.__bodyCropFailures=0;if(++window.__bodyCropFailures>20)throw Error('Illustrations insuffisantes pour créer des extraits. Réessaie avec d’autres filtres.');continue}window.__bodyCropFailures=0;p._bodyCrop=crop;c='🔍 Partie du corps à identifier (découpe automatique, à confirmer par l’organisateur)';}
    if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
    if(gameMode.value==='dexdesc'){const d=await getDexDescription(p);c=d.text;p._dexSource=d.source;}
    if(gameMode.value==='evolution'){const e=await getEvolutionClue(p);c='🧬 Chaîne d’évolution : '+e.text;p._evoFinal=e.final;}
@@ -1365,7 +1366,7 @@ async function rollCards(){
      const source=[...new Map((machine.length?machine:pool).map(m=>[m.name,m])).values()];
      for(let z=source.length-1;z>0;z--){const j=Math.floor(Math.random()*(z+1));[source[z],source[j]]=[source[j],source[z]]}
      const ms=await Promise.all(source.slice(0,4).map(moveFr));
-     c='⚔️ Movepool : '+ms.join(' • ');
+     c=ms.length===4?'⚔️ Movepool : '+ms.join(' • '):'⚔️ '+ms.length+' attaque(s) répertoriée(s) : '+(ms.join(' • ')||'aucune dans cette génération');
    }
    if(['weaknesses','resistances','effectiveness'].includes(gameMode.value)){
      const prof=await defensiveProfile(p);
