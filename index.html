@@ -1873,12 +1873,13 @@ for(const n of [1,2]){
  document.getElementById('passP'+n).addEventListener('click',()=>auctionAction(n,'pass'));
 }
 const AUCTION_SHOP_ITEMS=[['Sans objet',15],['Attaque interdite',20],['Nature imposée',20],['Talent imposé',25],['Attaque obligatoire',25],['Objet imposé',25],['Évolution bloquée',30],['Téracristallisation imposée',30],['Sans Téracristallisation',35],['Handicap d’équipe (2 Pokémon sans objet)',40],['Joker de remplacement (choix parmi 3)',40],['Échange forcé entre équipes',60]];
+function auctionMinimumStep(budget){return budget===250?10:budget>=1000?50:Math.max(1,Math.round(budget*.05))}
 function auctionSelectedBudget(){const tier=document.getElementById('auctionBudget');const custom=document.getElementById('auctionCustomBudget');return tier.value==='custom'?Math.max(10,Math.min(1000000,Number(custom.value)||1000)):Number(tier.value)}
 function auctionUpdatePrices(){
  const tier=document.getElementById('auctionBudget'),custom=document.getElementById('auctionCustomBudget');
  custom.style.display=tier.value==='custom'?'block':'none';
  const budget=auctionSelectedBudget(),scale=budget/100;
- const step=document.getElementById('auctionStep');step.value=Math.max(1,Math.round(budget*.05));step.max=Math.max(999,budget);
+ const step=document.getElementById('auctionStep');step.value=auctionMinimumStep(budget);step.max=Math.max(999,budget);
  document.getElementById('auctionShopPrices').innerHTML='<p><strong>Budget choisi : '+budget.toLocaleString('fr-FR')+' C par joueur</strong> — prix proportionnels au palier (base 100 C).</p><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px">Malus ou joker</th><th style="text-align:right;padding:8px">Prix</th></tr></thead><tbody>'+AUCTION_SHOP_ITEMS.map(([name,base])=>'<tr><td style="padding:7px;border-top:1px solid #654e78">'+name+'</td><td style="padding:7px;border-top:1px solid #654e78;text-align:right">'+Math.max(1,Math.round(base*scale)).toLocaleString('fr-FR')+' C</td></tr>').join('')+'</tbody></table>';
 }
 document.getElementById('auctionBudget').addEventListener('change',()=>{auctionUpdatePrices();if(!auctionRound.completed&&!auctionRound.pokemon)auctionRound.balances=null;auctionRender()});
