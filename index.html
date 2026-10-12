@@ -1551,7 +1551,7 @@ async function hangmanReceive(h){
    try{current=await Promise.all(h.ids.map(async id=>({p:await getP(id),clue:''})))}catch(e){console.warn('Pendu : chargement',e);return}
   }
  }
- hangmanState=h.phase==='setup'?null:h;
+ hangmanState=h.phase==='setup'?{phase:'setup',generator:h.generator,guesser:h.guesser}:h;
  if(h.phase==='done'&&h.selected!=null&&mpSession.id===h.generator&&!h.teamApplied){
   const ref=mpRoom(mpSession.room).child('hangman');
   const tx=await ref.transaction(v=>{if(!v||v.phase!=='done'||v.teamApplied)return;v.teamApplied=true;return v});
@@ -1610,7 +1610,7 @@ async function hangmanChoose(i){
 function renderHangman(){
  const h=hangmanState,remote=!!mpSession,amGenerator=!remote||mpSession.id===(h?.generator||mpSeats[player===1?2:1]),amGuesser=!remote||mpSession.id===h?.guesser;
  if(!current.length){cards.innerHTML='<div class="card">En attente du tirage des trois Pokémon…</div>';return}
- if(!h){
+ if(!h||h.phase==='setup'){
   cards.innerHTML='<div style="grid-column:1/-1;text-align:center"><h3>🎭 Pendu — sélection secrète</h3><p>'+(amGenerator?'Choisis un Pokémon parmi les trois.':'Le générateur choisit le Pokémon secret…')+'</p></div>'+
    (amGenerator?current.map((x,i)=>'<div class="card"><img src="'+(x.p.img||'')+'"><div class="name">'+mpEsc(x.p.name)+'</div><button onclick="hangmanStart('+i+')">🔒 Faire deviner</button></div>').join(''):'');
   return;
@@ -1620,7 +1620,7 @@ function renderHangman(){
  const word=hangmanNormalize(target.name),masked=[...word].map(c=>/[A-Z]/.test(c)?((h.letters||[]).includes(c)?c:'_'):c).join(' ');
  let html='<div style="grid-column:1/-1;text-align:center"><h3>🎭 Pendu Pokémon</h3><p style="font-size:1.5em;letter-spacing:.15em">'+masked+'</p><p>Erreurs : '+(h.errors||0)+' / '+(h.max||7)+'</p>';
  if(h.phase==='guess'){
-  html+='<p>'+(amGuesser?'À toi de deviner !':'L’adversaire propose des lettres…')+'</p>';
+  html+='<p>'+(amGuesser?'À toi de deviner !':amGenerator?'L’adversaire propose des lettres…':'👀 Spectateur : observe la manche sans voir les réponses et sans proposer de lettres.')+'</p>';
   html+='<div class="hangmanKeys">'+[...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map((c,i)=>'<button type="button" '+(!amGuesser||(h.letters||[]).includes(c)?'disabled':'')+' onclick="hangmanLetter(String.fromCharCode('+(65+i)+'))">'+c+'</button>').join('')+'</div>';
  }else if(h.phase==='done'){
   html+='<h3>✅ Pokémon attribué : '+mpEsc(current[h.selected]?.p.name||'')+'</h3>';
