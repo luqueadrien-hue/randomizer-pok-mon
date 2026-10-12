@@ -525,8 +525,7 @@ async function randomRealMove(p){
  if(g!=='all'&&GEN_VERSION_GROUPS[g]){
    usable=usable.filter(m=>(m.version_group_details||[]).some(v=>GEN_VERSION_GROUPS[g].includes(v.version_group?.name)));
  }
- if(!usable.length)usable=p.moves.filter(Boolean);
- if(!usable.length)return 'Lutte';
+ if(!usable.length)return 'Aucune attaque vérifiée pour cette génération';
  const m=usable[Math.floor(Math.random()*usable.length)];
  return await moveFr(m);
 }
@@ -710,7 +709,7 @@ async function evolutionModeClue(p,kind){
 }
 const REGION_BY_GEN={'generation-i':'Kanto','generation-ii':'Johto','generation-iii':'Hoenn','generation-iv':'Sinnoh','generation-v':'Unys','generation-vi':'Kalos','generation-vii':'Alola','generation-viii':'Galar','generation-ix':'Paldea'};
 async function wildGiftClue(p){
- try{const e=await encounterInfo(p);return e.details?.length?'Obtention : Pokémon sauvage':'Obtention : cadeau, échange, évolution ou rencontre spéciale'}catch(e){return 'Mode d’obtention indisponible'}
+ try{const e=await encounterInfo(p);return e.details?.length?'Rencontre sauvage répertoriée dans les versions consultées':'Aucune rencontre sauvage répertoriée (mode d’obtention non déterminé)'}catch(e){return 'Mode d’obtention indisponible'}
 }
 const TRAINER_HINTS={
 25:[['Red','Jeux vidéo','Génération 1'],['Sacha','Animé','Génération 1'],['Yellow','Manga Pokémon Adventures','Génération 1']],
@@ -990,6 +989,17 @@ async function defensiveProfile(p){
  }
  return mult;
 }
+const ENCOUNTER_VERSION_GROUPS={
+ 'red-blue':['red','blue'],'yellow':['yellow'],
+ 'gold-silver':['gold','silver'],'crystal':['crystal'],
+ 'ruby-sapphire':['ruby','sapphire'],'emerald':['emerald'],'firered-leafgreen':['firered','leafgreen'],
+ 'diamond-pearl':['diamond','pearl'],'platinum':['platinum'],'heartgold-soulsilver':['heartgold','soulsilver'],
+ 'black-white':['black','white'],'black-2-white-2':['black-2','white-2'],
+ 'x-y':['x','y'],'omega-ruby-alpha-sapphire':['omega-ruby','alpha-sapphire'],
+ 'sun-moon':['sun','moon'],'ultra-sun-ultra-moon':['ultra-sun','ultra-moon'],
+ 'sword-shield':['sword','shield'],'brilliant-diamond-shining-pearl':['brilliant-diamond','shining-pearl'],
+ 'legends-arceus':['legends-arceus'],'scarlet-violet':['scarlet','violet']
+};
 async function encounterInfo(p){
  const cacheKey=p.id+'|'+generation.value;
  if(ENCOUNTER_CACHE.has(cacheKey))return ENCOUNTER_CACHE.get(cacheKey);
@@ -1005,9 +1015,11 @@ async function encounterInfo(p){
        const locFr=loc?.names?.find(x=>x.language?.name==='fr')?.name;
        areaName=fr||locFr||areaName;
      }catch(_){}
-     locations.push(areaName);
      for(const vd of e.version_details||[]){
+       const selected=String(generation.value||'all');
+       if(selected!=='all'&&GEN_VERSION_GROUPS[selected]&&!GEN_VERSION_GROUPS[selected].some(group=>ENCOUNTER_VERSION_GROUPS[group]?.includes(vd.version?.name)))continue;
        const game=VERSION_FR[vd.version?.name]||String(vd.version?.name||'').replace(/-/g,' ');
+       locations.push(areaName);
        details.push(areaName+' — '+game);
        for(const ed of vd.encounter_details||[])if(ed.method?.name)methods.add(ed.method.name);
      }
@@ -1334,7 +1346,7 @@ async function rollCards(){
      let pool=p.moves.filter(Boolean);
      const g=String(generation.value||'all');
      if(g!=='all'&&GEN_VERSION_GROUPS[g])pool=pool.filter(m=>(m.version_group_details||[]).some(v=>GEN_VERSION_GROUPS[g].includes(v.version_group?.name)));
-     const machine=pool.filter(m=>(m.version_group_details||[]).some(v=>['machine','tutor'].includes(v.move_learn_method?.name)));
+     const machine=pool.filter(m=>(m.version_group_details||[]).some(v=>['machine','tutor'].includes(v.move_learn_method?.name)&&(g==='all'||!GEN_VERSION_GROUPS[g]||GEN_VERSION_GROUPS[g].includes(v.version_group?.name))));
      const source=[...new Map((machine.length?machine:pool).map(m=>[m.name,m])).values()];
      for(let z=source.length-1;z>0;z--){const j=Math.floor(Math.random()*(z+1));[source[z],source[j]]=[source[j],source[z]]}
      const ms=await Promise.all(source.slice(0,4).map(moveFr));
