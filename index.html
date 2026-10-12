@@ -1560,7 +1560,7 @@ async function hangmanReceive(h){
  renderHangman();
 }
 async function hangmanStart(i){
- if(!current[i]||hangmanState?.phase)return;
+ if(!current[i]||(hangmanState?.phase&&hangmanState.phase!=='setup'))return;
  if(mpSession){
   if(mpSession.id!==mpSeats[player===1?2:1])return alert('Le générateur doit choisir le Pokémon secret.');
   await mpRoom(mpSession.room).child('hangman').update({phase:'guess',target:i,letters:[],errors:0,max:7,updated:Date.now()});
