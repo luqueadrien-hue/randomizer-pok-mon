@@ -1287,17 +1287,32 @@ function bodyCrop(p){
   const im=new Image();im.crossOrigin='anonymous';
   im.onload=()=>{
    try{
-    const canvas=document.createElement('canvas');canvas.width=220;canvas.height=220;
-    const ctx=canvas.getContext('2d'),side=Math.min(im.naturalWidth,im.naturalHeight);
-    const part=BODY_PARTS[Math.floor(Math.random()*BODY_PARTS.length)];
-    const points=BODY_CROP_POINTS[part],point=points[Math.floor(Math.random()*points.length)];
-    const crop=side*.27;
-    const x=Math.max(0,Math.min(im.naturalWidth-crop,im.naturalWidth*point[0]-crop/2));
-    const y=Math.max(0,Math.min(im.naturalHeight-crop,im.naturalHeight*point[1]-crop/2));
+    // Choisir une zone contenant effectivement des pixels du Pokémon.
+    // Les points anatomiques restent des estimations : ne pas promettre une identification parfaite.
+    const side=Math.min(im.naturalWidth,im.naturalHeight);
+    const source=document.createElement('canvas');
+    source.width=im.naturalWidth;source.height=im.naturalHeight;
+    const sc=source.getContext('2d',{willReadFrequently:true});sc.drawImage(im,0,0);
+    const pixels=sc.getImageData(0,0,source.width,source.height).data;
+    const candidates=[];
+    for(const part of BODY_PARTS)for(const point of BODY_CROP_POINTS[part]){
+      const crop=Math.max(16,Math.floor(side*.27));
+      const x=Math.max(0,Math.min(source.width-crop,Math.round(source.width*point[0]-crop/2)));
+      const y=Math.max(0,Math.min(source.height-crop,Math.round(source.height*point[1]-crop/2)));
+      let visible=0,checked=0;
+      for(let yy=y;yy<y+crop;yy+=4)for(let xx=x;xx<x+crop;xx+=4){
+       checked++;if(pixels[(yy*source.width+xx)*4+3]>100)visible++;
+      }
+      if(checked&&visible/checked>=.30)candidates.push({part,x,y,crop});
+    }
+    if(!candidates.length){resolve(null);return}
+    const chosen=candidates[Math.floor(Math.random()*candidates.length)];
+    const canvas=document.createElement('canvas');canvas.width=160;canvas.height=160;
+    const ctx=canvas.getContext('2d');ctx.fillStyle='#f5f7fa';ctx.fillRect(0,0,160,160);
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-    ctx.drawImage(im,x,y,crop,crop,0,0,220,220);
-    resolve({part,image:canvas.toDataURL('image/png')});
-   }catch(e){resolve(null)}
+    ctx.drawImage(im,chosen.x,chosen.y,chosen.crop,chosen.crop,0,0,160,160);
+    resolve({part:chosen.part,image:canvas.toDataURL('image/jpeg',.83)});
+   }catch(e){console.warn('Découpe Pokémon',e);resolve(null)}
   };
   im.onerror=()=>resolve(null);im.src=p.img;
  });
@@ -1322,7 +1337,7 @@ async function rollCards(){
  for(let i=0;i<n;i++){
    const p=await draw(used);
    let c=clue(p,gameMode.value);
-   if(gameMode.value==='bodyparts'){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);continue}p._bodyCrop=crop;c='🔍 Partie du corps : '+crop.part;}
+   if(gameMode.value==='bodyparts'){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);continue}p._bodyCrop=crop;c='🔍 Zone estimée : '+crop.part;}
    if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
    if(gameMode.value==='dexdesc'){const d=await getDexDescription(p);c=d.text;p._dexSource=d.source;}
    if(gameMode.value==='evolution'){const e=await getEvolutionClue(p);c='🧬 Chaîne d’évolution : '+e.text;p._evoFinal=e.final;}
