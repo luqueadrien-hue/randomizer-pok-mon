@@ -353,7 +353,7 @@ async function mpHydrateState(st){
   if(!mine)current=[];
   teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;sixRoundCounts=st.sixRoundCounts||sixRoundCounts;sixRoundOwners=st.sixRoundOwners||sixRoundOwners;
   if(st.turn)turn.textContent=st.turn;
-  if(!mine)roll.disabled=true;
+  if(mpSession)roll.disabled=!mpLobbyStarted||mpSession.id!==mpSeats[player===1?2:1]||sixRoundFinished();
   if(st.mode==='learnleave'){
    dealPanel.style.display='block';
    if(!mine){
@@ -381,6 +381,7 @@ function mpReceive(r){
  if(lobby.innerHTML!==lobbyMarkup)lobby.innerHTML=lobbyMarkup;
  [1,2].forEach(n=>{const el=document.getElementById('mpSeat'+n);if(el){el.value=mpSeats[n]||'';el.onchange=()=>{if(!isHost)return;const other=n===1?2:1;if(el.value&&el.value===mpSeats[other]){el.value=mpSeats[n]||'';return}mpRoom(mpSession.room).child('seats/'+n).set(el.value||null).then(()=>mpSetStatus('✅ Joueur '+n+' attribué.')).catch(e=>mpSetStatus('❌ '+mpEsc(e.message)))}}});
  const activeGenerator=mpSeats[player===1?2:1];
+ if(mpSession&&r.state?.mode!=='auction'&&r.state?.mode!=='hangman'&&r.state?.mode!=='blinddraft')roll.disabled=!mpLobbyStarted||mpSession.id!==activeGenerator||sixRoundFinished();
  const activeName=ps[activeGenerator]?.name||'Non attribué';
  document.getElementById('mpRoleStatus').textContent=mpLobbyStarted?'🎲 Générateur : '+activeName+' → fait deviner au Joueur '+player+' ('+(ps[mpSeats[player]]?.name||'?')+')':'Les rôles de génération seront définis avant le lancement.';
  const btn=document.getElementById('mpStartChallenge');
