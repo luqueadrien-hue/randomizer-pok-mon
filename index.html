@@ -384,11 +384,13 @@ function mpReceive(r){
  const p1=ps[mpSeats[1]]?.name||'JOUEUR 1',p2=ps[mpSeats[2]]?.name||'JOUEUR 2';
  document.getElementById('team1').parentElement.querySelector('h2').textContent='JOUEUR 1 — '+p1;
  document.getElementById('team2').parentElement.querySelector('h2').textContent='JOUEUR 2 — '+p2;
- if(r.state&&r.state.mode!=='hangman')mpHydrateState(r.state);
+ if(r.state&&r.state.mode!=='hangman'&&r.state.mode!=='auction')mpHydrateState(r.state);
+ if(r.state?.mode==='auction'){gameMode.value='auction';auctionPanel.style.display='block';}
  if(r.state?.mode==='hangman'){gameMode.value='hangman';player=r.state.player||player;}
  if(r.state?.mode==='blinddraft')gameMode.value='blinddraft';
  if(r.hangman)hangmanReceive(r.hangman);
  if(r.blindDraft)blindDraftReceive(r.blindDraft);
+ if(r.auctionRound)auctionReceive(r.auctionRound);
 }
 
 window.addEventListener('DOMContentLoaded',()=>{
@@ -1768,32 +1770,83 @@ function auctionRender(){
   document.getElementById('raiseP'+n).disabled=!allowed||first||a.leader===n||balances[n]<a.highest+step;
   document.getElementById('passP'+n).disabled=!allowed||first||a.leader===n;
  }
- document.getElementById('startAuction').disabled=!!a.pokemon||a.loading||a.completed>=12||!!mpSession;
+ document.getElementById('startAuction').disabled=!!a.pokemon||a.loading||a.completed>=12||(!!mpSession&&(!mpLobbyStarted||mpSession.id!==mpSeats[a.completed%2+1]));
+}
+async function auctionReceive(v){
+ if(!mpSession||!v)return;
+ const prev=auctionRound.completed;
+ auctionRound={...v,pokemon:null,loading:false};
+ if(v.pokemonId){
+  try{const p=await getP(v.pokemonId);if(auctionRound.completed===v.completed&&auctionRound.pokemonId===v.pokemonId)auctionRound.pokemon=p}catch(e){console.warn('Pokémon enchères',e)}
+ }
+ if(v.budget){
+  const tier=document.getElementById('auctionBudget');
+  if([...tier.options].some(o=>o.value===String(v.budget)))tier.value=String(v.budget);
+  else{tier.value='custom';document.getElementById('auctionCustomBudget').value=v.budget}
+  auctionUpdatePrices();
+ }
+ if(v.step)document.getElementById('auctionStep').value=v.step;
+ if(v.awards){
+  teams={1:await Promise.all((v.awards[1]||[]).map(getP)),2:await Promise.all((v.awards[2]||[]).map(getP))};
+  drawTeams();
+ }
+ auctionRender();
 }
 async function auctionStart(){
- const a=auctionRound;if(mpSession)return alert('La synchronisation des enchères en ligne doit encore être activée.');if(a.pokemon||a.loading||a.completed>=12)return;
+ const a=auctionRound;
+ if(a.pokemon||a.loading||a.completed>=12)return;
+ if(mpSession&&(!mpLobbyStarted||mpSession.id!==mpSeats[a.completed%2+1]))return alert('Le joueur désigné doit lancer le Pokémon.');
  if(!a.balances)a.balances={1:auctionSelectedBudget(),2:auctionSelectedBudget()};
  a.loading=true;auctionRender();
- try{a.pokemon=await draw(new Set([...teams[1],...teams[2]].map(p=>p.id)));a.highest=0;a.leader=0;a.turn=a.completed%2+1;a.locked=false;}
- catch(e){alert('Impossible de générer le Pokémon : '+e.message)}
+ try{
+  const p=await draw(new Set([...teams[1],...teams[2]].map(x=>x.id)));
+  if(mpSession){
+   const ref=mpRoom(mpSession.room).child('auctionRound'),budget=auctionSelectedBudget(),step=Math.max(1,Number(document.getElementById('auctionStep').value)||1);
+   const tx=await ref.transaction(v=>{
+    if(v?.pokemonId||v?.completed>=12)return;
+    const balances=v?.balances||{1:budget,2:budget},completed=v?.completed||0;
+    return {pokemonId:p.id,highest:0,leader:0,turn:completed%2+1,locked:false,balances,completed,budget:v?.budget||budget,step:v?.step||step,awards:v?.awards||{1:[],2:[]},updated:Date.now()};
+   });
+   if(!tx.committed)alert('Une enchère est déjà en cours.');
+   else await auctionReceive(tx.snapshot.val());
+  }else{a.pokemon=p;a.highest=0;a.leader=0;a.turn=a.completed%2+1;a.locked=false}
+ }catch(e){alert('Impossible de générer le Pokémon : '+e.message)}
  finally{a.loading=false;auctionRender()}
 }
-function auctionAction(n,action){
- const a=auctionRound,step=Math.max(1,Number(document.getElementById('auctionStep').value)||1);
+async function auctionAction(n,action){
+ const a=auctionRound,step=Math.max(1,Number(mpSession?a.step:document.getElementById('auctionStep').value)||1);
  if(!a.pokemon||a.locked||a.turn!==n||!auctionCanAct(n))return;
+ if(mpSession){
+  const ref=mpRoom(mpSession.room).child('auctionRound');
+  const tx=await ref.transaction(v=>{
+   if(!v||!v.pokemonId||v.turn!==n||v.locked||v.completed>=12)return;
+   const st=Math.max(1,Number(v.step)||1),bal=v.balances||{1:0,2:0};
+   if(action==='pass'){
+    if(!v.leader||v.leader===n||v.highest>bal[v.leader])return;
+    const winner=v.leader;
+    bal[winner]-=v.highest;
+    v.awards=v.awards||{1:[],2:[]};v.awards[winner]=[...(v.awards[winner]||[]),v.pokemonId];
+    v.completed++;v.pokemonId=null;v.highest=0;v.leader=0;v.locked=true;
+   }else{
+    if(action==='bid'&&v.highest!==0)return;
+    if(action==='raise'&&(!v.highest||v.leader===n))return;
+    const price=v.highest+st;if(price>bal[n])return;
+    v.highest=price;v.leader=n;v.turn=3-n;
+   }
+   v.updated=Date.now();return v;
+  });
+  if(!tx.committed)return alert('Action refusée : enchère modifiée ou crédits insuffisants.');
+  await auctionReceive(tx.snapshot.val());return;
+ }
  if(action==='pass'){
   if(!a.leader||a.leader===n)return;
-  const winner=a.leader,price=a.highest;
-  if(price>a.balances[winner])return;
-  a.balances[winner]-=price;
-  teams[winner].push(a.pokemon);a.completed++;
-  a.pokemon=null;a.highest=0;a.leader=0;a.locked=true;
-  drawTeams();auctionRender();return;
+  const winner=a.leader,price=a.highest;if(price>a.balances[winner])return;
+  a.balances[winner]-=price;teams[winner].push(a.pokemon);a.completed++;
+  a.pokemon=null;a.highest=0;a.leader=0;a.locked=true;drawTeams();auctionRender();return;
  }
  if(action==='bid'&&a.highest!==0)return;
  if(action==='raise'&&(!a.highest||a.leader===n))return;
- const price=a.highest+step;
- if(price>a.balances[n])return alert('Crédits insuffisants.');
+ const price=a.highest+step;if(price>a.balances[n])return alert('Crédits insuffisants.');
  a.highest=price;a.leader=n;a.turn=3-n;auctionRender();
 }
 document.getElementById('startAuction').addEventListener('click',auctionStart);
