@@ -229,7 +229,7 @@ img,video,canvas,svg{max-width:100%}
   <h2 style="text-align:center;margin-top:0">💰 Enchères Pokémon</h2>
   <div class="controls">
     <label>Budget par joueur
-      <input id="auctionBudget" type="number" min="10" max="9999" value="100">
+      <select id="auctionBudget" aria-label="Palier de budget"><option value="100">Débutant — 100 C</option><option value="250">Petit budget — 250 C</option><option value="500">Standard — 500 C</option><option value="1000" selected>Confirmé — 1 000 C</option><option value="2000">Expert — 2 000 C</option><option value="5000">Légendaire — 5 000 C</option><option value="custom">Personnalisé — montant libre</option></select><input id="auctionCustomBudget" type="number" min="10" max="1000000" step="10" value="1000" style="display:none;margin-top:6px" aria-label="Budget personnalisé">
     </label>
     <label>Pas minimum
       <input id="auctionStep" type="number" min="1" max="999" value="5">
@@ -255,7 +255,7 @@ img,video,canvas,svg{max-width:100%}
     <button id="passP2">Joueur 2 passe</button>
     <button id="awardAuction">🏆 Attribuer au plus offrant</button>
   </div>
-  <div id="auctionInfo" class="turn"></div>
+  <div id="auctionInfo" class="turn"></div><div id="auctionShop" style="margin-top:16px"><h3>🛒 Boutique après constitution des équipes</h3><p>Six malus différents maximum par joueur, un usage par malus et un malus maximum par Pokémon. Les achats se font avec les crédits restant après les enchères.</p><div id="auctionShopPrices"></div></div>
 </div>
 
 <div id="gmPanel" class="panel" style="margin-top:18px;display:none;border-color:#c59a3a">
@@ -1755,6 +1755,18 @@ roll.addEventListener('click',()=>rollCards().catch(e=>{console.error(e);alert(e
 reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer').forEach(x=>x.style.display='block')});
 hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer').forEach(x=>x.style.display='none')});
 reset.addEventListener('click',()=>{dealStage=0;dealStarted=false;dealRemaining=[];dealUsed=new Set();starterOffer.innerHTML='';dealButtons();player=1;teams={1:[],2:[]};current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
+const AUCTION_SHOP_ITEMS=[['Sans objet',15],['Attaque interdite',20],['Nature imposée',20],['Talent imposé',25],['Attaque obligatoire',25],['Objet imposé',25],['Évolution bloquée',30],['Téracristallisation imposée',30],['Sans Téracristallisation',35],['Handicap d’équipe (2 Pokémon sans objet)',40],['Joker de remplacement (choix parmi 3)',40],['Échange forcé entre équipes',60]];
+function auctionSelectedBudget(){const tier=document.getElementById('auctionBudget');const custom=document.getElementById('auctionCustomBudget');return tier.value==='custom'?Math.max(10,Math.min(1000000,Number(custom.value)||1000)):Number(tier.value)}
+function auctionUpdatePrices(){
+ const tier=document.getElementById('auctionBudget'),custom=document.getElementById('auctionCustomBudget');
+ custom.style.display=tier.value==='custom'?'block':'none';
+ const budget=auctionSelectedBudget(),scale=budget/100;
+ const step=document.getElementById('auctionStep');step.value=Math.max(1,Math.round(budget*.05));step.max=Math.max(999,budget);
+ document.getElementById('auctionShopPrices').innerHTML='<p><strong>Budget choisi : '+budget.toLocaleString('fr-FR')+' C par joueur</strong> — prix proportionnels au palier (base 100 C).</p><table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px">Malus ou joker</th><th style="text-align:right;padding:8px">Prix</th></tr></thead><tbody>'+AUCTION_SHOP_ITEMS.map(([name,base])=>'<tr><td style="padding:7px;border-top:1px solid #654e78">'+name+'</td><td style="padding:7px;border-top:1px solid #654e78;text-align:right">'+Math.max(1,Math.round(base*scale)).toLocaleString('fr-FR')+' C</td></tr>').join('')+'</tbody></table>';
+}
+document.getElementById('auctionBudget').addEventListener('change',auctionUpdatePrices);
+document.getElementById('auctionCustomBudget').addEventListener('input',auctionUpdatePrices);
+auctionUpdatePrices();
 gameMode.addEventListener('change',()=>{surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';auctionPanel.style.display=gameMode.value==='auction'?'block':'none';turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
 ['teamSize','choiceCount','legend','generation','typeMode','revealMode','lieMode','boxSize'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
 </script>
