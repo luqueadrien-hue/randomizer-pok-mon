@@ -1757,24 +1757,40 @@ hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=
 reset.addEventListener('click',()=>{dealStage=0;dealStarted=false;dealRemaining=[];dealUsed=new Set();starterOffer.innerHTML='';dealButtons();player=1;teams={1:[],2:[]};current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
 let auctionRound={pokemon:null,highest:0,leader:0,turn:1,locked:false,balances:null,completed:0,loading:false};
 function auctionCanAct(n){return !mpSession||mpSession.id===mpSeats[n]}
+function auctionCounts(a){const awards=a.awards||{1:[],2:[]};return {1:(awards[1]||[]).length,2:(awards[2]||[]).length}}
+function auctionNextPlayer(a){const counts=auctionCounts(a);return counts[1]>=6?2:counts[2]>=6?1:(a.completed%2+1)}
+function auctionFinalize(a,winner){
+ const counts=auctionCounts(a);if(counts[winner]>=6)return false;
+ if(a.highest>(a.balances?.[winner]||0))return false;
+ a.balances[winner]-=a.highest;
+ a.awards=a.awards||{1:[],2:[]};
+ a.awards[winner]=[...(a.awards[winner]||[]),a.pokemonId||a.pokemon.id];
+ a.completed++;a.pokemonId=null;a.pokemon=null;a.highest=0;a.leader=0;a.locked=true;
+ return true;
+}
+function auctionAutoResolve(a){
+ if(!a.leader)return false;
+ const other=3-a.leader,counts=auctionCounts(a),step=Math.max(1,Number(a.step||document.getElementById('auctionStep').value)||1);
+ if(counts[other]>=6||(a.balances?.[other]||0)<a.highest+step)return auctionFinalize(a,a.leader);
+ return false;
+}
 function auctionRender(){
  const a=auctionRound,step=Math.max(1,Number(document.getElementById('auctionStep').value)||1);
  const info=document.getElementById('auctionInfo'),poke=document.getElementById('auctionPokemon');
  if(a.pokemon)poke.innerHTML='<img src="'+(a.pokemon.img||'')+'" style="height:120px;max-width:100%;object-fit:contain"><h3>'+mpEsc(a.pokemon.name)+'</h3>';else poke.textContent='Lance une enchère pour révéler un Pokémon.';
  const balances=a.balances||{1:auctionSelectedBudget(),2:auctionSelectedBudget()};
- info.textContent=a.completed>=12?'12 enchères terminées.':a.pokemon?'Meilleure offre : '+a.highest+' C par '+(a.leader?'Joueur '+a.leader:'personne')+' — au joueur '+a.turn+' de jouer.':'Prêt pour une nouvelle enchère ('+a.completed+'/12).';
+ info.textContent=a.completed>=12?'12 enchères terminées — six Pokémon par joueur.':a.pokemon?'Meilleure offre : '+a.highest+' C par '+(a.leader?'Joueur '+a.leader:'personne')+' — au joueur '+a.turn+' de jouer.':'Prêt pour une nouvelle enchère ('+a.completed+'/12).';
  for(let n=1;n<=2;n++){
   document.getElementById('auctionBalance'+n).textContent='Solde : '+balances[n]+' C';
-  const allowed=!!a.pokemon&&!a.locked&&a.turn===n&&auctionCanAct(n),first=a.highest===0;
+  const counts=auctionCounts(a),allowed=!!a.pokemon&&!a.locked&&a.turn===n&&auctionCanAct(n)&&counts[n]<6,first=a.highest===0;
   document.getElementById('bidP'+n).disabled=!allowed||!first||balances[n]<step;
   document.getElementById('raiseP'+n).disabled=!allowed||first||a.leader===n||balances[n]<a.highest+step;
   document.getElementById('passP'+n).disabled=!allowed||first||a.leader===n;
  }
- document.getElementById('startAuction').disabled=!!a.pokemon||a.loading||a.completed>=12||(!!mpSession&&(!mpLobbyStarted||mpSession.id!==mpSeats[a.completed%2+1]));
+ document.getElementById('startAuction').disabled=!!a.pokemon||a.loading||a.completed>=12||(!!mpSession&&(!mpLobbyStarted||mpSession.id!==mpSeats[auctionNextPlayer(a)]));
 }
 async function auctionReceive(v){
  if(!mpSession||!v)return;
- const prev=auctionRound.completed;
  auctionRound={...v,pokemon:null,loading:false};
  if(v.pokemonId){
   try{const p=await getP(v.pokemonId);if(auctionRound.completed===v.completed&&auctionRound.pokemonId===v.pokemonId)auctionRound.pokemon=p}catch(e){console.warn('Pokémon enchères',e)}
@@ -1804,12 +1820,12 @@ async function auctionStart(){
    const ref=mpRoom(mpSession.room).child('auctionRound'),budget=auctionSelectedBudget(),step=Math.max(1,Number(document.getElementById('auctionStep').value)||1);
    const tx=await ref.transaction(v=>{
     if(v?.pokemonId||v?.completed>=12)return;
-    const balances=v?.balances||{1:budget,2:budget},completed=v?.completed||0;
-    return {pokemonId:p.id,highest:0,leader:0,turn:completed%2+1,locked:false,balances,completed,budget:v?.budget||budget,step:v?.step||step,awards:v?.awards||{1:[],2:[]},updated:Date.now()};
+    const balances=v?.balances||{1:budget,2:budget},completed=v?.completed||0,awards=v?.awards||{1:[],2:[]};
+    return {pokemonId:p.id,highest:0,leader:0,turn:auctionNextPlayer({completed,awards}),locked:false,balances,completed,budget:v?.budget||budget,step:v?.step||step,awards,updated:Date.now()};
    });
    if(!tx.committed)alert('Une enchère est déjà en cours.');
    else await auctionReceive(tx.snapshot.val());
-  }else{a.pokemon=p;a.highest=0;a.leader=0;a.turn=a.completed%2+1;a.locked=false}
+  }else{a.pokemon=p;a.highest=0;a.leader=0;a.turn=auctionNextPlayer({...a,awards:{1:teams[1].map(x=>x.id),2:teams[2].map(x=>x.id)}});a.locked=false}
  }catch(e){alert('Impossible de générer le Pokémon : '+e.message)}
  finally{a.loading=false;auctionRender()}
 }
@@ -1819,19 +1835,16 @@ async function auctionAction(n,action){
  if(mpSession){
   const ref=mpRoom(mpSession.room).child('auctionRound');
   const tx=await ref.transaction(v=>{
-   if(!v||!v.pokemonId||v.turn!==n||v.locked||v.completed>=12)return;
+   if(!v||!v.pokemonId||v.turn!==n||v.locked||v.completed>=12||auctionCounts(v)[n]>=6)return;
    const st=Math.max(1,Number(v.step)||1),bal=v.balances||{1:0,2:0};
    if(action==='pass'){
     if(!v.leader||v.leader===n||v.highest>bal[v.leader])return;
-    const winner=v.leader;
-    bal[winner]-=v.highest;
-    v.awards=v.awards||{1:[],2:[]};v.awards[winner]=[...(v.awards[winner]||[]),v.pokemonId];
-    v.completed++;v.pokemonId=null;v.highest=0;v.leader=0;v.locked=true;
+    if(!auctionFinalize(v,v.leader))return;
    }else{
     if(action==='bid'&&v.highest!==0)return;
     if(action==='raise'&&(!v.highest||v.leader===n))return;
     const price=v.highest+st;if(price>bal[n])return;
-    v.highest=price;v.leader=n;v.turn=3-n;
+    v.highest=price;v.leader=n;v.turn=3-n;auctionAutoResolve(v);
    }
    v.updated=Date.now();return v;
   });
@@ -1847,7 +1860,11 @@ async function auctionAction(n,action){
  if(action==='bid'&&a.highest!==0)return;
  if(action==='raise'&&(!a.highest||a.leader===n))return;
  const price=a.highest+step;if(price>a.balances[n])return alert('Crédits insuffisants.');
- a.highest=price;a.leader=n;a.turn=3-n;auctionRender();
+ a.highest=price;a.leader=n;a.turn=3-n;a.step=step;
+ if(auctionAutoResolve({...a,awards:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)}})){
+  a.balances[n]-=price;teams[n].push(a.pokemon);a.completed++;a.pokemon=null;a.highest=0;a.leader=0;a.locked=true;drawTeams();
+ }
+ auctionRender();
 }
 document.getElementById('startAuction').addEventListener('click',auctionStart);
 for(const n of [1,2]){
