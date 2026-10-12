@@ -335,7 +335,7 @@ async function mpLeaveRoom(){
 }
 function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
 async function mpSnapshot(){
- return {player,mode:gameMode.value,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(x=>({clue:x.clue||'',offerLabel:x.offerLabel||null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
+ return {player,mode:gameMode.value,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(x=>({clue:x.clue||'',offerLabel:x.offerLabel||null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
 }
 async function mpSyncState(){
  if(!mpSession||mpApplying||gameMode.value==='triochoice')return;
@@ -350,7 +350,7 @@ async function mpHydrateState(st){
   const mine=!st.proposalOwnerId||!mpSession||st.proposalOwnerId===mpSession.id;
   mpPrivateBatchOwner=st.proposalOwnerId||null;
   if(!mine)current=[];
-  teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;
+  teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;sixRoundCounts=st.sixRoundCounts||sixRoundCounts;sixRoundOwners=st.sixRoundOwners||sixRoundOwners;
   if(st.turn)turn.textContent=st.turn;
   if(st.mode==='learnleave'){
    dealPanel.style.display='block';
@@ -1727,12 +1727,26 @@ async function renderBlindDraft(){
   getP(id).then(p=>{if(!el.isConnected)return;el.innerHTML='<img src="'+(p.img||'')+'" style="height:90px;display:block;margin:auto"><b>'+mpEsc(p.name)+'</b>'}).catch(()=>{});
  }
 }
-function drawTeams(){[1,2].forEach(n=>document.getElementById('team'+n).innerHTML=teams[n].map(p=>'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>').join(''))}
+let sixRoundCounts={1:0,2:0},sixRoundOwners={1:[],2:[]};
+function sixRoundRecipient(chooser){return sixRoundCounts[chooser]%2===0?3-chooser:chooser}
+function sixRoundFinished(){return sixRoundCounts[1]>=6&&sixRoundCounts[2]>=6}
+function drawTeams(){[1,2].forEach(n=>document.getElementById('team'+n).innerHTML=teams[n].map((p,i)=>{
+ const by=sixRoundOwners[n]?.[i],visible=!mpSession||!by||mpSession.id===mpSeats[by]||sixRoundFinished();
+ return visible?'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>':'<div class="mini">🔒 Pokémon secret</div>';
+ }).join(''))}
 function pick(i){
- if(mpSession&&!mpLobbyStarted)return;if(mpSession&&mpSession.id!==(mpSeats[player===1?2:1]))return;if(batchLocked||!current[i])return;if(gameMode.value==='learnleave'&&dealStage!==4)return;batchLocked=true;teams[player].push(current[i].p);if(gameMode.value==='learnleave'){dealStage=0;dealStarted=false;dealRemaining=[];starterOffer.innerHTML='';dealInfo.textContent='Manche terminée. Lance une nouvelle manche.';dealButtons();}drawTeams();
- const max=+teamSize.value;if(teams[1].length>=max&&teams[2].length>=max){turn.textContent='ÉQUIPES COMPLÈTES';roll.disabled=true;mpSyncState();return}
- player=player===1?2:1;if(teams[player].length>=max)player=player===1?2:1;
- turn.textContent='Sélection verrouillée — génère une nouvelle sélection pour le JOUEUR '+player;render();mpSyncState();
+ if(mpSession&&!mpLobbyStarted)return;
+ if(mpSession&&mpSession.id!==mpSeats[player===1?2:1])return;
+ if(batchLocked||!current[i])return;
+ if(gameMode.value==='learnleave'&&dealStage!==4)return;
+ batchLocked=true;
+ const chooser=player,recipient=sixRoundRecipient(chooser);
+ teams[recipient].push(current[i].p);sixRoundOwners[recipient].push(chooser);sixRoundCounts[chooser]++;
+ if(gameMode.value==='learnleave'){dealStage=0;dealStarted=false;dealRemaining=[];starterOffer.innerHTML='';dealInfo.textContent='Manche terminée. Lance une nouvelle manche.';dealButtons();}
+ if(sixRoundFinished()){turn.textContent='12 MANCHES TERMINÉES — ÉQUIPES COMPLÈTES';roll.disabled=true;drawTeams();mpSyncState();return}
+ player=chooser===1?2:1;if(sixRoundCounts[player]>=6)player=chooser;
+ turn.textContent='Manche '+(sixRoundCounts[player]+1)+'/6 du JOUEUR '+player+' — Pokémon pour '+(sixRoundRecipient(player)===player?'soi':'l’adversaire')+'. Génère une nouvelle sélection.';
+ drawTeams();render();mpSyncState();
 }
 async function discardDeal(i){if(gameMode.value!=='learnleave'||!current[i])return;if(mpSession&&mpSession.id!==(mpSeats[player===1?2:1]))return;if(dealStage===2){dealRemaining=current.filter((_,j)=>j!==i);dealStage=3;current=[await dealDraw()];starterOffer.innerHTML='<div class="card"><b>Nouvelle proposition</b></div>';dealInfo.textContent='Étape 3 : accepte ce nouveau Pokémon ou refuse-le pour retrouver les deux autres.';}else if(dealStage===4){current.splice(i,1);dealRemaining=[...current];dealInfo.textContent='Choisis le Pokémon restant.';}else return;render();dealButtons();mpSyncState()}
 document.getElementById('keepStarter').addEventListener('click',()=>dealKeep().catch(console.error));
