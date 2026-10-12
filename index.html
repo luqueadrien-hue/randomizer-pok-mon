@@ -386,7 +386,7 @@ function mpReceive(r){
  document.getElementById('team1').parentElement.querySelector('h2').textContent='JOUEUR 1 — '+p1;
  document.getElementById('team2').parentElement.querySelector('h2').textContent='JOUEUR 2 — '+p2;
  if(r.state&&r.state.mode!=='hangman')mpHydrateState(r.state);
- if(r.state?.mode==='hangman'&&gameMode.value!=='hangman')gameMode.value='hangman';
+ if(r.state?.mode==='hangman'){gameMode.value='hangman';player=r.state.player||player;}
  if(r.hangman)hangmanReceive(r.hangman);
 }
 
@@ -1552,6 +1552,11 @@ async function hangmanReceive(h){
   }
  }
  hangmanState=h.phase==='setup'?null:h;
+ if(h.phase==='done'&&h.selected!=null&&mpSession.id===h.generator&&!h.teamApplied){
+  const ref=mpRoom(mpSession.room).child('hangman');
+  const tx=await ref.transaction(v=>{if(!v||v.phase!=='done'||v.teamApplied)return;v.teamApplied=true;return v});
+  if(tx.committed){const chosen=current[h.selected]?.p;if(chosen){teams[h.player||player].push(chosen);drawTeams();player=(h.player||player)===1?2:1;turn.textContent='Pendu terminé — prochain tour : joueur '+player;await mpSyncState()}}
+ }
  renderHangman();
 }
 async function hangmanStart(i){
