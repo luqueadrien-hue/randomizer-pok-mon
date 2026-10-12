@@ -172,6 +172,7 @@ img,video,canvas,svg{max-width:100%}
 <option value="randombox">📦 Boîte randomisée</option>
 <option value="blinddraft">🕶️ Draft à l’aveugle — 6 manches par joueur</option>
 <option value="auction">💰 Enchères Pokémon</option>
+<option value="bodyparts">👁️ Parties du corps — deviner le Pokémon</option>
 <option value="hangman">🎭 Pendu Pokémon</option>
 <option value="surprise">🎲 Randomizer multi-jeux : jeu aléatoire</option>
 </select>
@@ -1258,6 +1259,36 @@ function surpriseNext(){
  if(!batchLocked&&current.length)return alert('Termine la sélection de cette manche avant de relancer le dé.');
  gameMode.value='surprise';return rollCards();
 }
+
+// Extraits réellement recadrés sur canvas : aucun sprite complet dans l'indice.
+// Les positions sont estimées sur l'illustration ; l'anatomie exacte varie selon l'espèce.
+const BODY_PARTS=['Yeux','Oreilles','Queue','Ailes','Pattes','Bouche','Bras'];
+const BODY_CROP_POINTS={
+ 'Yeux':[[.48,.30],[.57,.33]],'Oreilles':[[.30,.15],[.68,.16]],
+ 'Queue':[[.78,.72],[.19,.72]],'Ailes':[[.22,.43],[.77,.42]],
+ 'Pattes':[[.35,.83],[.68,.84]],'Bouche':[[.51,.43]],
+ 'Bras':[[.25,.55],[.75,.56]]
+};
+function bodyCrop(p){
+ return new Promise(resolve=>{
+  const im=new Image();im.crossOrigin='anonymous';
+  im.onload=()=>{
+   try{
+    const canvas=document.createElement('canvas');canvas.width=220;canvas.height=220;
+    const ctx=canvas.getContext('2d'),side=Math.min(im.naturalWidth,im.naturalHeight);
+    const part=BODY_PARTS[Math.floor(Math.random()*BODY_PARTS.length)];
+    const points=BODY_CROP_POINTS[part],point=points[Math.floor(Math.random()*points.length)];
+    const crop=side*.27;
+    const x=Math.max(0,Math.min(im.naturalWidth-crop,im.naturalWidth*point[0]-crop/2));
+    const y=Math.max(0,Math.min(im.naturalHeight-crop,im.naturalHeight*point[1]-crop/2));
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    ctx.drawImage(im,x,y,crop,crop,0,0,220,220);
+    resolve({part,image:canvas.toDataURL('image/png')});
+   }catch(e){resolve(null)}
+  };
+  im.onerror=()=>resolve(null);im.src=p.img;
+ });
+}
 async function rollCards(){
  if(gameMode.value==='surprise')return surpriseRoll();
  if(gameMode.value==='triochoice')return trioEntry()
@@ -1278,6 +1309,7 @@ async function rollCards(){
  for(let i=0;i<n;i++){
    const p=await draw(used);
    let c=clue(p,gameMode.value);
+   if(gameMode.value==='bodyparts'){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);continue}p._bodyCrop=crop;c='🔍 Partie du corps : '+crop.part;}
    if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
    if(gameMode.value==='dexdesc'){const d=await getDexDescription(p);c=d.text;p._dexSource=d.source;}
    if(gameMode.value==='evolution'){const e=await getEvolutionClue(p);c='🧬 Chaîne d’évolution : '+e.text;p._evoFinal=e.final;}
@@ -1647,6 +1679,11 @@ function render(){
  if(gameMode.value==='triochoice'){renderTrio();return;}
  if(gameMode.value==='blinddraft'){renderBlindDraft();return;}
  if(gameMode.value==='hangman'){renderHangman();return;}
+ if(gameMode.value==='bodyparts'){
+  cards.classList.remove('boxModeGrid');
+  cards.innerHTML=current.map((x,i)=>'<div class="card" id="c'+i+'"><img src="'+(x.p._bodyCrop?.image||'')+'" alt="Extrait recadré" style="width:220px;height:220px;object-fit:contain;image-rendering:auto"><div class="gameClue">'+x.clue+'</div><div class="bodyAnswer" style="display:none"><img src="'+(x.p.img||'')+'"><div class="name">'+mpEsc(x.p.name)+'</div></div><button onclick="pick('+i+')">CHOISIR</button></div>').join('');
+  return;
+ }
  cards.classList.toggle('boxModeGrid',gameMode.value==='randombox');
  if(gameMode.value==='randombox'){
   let slots='';
@@ -1754,8 +1791,8 @@ async function discardDeal(i){if(gameMode.value!=='learnleave'||!current[i])retu
 document.getElementById('keepStarter').addEventListener('click',()=>dealKeep().catch(console.error));
 document.getElementById('discardStarter').addEventListener('click',()=>dealRefuse().catch(console.error));
 roll.addEventListener('click',()=>rollCards().catch(e=>{console.error(e);alert(e.message||'Erreur')}));
-reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer').forEach(x=>x.style.display='block')});
-hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer').forEach(x=>x.style.display='none')});
+reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer,.bodyAnswer').forEach(x=>x.style.display='block')});
+hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer,.bodyAnswer').forEach(x=>x.style.display='none')});
 reset.addEventListener('click',()=>{dealStage=0;dealStarted=false;dealRemaining=[];dealUsed=new Set();starterOffer.innerHTML='';dealButtons();player=1;teams={1:[],2:[]};current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
 let auctionRound={pokemon:null,highest:0,leader:0,turn:1,locked:false,balances:null,completed:0,loading:false};
 function auctionCanAct(n){return !mpSession||mpSession.id===mpSeats[n]}
