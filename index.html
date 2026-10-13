@@ -206,7 +206,7 @@ img,video,canvas,svg{max-width:100%}
 </select></label>
 <label id="competitiveGenerationWrap" style="display:none">Génération du classement VGC / Smogon<select id="competitiveGeneration"><option value="all">Toutes les générations</option><option value="1">Génération 1</option><option value="2">Génération 2</option><option value="3">Génération 3</option><option value="4">Génération 4</option><option value="5">Génération 5</option><option value="6">Génération 6</option><option value="7">Génération 7</option><option value="8">Génération 8</option><option value="9">Génération 9</option></select></label>
 <label>Mode de type<select id="typeMode">
-<option value="random" selected>Types aléatoires</option><option value="random-d10">🎲 Monotype aléatoire — dé 10 000 faces (6 manches/joueur)</option><option value="same">Même type aléatoire</option>
+<option value="random" selected>Types aléatoires</option><option value="random-d10">🎲 Monotype aléatoire — dé 18 faces (6 manches/joueur)</option><option value="same">Même type aléatoire</option>
 <option value="mono-normal">Monotype Normal</option><option value="mono-fire">Monotype Feu</option><option value="mono-water">Monotype Eau</option>
 <option value="mono-electric">Monotype Électrik</option><option value="mono-grass">Monotype Plante</option><option value="mono-ice">Monotype Glace</option>
 <option value="mono-fighting">Monotype Combat</option><option value="mono-poison">Monotype Poison</option><option value="mono-ground">Monotype Sol</option>
@@ -494,16 +494,10 @@ let monoDiceResult=null;
 function monoRoll(n){
  const available=monoEligibleTypes(n);
  if(!available.length)throw Error('Aucun type disponible pour ce joueur.');
- // Les 10 000 résultats possibles couvrent tous les types encore autorisés.
- // Tirage équilibré par rejet des dernières faces excédentaires.
- const fairLimit=Math.floor(10000/available.length)*available.length;
- let face;
- do{face=1+Math.floor(Math.random()*10000)}while(face>fairLimit);
- monoDiceResult=face;
- monoDiceFaces=[...available];
- monoDiceType=available[(face-1)%available.length];
- monoSeen[n].add(monoDiceType);
- return monoDiceType;
+ let face,chosen;
+ do{face=1+Math.floor(Math.random()*18);chosen=TYPES[face-1].en}while(!available.includes(chosen));
+ monoDiceResult=face;monoDiceFaces=TYPES.map(x=>x.en);monoDiceType=chosen;
+ monoSeen[n].add(chosen);return chosen;
 }
 async function monoDraw(n,type,used){
  const [lo,hi]=range();
@@ -1603,7 +1597,7 @@ async function rollCards(){
  let n=parseInt(choiceCount.value)||3;n=Math.max(2,Math.min(12,n));if(typeMode.value==='random-d10')n=3;if(gameMode.value==='hangman')n=3;else choiceCount.value=n;hangmanState=null;
  const used=new Set();current=[];batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML='<div class="loaderGen"><div class="loaderBall"></div><div>Génération en cours<span class="loaderDots"></span></div></div>';
  const diceMode=typeMode.value==='random-d10';
- if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');monoRoll(player);turn.textContent='🎲 D10 000 : '+monoDiceResult+'/10 000 → '+frt(monoDiceType)+' ('+monoDiceFaces.length+' types disponibles) | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
+ if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');monoRoll(player);turn.textContent='🎲 D18 : face '+monoDiceResult+'/18 → '+frt(monoDiceType)+' | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
  for(let i=0;i<n;i++){
    const p=diceMode?await monoDraw(player,monoDiceType,used):await draw(used);
    let c=clue(p,gameMode.value);
