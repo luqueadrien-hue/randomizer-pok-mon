@@ -360,7 +360,7 @@ async function mpLeaveRoom(){
 }
 function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
 async function mpSnapshot(){
- return {player,mode:gameMode.value,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value,competitiveGeneration:competitiveGeneration.value},current:current.map(x=>({clue:x.clue||'',offerLabel:x.offerLabel||null,bodyCrop:isBodyMode(gameMode.value)?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,monoSeen:{1:[...monoSeen[1]],2:[...monoSeen[2]]},monoExcluded:{1:[...monoExcluded[1]],2:[...monoExcluded[2]]},monoDiceType,monoDiceFaces,monoDiceResult,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
+ return {player,mode:gameMode.value,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value,competitiveGeneration:competitiveGeneration.value},current:current.map(x=>({pokemonId:x.p?.id||null,clue:x.clue||'',offerLabel:x.offerLabel||null,bodyCrop:isBodyMode(gameMode.value)?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,monoSeen:{1:[...monoSeen[1]],2:[...monoSeen[2]]},monoExcluded:{1:[...monoExcluded[1]],2:[...monoExcluded[2]]},monoDiceType,monoDiceFaces,monoDiceResult,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
 }
 async function mpSyncState(){
  if(!mpSession||mpApplying||gameMode.value==='triochoice')return;
@@ -376,6 +376,9 @@ async function mpHydrateState(st){
   mpPrivateBatchOwner=st.proposalOwnerId||null;
   if(st.mode==='randombox'){pcBoxSlots=st.pcBoxSlots||null;pcBoxPhase=st.pcBoxPhase||'pick';pcBoxBans=st.pcBoxBans||{1:[],2:[]};current=[];}else if(!mine)current=[];
   teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;sixRoundCounts=st.sixRoundCounts||sixRoundCounts;sixRoundOwners=st.sixRoundOwners||sixRoundOwners;if(st.monoSeen)for(const n of [1,2])monoSeen[n]=new Set(st.monoSeen[n]||[]);if(st.monoExcluded)for(const n of [1,2])monoExcluded[n]=new Set(st.monoExcluded[n]||[]);monoDiceType=st.monoDiceType||null;monoDiceFaces=st.monoDiceFaces||[];monoDiceResult=st.monoDiceResult||null;
+  if(!mine&&st.mode!=='randombox'&&st.mode!=='learnleave'&&Array.isArray(st.current)){
+   current=await Promise.all(st.current.map(async x=>({p:x.pokemonId?await getP(x.pokemonId):null,clue:x.clue||'',isLie:false})));
+  }
   if(st.turn)turn.textContent=st.turn;
   if(mpSession)roll.disabled=!mpLobbyStarted||mpSession.id!==mpSeats[player===1?2:1]||sixRoundFinished();
   if(st.mode==='learnleave'){
@@ -2085,7 +2088,7 @@ function pick(i){
  if(mpSession&&!mpLobbyStarted)return;
  // En réseau, l'adversaire génère les propositions mais c'est bien le joueur actif qui choisit.
  if(mpSession&&mpSession.id!==mpSeats[player])return;
- if(batchLocked||!current[i])return;
+ if(batchLocked||!current[i]||!current[i].p)return;
  if(gameMode.value==='learnleave'&&dealStage!==4)return;
  batchLocked=true;
  const chooser=player,recipient=typeMode.value==='random-d10'?chooser:sixRoundRecipient(chooser);
