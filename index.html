@@ -172,6 +172,7 @@ img,video,canvas,svg{max-width:100%}
 <option value="triochoice">37. 🎰 Trio : accepter ou refuser</option>
 <option value="typeblind">38. ❓ Type à l'aveugle</option>
 <option value="stat-speed">39. 💨 Vitesse à l'aveugle</option>
+<option value="smogontier">40. 🏆 Tier compétitif (ZU, PU, NU, RU, UU, OU…)</option>
 <option value="learnleave">📦 Apprendre ou à laisser</option>
 <option value="randombox">📦 Boîte randomisée</option>
 <option value="questionduel">❓ Qui est-ce ?</option>
@@ -1177,7 +1178,33 @@ const FIRST_CONSOLE_COMPAT={
 };
 function firstConsoleClue(p){return 'Console de première apparition : '+(FIRST_CONSOLE_BY_GEN[p.gen]||'Inconnue')+'<br><small>Consoles compatibles avec le jeu d’origine : '+(FIRST_CONSOLE_COMPAT[p.gen]||'Inconnues')+'</small>'}
 function maxMinStatClue(p){const names={'hp':'PV','attack':'Attaque','defense':'Défense','special-attack':'Attaque Spé.','special-defense':'Défense Spé.','speed':'Vitesse'};const entries=Object.entries(p.stats||{}).filter(([k,v])=>names[k]&&Number.isFinite(v));if(!entries.length)return 'Statistiques indisponibles';const hi=Math.max(...entries.map(x=>x[1])),lo=Math.min(...entries.map(x=>x[1]));return 'Statistique maximale : '+entries.filter(x=>x[1]===hi).map(x=>names[x[0]]).join(' / ')+' ('+hi+')<br>Statistique minimale : '+entries.filter(x=>x[1]===lo).map(x=>names[x[0]]).join(' / ')+' ('+lo+')'}
-function clue(p,m){if(m==='maxminstat')return maxMinStatClue(p);if(m==='firstlastletter')return firstLastLetterClue(p);if(m==='firstconsole')return firstConsoleClue(p);if(m==='japanesename')return 'Nom japonais en préparation…';if(m==='egg')return '🥚 Type : '+p.types.map(frt).join(' / ')+'<br>Groupe d’Œuf : '+((p.eggGroups||[]).map(extraFr).join(' / ')||'Inconnu');if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='shinypalette')return 'Palette Shiny en préparation…';if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind'){const g={'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9};return `Génération ${g[p.gen]||'?'}`;}if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
+// Tiers Smogon en solo (distincts des règles officielles VGC en duo).
+// La liste est chargée depuis Pokémon Showdown et non déduite des statistiques.
+let smogonTiersPromise=null;
+function smogonTierKey(name){return String(name||'').toLowerCase().replace(/[^a-z0-9]/g,'')}
+function loadSmogonTiers(){
+ if(smogonTiersPromise)return smogonTiersPromise;
+ smogonTiersPromise=new Promise((resolve,reject)=>{
+  if(window.BattleFormatsData)return resolve(window.BattleFormatsData);
+  const script=document.createElement('script');
+  const timer=setTimeout(()=>{script.remove();reject(new Error('Délai dépassé'))},12000);
+  script.src='https://play.pokemonshowdown.com/data/formats-data.js';
+  script.onload=()=>{clearTimeout(timer);window.BattleFormatsData?resolve(window.BattleFormatsData):reject(new Error('Tiers indisponibles'))};
+  script.onerror=()=>{clearTimeout(timer);reject(new Error('Serveur des tiers inaccessible'))};
+  document.head.appendChild(script);
+ }).catch(e=>{smogonTiersPromise=null;throw e});
+ return smogonTiersPromise;
+}
+async function smogonTierClue(p){
+ try{
+  const data=await loadSmogonTiers();
+  const keys=[p.apiName,p.name].map(smogonTierKey);
+  const item=keys.map(k=>data[k]).find(Boolean);
+  const tier=item?.tier||item?.doublesTier||null;
+  return tier?'🏆 Tier Smogon : '+tier:'🏆 Tier Smogon : non classé / non disponible';
+ }catch(e){return '⚠️ Tier Smogon indisponible (connexion nécessaire)'}
+}
+function clue(p,m){if(m==='smogontier')return '🏆 Tier Smogon en préparation…';if(m==='maxminstat')return maxMinStatClue(p);if(m==='firstlastletter')return firstLastLetterClue(p);if(m==='firstconsole')return firstConsoleClue(p);if(m==='japanesename')return 'Nom japonais en préparation…';if(m==='egg')return '🥚 Type : '+p.types.map(frt).join(' / ')+'<br>Groupe d’Œuf : '+((p.eggGroups||[]).map(extraFr).join(' / ')||'Inconnu');if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='shinypalette')return 'Palette Shiny en préparation…';if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind'){const g={'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9};return `Génération ${g[p.gen]||'?'}`;}if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
 if(m==='dominantstat')return dominantStat(p);
 if(m==='bstonly')return `BST : ${p.total}`;
 if(m==='egggroup')return (p.eggGroups||[]).map(extraFr).join(' / ')||'Groupe d’Œuf inconnu';
@@ -1484,6 +1511,7 @@ async function rollCards(){
    if(gameMode.value==='bodyparts'){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);if(!window.__bodyCropFailures)window.__bodyCropFailures=0;if(++window.__bodyCropFailures>20)throw Error('Illustrations insuffisantes pour créer des extraits. Réessaie avec d’autres filtres.');continue}window.__bodyCropFailures=0;p._bodyCrop=crop;c='🔍 Partie du corps à identifier (découpe automatique, à confirmer par l’organisateur)';}
    if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
    if(gameMode.value==='japanesename')c=await japaneseNameClue(p);
+   if(gameMode.value==='smogontier')c=await smogonTierClue(p);
    if(gameMode.value==='dexdesc'){const d=await getDexDescription(p);c=d.text;p._dexSource=d.source;}
    if(gameMode.value==='evolution'){const e=await getEvolutionClue(p);c='🧬 Chaîne d’évolution : '+e.text;p._evoFinal=e.final;}
    if(gameMode.value==='evolevel')c=await evolutionModeClue(p,'level');
