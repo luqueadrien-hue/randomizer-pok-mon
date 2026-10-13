@@ -179,6 +179,13 @@ img,video,canvas,svg{max-width:100%}
 <option value="questionduel">❓ Qui est-ce ?</option>
 <option value="blinddraft">🕶️ Draft à l’aveugle — 6 manches par joueur</option>
 <option value="auction">💰 Enchères Pokémon</option>
+<option value="body-eyes">👁️ Yeux — deviner le Pokémon</option>
+<option value="body-ears">👁️ Oreilles — deviner le Pokémon</option>
+<option value="body-mouth">👁️ Bouche — deviner le Pokémon</option>
+<option value="body-arms">👁️ Bras — deviner le Pokémon</option>
+<option value="body-legs">👁️ Pattes — deviner le Pokémon</option>
+<option value="body-wings">👁️ Ailes — deviner le Pokémon</option>
+<option value="body-tail">👁️ Queue — deviner le Pokémon</option>
 <option value="bodyparts">👁️ Parties du corps aléatoires — jeu non numéroté</option>
 <option value="hangman">🎭 Pendu Pokémon</option>
 <option value="surprise">🎲 Randomizer multi-jeux : jeu aléatoire</option>
@@ -350,7 +357,7 @@ async function mpLeaveRoom(){
 }
 function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
 async function mpSnapshot(){
- return {player,mode:gameMode.value,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value,competitiveGeneration:competitiveGeneration.value},current:current.map(x=>({clue:x.clue||'',offerLabel:x.offerLabel||null,bodyCrop:gameMode.value==='bodyparts'?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
+ return {player,mode:gameMode.value,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value,competitiveGeneration:competitiveGeneration.value},current:current.map(x=>({clue:x.clue||'',offerLabel:x.offerLabel||null,bodyCrop:isBodyMode(gameMode.value)?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
 }
 async function mpSyncState(){
  if(!mpSession||mpApplying||gameMode.value==='triochoice')return;
@@ -376,7 +383,7 @@ async function mpHydrateState(st){
    }
   }else if(!mine){starterOffer.innerHTML=''}
   if(st.mode==='randombox'){render();}else if(mine){if(st.mode!=='learnleave'||st.dealStage!==1)render();else cards.innerHTML='';}
-  else if(st.mode==='bodyparts')cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Observe la partie du corps et devine le Pokémon !</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div>'+(x.bodyCrop?'<img src="'+x.bodyCrop+'" alt="Partie du corps mystère" style="width:220px;height:220px;object-fit:contain">':'<div>Image en préparation…</div>')+'<div class="gameClue">'+mpEsc(x.clue||'')+'</div></div>').join('');
+  else if(isBodyMode(st.mode))cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Observe la partie du corps et devine le Pokémon !</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div>'+(x.bodyCrop?'<img src="'+x.bodyCrop+'" alt="Partie du corps mystère" style="width:220px;height:220px;object-fit:contain">':'<div>Image en préparation…</div>')+'<div class="gameClue">'+mpEsc(x.clue||'')+'</div></div>').join('');
   else cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Indices de la manche — Pokémon masqués</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div><div class="gameClue">'+(x.clue||'Indice indisponible')+'</div>'+(mpSession&&mpSession.id===mpSeats[player]&&!st.batchLocked?'<button onclick="pick('+i+')">Choisir ce Pokémon</button>':'')+'</div>').join('');
   drawTeams();
  }catch(e){console.warn('Hydratation multijoueur',e)}finally{mpApplying=false}
@@ -1336,13 +1343,15 @@ function surpriseNext(){
 // Extraits réellement recadrés sur canvas : aucun sprite complet dans l'indice.
 // Les positions sont estimées sur l'illustration ; l'anatomie exacte varie selon l'espèce.
 const BODY_PARTS=['Yeux','Oreilles','Queue','Ailes','Pattes','Bouche','Bras'];
+const BODY_MODE_PARTS={'body-eyes':'Yeux','body-ears':'Oreilles','body-mouth':'Bouche','body-arms':'Bras','body-legs':'Pattes','body-wings':'Ailes','body-tail':'Queue'};
+function isBodyMode(mode){return mode==='bodyparts'||Object.prototype.hasOwnProperty.call(BODY_MODE_PARTS,mode)}
 const BODY_CROP_POINTS={
  'Yeux':[[.48,.30],[.57,.33]],'Oreilles':[[.30,.15],[.68,.16]],
  'Queue':[[.78,.72],[.19,.72]],'Ailes':[[.22,.43],[.77,.42]],
  'Pattes':[[.35,.83],[.68,.84]],'Bouche':[[.51,.43]],
  'Bras':[[.25,.55],[.75,.56]]
 };
-function bodyCrop(p){
+function bodyCrop(p,mode=gameMode.value){
  return new Promise(resolve=>{
   const im=new Image();im.crossOrigin='anonymous';
   im.onload=()=>{
@@ -1355,7 +1364,7 @@ function bodyCrop(p){
     const sc=source.getContext('2d',{willReadFrequently:true});sc.drawImage(im,0,0);
     const pixels=sc.getImageData(0,0,source.width,source.height).data;
     const candidates=[];
-    for(const part of BODY_PARTS)for(const point of BODY_CROP_POINTS[part]){
+    for(const part of (BODY_MODE_PARTS[mode]?[BODY_MODE_PARTS[mode]]:BODY_PARTS))for(const point of BODY_CROP_POINTS[part]){
       const crop=Math.max(16,Math.floor(side*.27));
       const x=Math.max(0,Math.min(source.width-crop,Math.round(source.width*point[0]-crop/2)));
       const y=Math.max(0,Math.min(source.height-crop,Math.round(source.height*point[1]-crop/2)));
@@ -1510,7 +1519,7 @@ async function rollCards(){
  for(let i=0;i<n;i++){
    const p=await draw(used);
    let c=clue(p,gameMode.value);
-   if(gameMode.value==='bodyparts'){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);if(!window.__bodyCropFailures)window.__bodyCropFailures=0;if(++window.__bodyCropFailures>20)throw Error('Illustrations insuffisantes pour créer des extraits. Réessaie avec d’autres filtres.');continue}window.__bodyCropFailures=0;p._bodyCrop=crop;c='🔍 Partie du corps à identifier (découpe automatique, à confirmer par l’organisateur)';}
+   if(isBodyMode(gameMode.value)){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);if(!window.__bodyCropFailures)window.__bodyCropFailures=0;if(++window.__bodyCropFailures>20)throw Error('Illustrations insuffisantes pour créer des extraits. Réessaie avec d’autres filtres.');continue}window.__bodyCropFailures=0;p._bodyCrop=crop;c='🔍 Partie du corps à identifier (découpe automatique, à confirmer par l’organisateur)';}
    if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
    if(gameMode.value==='japanesename')c=await japaneseNameClue(p);
    if(gameMode.value==='smogontier')c=await smogonTierClue(p);
@@ -1883,7 +1892,7 @@ function render(){
  if(gameMode.value==='triochoice'){renderTrio();return;}
  if(gameMode.value==='blinddraft'){renderBlindDraft();return;}
  if(gameMode.value==='hangman'){renderHangman();return;}
- if(gameMode.value==='bodyparts'){
+ if(isBodyMode(gameMode.value)){
   cards.classList.remove('boxModeGrid');
   cards.innerHTML=current.map((x,i)=>'<div class="card" id="c'+i+'"><img src="'+(x.p._bodyCrop?.image||'')+'" alt="Extrait recadré" style="width:220px;height:220px;object-fit:contain;image-rendering:auto"><div class="gameClue">'+x.clue+'</div><div class="bodyAnswer" style="display:none"><img src="'+(x.p.img||'')+'"><div class="name">'+mpEsc(x.p.name)+'</div></div><button onclick="pick('+i+')">CHOISIR</button></div>').join('');
   return;
