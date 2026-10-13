@@ -1342,6 +1342,7 @@ async function qdCreateBox(){
 }
 async function qdChoose(i){
  const who=qd.phase==='choose1'?1:qd.phase==='choose2'?2:0;if(!who||!qd.box[i]||mpSession&&mpSession.id!==mpSeats[who])return;
+ // Dans Qui est-ce ?, les deux joueurs peuvent choisir exactement le même Pokémon de la boîte.
  qd.targets[who]=qd.box[i];qd.phase=who===1?'choose2':'questions';qd.asker=1;await qdSync();qdRender();
 }
 async function qdAsk(k){
@@ -1368,7 +1369,7 @@ function qdRender(){
  q.innerHTML=qd.answers.map(x=>'<div class="turn"><b>J'+x.asker+' · '+mpEsc(x.label)+'</b> — Réponse de J'+(3-x.asker)+' : '+mpEsc(x.answer)+'</div>').join('');
  if(qd.phase==='idle'){c.innerHTML=me(1)?'<button class="primary" onclick="qdCreateBox()">📦 Générer une boîte PC de 30 Pokémon</button>':'En attente de J1';return}
  if(qd.phase==='choose1'||qd.phase==='choose2'){
-  const who=qd.phase==='choose1'?1:2,can=me(who);c.innerHTML='<div class="pcBoxHeader">📦 BOÎTE PC — J'+who+' sélectionne son Pokémon</div><div class="pcBoxSlots">'+qd.box.map((id,i)=>'<button class="pcSlot" '+(can?'':'disabled')+' onclick="qdChoose('+i+')"><span class="slotNo">'+(i+1)+'</span><span class="pcPoke" data-qd-id="'+id+'">Chargement…</span></button>').join('')+'</div>';c.querySelectorAll('[data-qd-id]').forEach(el=>getP(Number(el.dataset.qdId)).then(p=>{if(el.isConnected)el.innerHTML='<img src="'+(p.sprite||p.img||'')+'"><span class="slotName">'+mpEsc(p.name)+'</span>'}));return
+  const who=qd.phase==='choose1'?1:2,can=me(who);c.innerHTML='<div class="pcBoxHeader">📦 BOÎTE PC — J'+who+' sélectionne son Pokémon</div><div style="margin:6px 0">Le même Pokémon peut être choisi par les deux joueurs.</div><div class="pcBoxSlots">'+qd.box.map((id,i)=>'<button class="pcSlot" '+(can?'':'disabled')+' onclick="qdChoose('+i+')"><span class="slotNo">'+(i+1)+'</span><span class="pcPoke" data-qd-id="'+id+'">Chargement…</span></button>').join('')+'</div>';c.querySelectorAll('[data-qd-id]').forEach(el=>getP(Number(el.dataset.qdId)).then(p=>{if(el.isConnected)el.innerHTML='<img src="'+(p.sprite||p.img||'')+'"><span class="slotName">'+mpEsc(p.name)+'</span>'}));return
  }
  if(qd.phase==='questions'){
   const a=qd.asker;c.innerHTML=me(a)?'<div>Choisis la question à poser à J'+(3-a)+'. Le jeu affiche automatiquement la réponse.</div>'+QD_CATS.map(x=>'<button '+(qd.used[a].includes(x[0])?'disabled':'')+' onclick="qdAsk(\''+x[0]+'\')">'+x[1]+'</button>').join(''):'J'+a+' choisit sa question…';return
