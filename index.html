@@ -336,7 +336,7 @@ async function mpLeaveRoom(){
 }
 function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
 async function mpSnapshot(){
- return {player,mode:gameMode.value,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(x=>({clue:x.clue||'',offerLabel:x.offerLabel||null,bodyCrop:gameMode.value==='bodyparts'?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
+ return {player,mode:gameMode.value,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value},current:current.map(x=>({clue:x.clue||'',offerLabel:x.offerLabel||null,bodyCrop:gameMode.value==='bodyparts'?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
 }
 async function mpSyncState(){
  if(!mpSession||mpApplying||gameMode.value==='triochoice')return;
@@ -350,7 +350,7 @@ async function mpHydrateState(st){
   if(typeof updateModePanels==='function')updateModePanels();
   const mine=!!mpSession&&!!st.proposalOwnerId&&st.proposalOwnerId===mpSession.id;
   mpPrivateBatchOwner=st.proposalOwnerId||null;
-  if(st.mode==='randombox'){pcBoxSlots=st.pcBoxSlots||null;current=[];}else if(!mine)current=[];
+  if(st.mode==='randombox'){pcBoxSlots=st.pcBoxSlots||null;pcBoxPhase=st.pcBoxPhase||'pick';pcBoxBans=st.pcBoxBans||{1:[],2:[]};current=[];}else if(!mine)current=[];
   teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;sixRoundCounts=st.sixRoundCounts||sixRoundCounts;sixRoundOwners=st.sixRoundOwners||sixRoundOwners;
   if(st.turn)turn.textContent=st.turn;
   if(mpSession)roll.disabled=!mpLobbyStarted||mpSession.id!==mpSeats[player===1?2:1]||sixRoundFinished();
@@ -1319,57 +1319,64 @@ function bodyCrop(p){
   im.onerror=()=>resolve(null);im.src=p.img;
  });
 }
-// Boîte PC partagée : les trente emplacements gardent leur position durant les douze choix.
-let pcBoxSlots=null,pcBoxBusy=false;
+// Boîte PC commune : draft Pick J1 → Pick J2 → Ban J1 → Ban J2, répété jusqu'à 6 Pokémon par équipe.
+let pcBoxSlots=null,pcBoxBusy=false,pcBoxPhase='pick',pcBoxBans={1:[],2:[]};
+function pcBoxDone(){return teams[1].length>=6&&teams[2].length>=6}
+function pcBoxActionText(){
+ if(pcBoxDone())return 'DRAFT TERMINÉ — 6 Pokémon par équipe';
+ return 'JOUEUR '+player+' — '+(pcBoxPhase==='ban'?'BANNIS un Pokémon de la boîte':'SÉLECTIONNE un Pokémon pour son équipe');
+}
+function pcBoxAdvance(){
+ if(pcBoxPhase==='pick'){
+  if(player===1){player=2}
+  else{pcBoxPhase='ban';player=1}
+ }else{
+  if(player===1){player=2}
+  else{pcBoxPhase='pick';player=1}
+ }
+ if(pcBoxDone())pcBoxPhase='done';
+}
 async function pcBoxStart(){
  if(pcBoxBusy)return;
  if(mpSession&&!mpLobbyStarted)return alert('Lance d’abord le challenge multijoueur.');
- if(mpSession&&mpSession.id!==mpSeats[player===1?2:1])return alert('Le générateur désigné doit créer la boîte.');
- if(pcBoxSlots&&pcBoxSlots.some(Boolean)&&!sixRoundFinished())return render();
- pcBoxBusy=true;roll.disabled=true;
- cards.innerHTML='<div class="loaderGen">Création de la boîte PC commune…</div>';
+ if(pcBoxSlots&&pcBoxSlots.some(Boolean)&&!pcBoxDone())return render();
+ if(mpSession&&mpSession.role!=='host')return alert('L’organisateur crée la boîte PC commune.');
+ pcBoxBusy=true;roll.disabled=true;cards.innerHTML='<div class="loaderGen">Création de la boîte PC commune…</div>';
  try{
-  const used=new Set(),slots=[];
-  for(let i=0;i<30;i++){const p=await draw(used);slots.push(p.id)}
-  pcBoxSlots=slots;
-  current=await Promise.all(slots.map(async id=>({p:await getP(id),clue:''})));
-  batchLocked=false;mpPrivateBatchOwner=null;
-  turn.textContent='BOÎTE PC COMMUNE — Joueur '+player+' choisit un Pokémon. Les cases sélectionnées restent vides.';
-  render();await mpSyncState();
+  const used=new Set(),slots=[];for(let i=0;i<30;i++){const p=await draw(used);slots.push(p.id)}
+  pcBoxSlots=slots;pcBoxPhase='pick';pcBoxBans={1:[],2:[]};player=1;
+  teams={1:[],2:[]};sixRoundCounts={1:0,2:0};sixRoundOwners={1:[],2:[]};
+  current=[];batchLocked=false;mpPrivateBatchOwner=null;turn.textContent=pcBoxActionText();render();await mpSyncState();
  }catch(e){cards.textContent='Impossible de remplir la boîte : '+e.message;pcBoxSlots=null}
- finally{pcBoxBusy=false;roll.disabled=!!mpSession||sixRoundFinished()}
+ finally{pcBoxBusy=false;roll.disabled=!!pcBoxSlots}
 }
 async function pcBoxPick(i){
- if(!pcBoxSlots||!pcBoxSlots[i]||pcBoxBusy||sixRoundFinished())return;
+ if(!pcBoxSlots||!pcBoxSlots[i]||pcBoxBusy||pcBoxDone())return;
  if(mpSession&&(!mpLobbyStarted||mpSession.id!==mpSeats[player]))return;
  pcBoxBusy=true;
  try{
-  // La transaction empêche deux participants de sélectionner la même case.
   if(mpSession){
    const ref=mpRoom(mpSession.room).child('state');
    const result=await ref.transaction(st=>{
     if(!st||st.mode!=='randombox'||st.player!==player||!st.pcBoxSlots?.[i]||st.pcBoxSlots[i]!==pcBoxSlots[i])return;
-    const chooser=st.player,recipient=(st.sixRoundCounts?.[chooser]||0)%2===0?3-chooser:chooser;
-    const id=st.pcBoxSlots[i];
-    st.pcBoxSlots[i]=null;
-    st.teams=st.teams||{1:[],2:[]};st.teams[recipient]=[...(st.teams[recipient]||[]),id];
-    st.sixRoundOwners=st.sixRoundOwners||{1:[],2:[]};st.sixRoundOwners[recipient]=[...(st.sixRoundOwners[recipient]||[]),chooser];
-    st.sixRoundCounts=st.sixRoundCounts||{1:0,2:0};st.sixRoundCounts[chooser]=(st.sixRoundCounts[chooser]||0)+1;
-    const done=st.sixRoundCounts[1]>=6&&st.sixRoundCounts[2]>=6;
-    st.player=done?chooser:3-chooser;
-    st.turn=done?'12 MANCHES TERMINÉES — ÉQUIPES COMPLÈTES':'BOÎTE PC COMMUNE — Joueur '+st.player+' choisit un Pokémon.';
+    st.teams=st.teams||{1:[],2:[]};st.pcBoxBans=st.pcBoxBans||{1:[],2:[]};
+    const who=st.player,id=st.pcBoxSlots[i],phase=st.pcBoxPhase||'pick';st.pcBoxSlots[i]=null;
+    if(phase==='ban')st.pcBoxBans[who]=[...(st.pcBoxBans[who]||[]),id];
+    else st.teams[who]=[...(st.teams[who]||[]),id];
+    const done=(st.teams[1]||[]).length>=6&&(st.teams[2]||[]).length>=6;
+    if(done){st.pcBoxPhase='done'}
+    else if(phase==='pick'){if(who===1)st.player=2;else{st.pcBoxPhase='ban';st.player=1}}
+    else{if(who===1)st.player=2;else{st.pcBoxPhase='pick';st.player=1}}
+    st.turn=done?'DRAFT TERMINÉ — 6 Pokémon par équipe':'JOUEUR '+st.player+' — '+(st.pcBoxPhase==='ban'?'BANNIS un Pokémon':'SÉLECTIONNE un Pokémon');
     st.updated=Date.now();return st;
    },undefined,false);
-   if(!result.committed)return;
-   await mpHydrateState(result.snapshot.val());
+   if(!result.committed)return;await mpHydrateState(result.snapshot.val());
   }else{
-   const id=pcBoxSlots[i],chooser=player,recipient=sixRoundRecipient(chooser);
-   pcBoxSlots[i]=null;teams[recipient].push(await getP(id));sixRoundOwners[recipient].push(chooser);sixRoundCounts[chooser]++;
-   if(!sixRoundFinished())player=3-chooser;
-   turn.textContent=sixRoundFinished()?'12 MANCHES TERMINÉES — ÉQUIPES COMPLÈTES':'BOÎTE PC COMMUNE — Joueur '+player+' choisit un Pokémon.';
-   render();drawTeams();
+   const id=pcBoxSlots[i],who=player;pcBoxSlots[i]=null;
+   if(pcBoxPhase==='ban')pcBoxBans[who].push(id);else teams[who].push(await getP(id));
+   pcBoxAdvance();turn.textContent=pcBoxActionText();render();drawTeams();
   }
- }catch(e){console.warn('Sélection PC commune',e);alert('Sélection non enregistrée : '+e.message)}
+ }catch(e){console.warn('Action PC commune',e);alert('Action non enregistrée : '+e.message)}
  finally{pcBoxBusy=false}
 }
 async function rollCards(){
@@ -1770,17 +1777,12 @@ function render(){
  }
  cards.classList.toggle('boxModeGrid',gameMode.value==='randombox');
  if(gameMode.value==='randombox'){
-  const slots=pcBoxSlots||[];
-  const canChoose=!sixRoundFinished()&&(!mpSession||mpLobbyStarted&&mpSession.id===mpSeats[player]);
-  let html='';
-  for(let i=0;i<30;i++){
-   const id=slots[i];
-   html+=id?'<button type="button" class="pcSlot" data-pc-slot="'+i+'" '+(canChoose?'':'disabled')+'><span class="slotNo">'+(i+1)+'</span><span class="pcPoke" data-pc-id="'+id+'">Chargement…</span></button>':'<div class="pcSlot empty"><span class="slotNo">'+(i+1)+'</span></div>';
-  }
-  cards.innerHTML='<div class="pcBoxHeader"><span>📦 BOÎTE PC COMMUNE — JOUEURS 1 & 2</span></div><div class="pcBoxSlots">'+html+'</div><div class="pcBoxFooter"><span>'+slots.filter(Boolean).length+'/30 Pokémon restants</span><span>Tour du joueur '+player+'</span><span>Les Pokémon choisis disparaissent définitivement</span></div>';
+  const slots=pcBoxSlots||[],done=pcBoxDone(),canAct=!done&&(!mpSession||mpLobbyStarted&&mpSession.id===mpSeats[player]);
+  let html='';for(let i=0;i<30;i++){const id=slots[i];html+=id?'<button type="button" class="pcSlot" data-pc-slot="'+i+'" '+(canAct?'':'disabled')+'><span class="slotNo">'+(i+1)+'</span><span class="pcPoke" data-pc-id="'+id+'">Chargement…</span></button>':'<div class="pcSlot empty"><span class="slotNo">'+(i+1)+'</span><span>—</span></div>'}
+  const action=done?'✅ DRAFT TERMINÉ':(pcBoxPhase==='ban'?'🚫 JOUEUR '+player+' — BANNISSEMENT':'✅ JOUEUR '+player+' — SÉLECTION');
+  cards.innerHTML='<div class="pcBoxHeader"><span>📦 BOÎTE PC COMMUNE — JOUEURS 1 & 2</span></div><div class="turn">'+action+'</div><div class="pcBoxSlots">'+html+'</div><div class="pcBoxFooter"><span>'+slots.filter(Boolean).length+'/30 disponibles</span><span>J1 : '+teams[1].length+'/6 · J2 : '+teams[2].length+'/6</span><span>Bans J1 : '+((pcBoxBans[1]||[]).length)+' · Bans J2 : '+((pcBoxBans[2]||[]).length)+'</span></div>';
   cards.querySelectorAll('[data-pc-slot]').forEach(el=>el.addEventListener('click',()=>pcBoxPick(Number(el.dataset.pcSlot))));
-  cards.querySelectorAll('[data-pc-id]').forEach(el=>getP(Number(el.dataset.pcId)).then(p=>{if(el.isConnected){el.innerHTML='<img src="'+(p.sprite||p.img||'')+'" alt=""><span class="slotName">'+mpEsc(p.name)+'</span>'}}).catch(()=>{if(el.isConnected)el.textContent='Pokémon indisponible'}));
-  return;
+  cards.querySelectorAll('[data-pc-id]').forEach(el=>getP(Number(el.dataset.pcId)).then(p=>{if(el.isConnected)el.innerHTML='<img src="'+(p.sprite||p.img||'')+'" alt=""><span class="slotName">'+mpEsc(p.name)+'</span>'}).catch(()=>{if(el.isConnected)el.textContent='Indisponible'}));return;
  }
  const hidden=!surpriseActive&&revealMode.value==='hidden',deal=gameMode.value==='learnleave';
  cards.innerHTML=current.map((x,i)=>'<div class="card '+(hidden?'hiddenPoke':'')+'" id="c'+i+'"><img src="'+(x.p.img||'')+'"><div class="name">'+(x.displayName||x.p.name)+'</div><div>'+x.p.types.map(t=>'<span class="badge">'+frt(t)+'</span>').join('')+'</div><div class="gameClue">'+(x.clue||'')+'</div>'+(x.shinyAnswer?'<div class="offerTag shinyAnswer" style="display:none"><img src="'+x.p.shiny+'" style="max-width:150px;display:block;margin:8px auto"><b>✨ '+x.p.name+' chromatique</b></div>':'')+(x.musicAnswer?'<div class="offerTag musicAnswer" style="display:none">🎵 '+x.musicAnswer+'</div>':'')+(x.isLie?'<div class="offerTag lieflag" style="display:none">⚠️ '+(x.lieText||'LEURRE')+'</div>':'')+(deal?'<button onclick="pick('+i+')">✅ PRENDRE</button><button class="danger" onclick="discardDeal('+i+')">🗑️ SUPPRIMER</button>':'<button onclick="pick('+i+')">CHOISIR</button>')+'</div>').join('');
@@ -1861,7 +1863,7 @@ let sixRoundCounts={1:0,2:0},sixRoundOwners={1:[],2:[]};
 function sixRoundRecipient(chooser){return sixRoundCounts[chooser]%2===0?3-chooser:chooser}
 function sixRoundFinished(){return sixRoundCounts[1]>=6&&sixRoundCounts[2]>=6}
 function drawTeams(){[1,2].forEach(n=>document.getElementById('team'+n).innerHTML=teams[n].map((p,i)=>{
- const by=sixRoundOwners[n]?.[i],visible=!mpSession||!by||mpSession.id===mpSeats[by]||sixRoundFinished();
+ const visible=gameMode.value==='randombox'||!mpSession||sixRoundFinished();
  return visible?'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>':'<div class="mini">🔒 Pokémon secret</div>';
  }).join(''))}
 function pick(i){
