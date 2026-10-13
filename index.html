@@ -206,7 +206,7 @@ img,video,canvas,svg{max-width:100%}
 </select></label>
 <label id="competitiveGenerationWrap" style="display:none">Génération du classement VGC / Smogon<select id="competitiveGeneration"><option value="all">Toutes les générations</option><option value="1">Génération 1</option><option value="2">Génération 2</option><option value="3">Génération 3</option><option value="4">Génération 4</option><option value="5">Génération 5</option><option value="6">Génération 6</option><option value="7">Génération 7</option><option value="8">Génération 8</option><option value="9">Génération 9</option></select></label>
 <label>Mode de type<select id="typeMode">
-<option value="random" selected>Types aléatoires</option><option value="random-d10">🎲 Monotype aléatoire — dé 10 faces (6 manches/joueur)</option><option value="same">Même type aléatoire</option>
+<option value="random" selected>Types aléatoires</option><option value="random-d10">🎲 Monotype aléatoire — dé 10 000 faces (6 manches/joueur)</option><option value="same">Même type aléatoire</option>
 <option value="mono-normal">Monotype Normal</option><option value="mono-fire">Monotype Feu</option><option value="mono-water">Monotype Eau</option>
 <option value="mono-electric">Monotype Électrik</option><option value="mono-grass">Monotype Plante</option><option value="mono-ice">Monotype Glace</option>
 <option value="mono-fighting">Monotype Combat</option><option value="mono-poison">Monotype Poison</option><option value="mono-ground">Monotype Sol</option>
@@ -360,7 +360,7 @@ async function mpLeaveRoom(){
 }
 function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
 async function mpSnapshot(){
- return {player,mode:gameMode.value,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value,competitiveGeneration:competitiveGeneration.value},current:current.map(x=>({clue:x.clue||'',offerLabel:x.offerLabel||null,bodyCrop:isBodyMode(gameMode.value)?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,monoSeen:{1:[...monoSeen[1]],2:[...monoSeen[2]]},monoExcluded:{1:[...monoExcluded[1]],2:[...monoExcluded[2]]},monoDiceType,monoDiceFaces,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
+ return {player,mode:gameMode.value,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value,competitiveGeneration:competitiveGeneration.value},current:current.map(x=>({clue:x.clue||'',offerLabel:x.offerLabel||null,bodyCrop:isBodyMode(gameMode.value)?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,monoSeen:{1:[...monoSeen[1]],2:[...monoSeen[2]]},monoExcluded:{1:[...monoExcluded[1]],2:[...monoExcluded[2]]},monoDiceType,monoDiceFaces,monoDiceResult,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
 }
 async function mpSyncState(){
  if(!mpSession||mpApplying||gameMode.value==='triochoice')return;
@@ -375,7 +375,7 @@ async function mpHydrateState(st){
   const mine=!!mpSession&&!!st.proposalOwnerId&&st.proposalOwnerId===mpSession.id;
   mpPrivateBatchOwner=st.proposalOwnerId||null;
   if(st.mode==='randombox'){pcBoxSlots=st.pcBoxSlots||null;pcBoxPhase=st.pcBoxPhase||'pick';pcBoxBans=st.pcBoxBans||{1:[],2:[]};current=[];}else if(!mine)current=[];
-  teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;sixRoundCounts=st.sixRoundCounts||sixRoundCounts;sixRoundOwners=st.sixRoundOwners||sixRoundOwners;if(st.monoSeen)for(const n of [1,2])monoSeen[n]=new Set(st.monoSeen[n]||[]);if(st.monoExcluded)for(const n of [1,2])monoExcluded[n]=new Set(st.monoExcluded[n]||[]);monoDiceType=st.monoDiceType||null;monoDiceFaces=st.monoDiceFaces||[];
+  teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;sixRoundCounts=st.sixRoundCounts||sixRoundCounts;sixRoundOwners=st.sixRoundOwners||sixRoundOwners;if(st.monoSeen)for(const n of [1,2])monoSeen[n]=new Set(st.monoSeen[n]||[]);if(st.monoExcluded)for(const n of [1,2])monoExcluded[n]=new Set(st.monoExcluded[n]||[]);monoDiceType=st.monoDiceType||null;monoDiceFaces=st.monoDiceFaces||[];monoDiceResult=st.monoDiceResult||null;
   if(st.turn)turn.textContent=st.turn;
   if(mpSession)roll.disabled=!mpLobbyStarted||mpSession.id!==mpSeats[player===1?2:1]||sixRoundFinished();
   if(st.mode==='learnleave'){
@@ -484,18 +484,24 @@ let monoDiceType=null;
 let monoDiceFaces=[];
 const monoSeen={1:new Set(),2:new Set()};
 const monoExcluded={1:new Set(),2:new Set()};
-function monoReset(){monoDiceType=null;monoDiceFaces=[];for(const n of [1,2]){monoSeen[n].clear();monoExcluded[n].clear()}}
+function monoReset(){monoDiceType=null;monoDiceFaces=[];monoDiceResult=null;for(const n of [1,2]){monoSeen[n].clear();monoExcluded[n].clear()}}
 function monoEligibleTypes(n){
  const banned=new Set([...monoSeen[n],...monoExcluded[n]]);
  for(const p of teams[n])for(const t of p.types)banned.add(t);
  return TYPES.map(x=>x.en).filter(t=>!banned.has(t));
 }
+let monoDiceResult=null;
 function monoRoll(n){
  const available=monoEligibleTypes(n);
  if(!available.length)throw Error('Aucun type disponible pour ce joueur.');
- const shuffled=[...available];for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
- monoDiceFaces=shuffled.slice(0,10);
- monoDiceType=monoDiceFaces[Math.floor(Math.random()*monoDiceFaces.length)];
+ // Les 10 000 résultats possibles couvrent tous les types encore autorisés.
+ // Tirage équilibré par rejet des dernières faces excédentaires.
+ const fairLimit=Math.floor(10000/available.length)*available.length;
+ let face;
+ do{face=1+Math.floor(Math.random()*10000)}while(face>fairLimit);
+ monoDiceResult=face;
+ monoDiceFaces=[...available];
+ monoDiceType=available[(face-1)%available.length];
  monoSeen[n].add(monoDiceType);
  return monoDiceType;
 }
@@ -1597,7 +1603,7 @@ async function rollCards(){
  let n=parseInt(choiceCount.value)||3;n=Math.max(2,Math.min(12,n));if(typeMode.value==='random-d10')n=3;if(gameMode.value==='hangman')n=3;else choiceCount.value=n;hangmanState=null;
  const used=new Set();current=[];batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML='<div class="loaderGen"><div class="loaderBall"></div><div>Génération en cours<span class="loaderDots"></span></div></div>';
  const diceMode=typeMode.value==='random-d10';
- if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');monoRoll(player);turn.textContent='🎲 D10 : '+monoDiceFaces.map((t,i)=>(i+1)+'. '+frt(t)).join(' · ')+' → '+frt(monoDiceType)+' | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
+ if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');monoRoll(player);turn.textContent='🎲 D10 000 : '+monoDiceResult+'/10 000 → '+frt(monoDiceType)+' ('+monoDiceFaces.length+' types disponibles) | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
  for(let i=0;i<n;i++){
    const p=diceMode?await monoDraw(player,monoDiceType,used):await draw(used);
    let c=clue(p,gameMode.value);
