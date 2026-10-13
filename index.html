@@ -186,6 +186,17 @@ img,video,canvas,svg{max-width:100%}
 <option value="body-legs">45. 👁️ Pattes — deviner le Pokémon</option>
 <option value="body-wings">46. 👁️ Ailes — deviner le Pokémon</option>
 <option value="body-tail">47. 👁️ Queue — deviner le Pokémon</option>
+<option value="footprint">48. Empreinte (silhouette stylisée)</option>
+<option value="habitat">49. Habitat</option>
+<option value="specialtrait">50. Particularité spéciale</option>
+<option value="helditem">51. Objet tenu</option>
+<option value="capturerate">52. Taux de capture</option>
+<option value="evyield">53. Rendement EV</option>
+<option value="genderrate">54. Répartition des genres</option>
+<option value="basefriendship">55. Amitié de base</option>
+<option value="baseexperience">56. Expérience de base</option>
+<option value="hiddenability">57. Talent caché</option>
+<option value="retrosprite">58. Sprite rétro</option>
 <option value="bodyparts">👁️ Parties du corps aléatoires — jeu non numéroté</option>
 <option value="hangman">🎭 Pendu Pokémon</option>
 <option value="surprise">🎲 Randomizer multi-jeux : jeu aléatoire</option>
@@ -512,6 +523,7 @@ async function getPUncached(id){
  pokedexNumbers:(s.pokedex_numbers||[]).map(x=>({dex:x.pokedex?.name||'',entry:x.entry_number})),
  cries:p.cries||{},gameIndices:(p.game_indices||[]).map(x=>x.version?.name).filter(Boolean),
  baseExperience:p.base_experience??null,
+ evYield:(p.stats||[]).filter(x=>x.effort>0).map(x=>({stat:x.stat.name,amount:x.effort})),
  heldItems:(p.held_items||[]).map(h=>({name:h.item?.name||'',versions:(h.version_details||[]).map(v=>({rarity:v.rarity,version:v.version?.name||''}))})),
  encounterUrl:p.location_area_encounters};
  cache.set(id,o);return o;
@@ -1213,6 +1225,31 @@ async function smogonTierClue(p){
   return tier?'🏆 Tier Smogon : '+tier:'🏆 Tier Smogon : non classé / non disponible';
  }catch(e){return '⚠️ Tier Smogon indisponible (connexion nécessaire)'}
 }
+
+const EXTRA_RANK_MODES=['footprint','habitat','specialtrait','helditem','capturerate','evyield','genderrate','basefriendship','baseexperience','hiddenability','retrosprite'];
+const HABITAT_FR={cave:'Grotte',forest:'Forêt',grassland:'Prairie',mountain:'Montagne',rare:'Rare',roughterrain:'Terrain accidenté',sea:'Mer',urban:'Ville',watersedge:"Bord de l’eau"};
+const STAT_FR={hp:'PV',attack:'Attaque',defense:'Défense','special-attack':'Attaque spéciale','special-defense':'Défense spéciale',speed:'Vitesse'};
+async function extraRankClue(p,mode){
+ switch(mode){
+ case 'habitat':return '🌿 Habitat : '+(HABITAT_FR[p.habitat]||'Non répertorié');
+ case 'specialtrait':return '✨ Particularité : '+(p.isBaby?'Pokémon bébé':p.formsSwitchable?'Formes interchangeables':p.hasGenderDifferences?'Apparence différente selon le genre':p.isMythical?'Pokémon fabuleux':p.isLegendary?'Pokémon légendaire':p.evolvesFrom?'Espèce issue d’une évolution':'Espèce sans particularité répertoriée');
+ case 'helditem':{const a=p.heldItems||[];return '🎒 Objet sauvage : '+(a.length?a.map(x=>x.name.replace(/-/g,' ')).join(' / '):'Aucun objet répertorié')}
+ case 'capturerate':return '🎯 Taux de capture : '+(p.captureRate??'Non disponible');
+ case 'evyield':return '📈 EV rapportés : '+((p.evYield||[]).map(x=>x.amount+' '+(STAT_FR[x.stat]||x.stat)).join(' / ')||'Non disponibles');
+ case 'genderrate':return p.genderRate===-1?'⚥ Sans genre':p.genderRate==null?'⚥ Répartition inconnue':'⚥ Femelles : '+(p.genderRate*12.5)+' % • Mâles : '+(100-p.genderRate*12.5)+' %';
+ case 'basefriendship':return '💗 Amitié de base : '+(p.baseHappiness??'Non disponible');
+ case 'baseexperience':return '⭐ Expérience de base : '+(p.baseExperience??'Non disponible');
+ case 'hiddenability':{const a=(p.abilities||[]).find(x=>x.hidden);if(!a)return '✨ Aucun talent caché répertorié';try{const d=await fetch(a.url).then(r=>r.json());return '✨ Talent caché : '+(d.names?.find(x=>x.language.name==='fr')?.name||a.name)}catch(e){return '✨ Talent caché : '+a.name}}
+ case 'retrosprite':return '🎮 Sprite rétro — devine le Pokémon';
+ case 'footprint':return '🐾 Empreinte stylisée (indice visuel, non officiel)';
+ }
+ return '';
+}
+function extraRankImage(p,mode){
+ if(mode==='retrosprite')return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-iii/emerald/'+p.id+'.png';
+ return p.sprite||p.img||'';
+}
+
 function clue(p,m){if(m==='vgc')return '🏆 VGC : format officiel en duo — génération '+(document.getElementById('competitiveGeneration')?.value||'all');if(m==='smogontier')return '🏆 Tier Smogon en préparation…';if(m==='maxminstat')return maxMinStatClue(p);if(m==='firstlastletter')return firstLastLetterClue(p);if(m==='firstconsole')return firstConsoleClue(p);if(m==='japanesename')return 'Nom japonais en préparation…';if(m==='egg')return '🥚 Type : '+p.types.map(frt).join(' / ')+'<br>Groupe d’Œuf : '+((p.eggGroups||[]).map(extraFr).join(' / ')||'Inconnu');if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='shinypalette')return 'Palette Shiny en préparation…';if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind'){const g={'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9};return `Génération ${g[p.gen]||'?'}`;}if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
 if(m==='dominantstat')return dominantStat(p);
 if(m==='bstonly')return `BST : ${p.total}`;
@@ -1523,6 +1560,7 @@ async function rollCards(){
    if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
    if(gameMode.value==='japanesename')c=await japaneseNameClue(p);
    if(gameMode.value==='smogontier')c=await smogonTierClue(p);
+   if(EXTRA_RANK_MODES.includes(gameMode.value))c=await extraRankClue(p,gameMode.value);
    if(gameMode.value==='vgc')c='🏆 VGC — génération '+(competitiveGeneration.value==='all'?'au choix':competitiveGeneration.value)+' (classement historique non disponible)';
    if(gameMode.value==='dexdesc'){const d=await getDexDescription(p);c=d.text;p._dexSource=d.source;}
    if(gameMode.value==='evolution'){const e=await getEvolutionClue(p);c='🧬 Chaîne d’évolution : '+e.text;p._evoFinal=e.final;}
@@ -1889,6 +1927,16 @@ function renderHangman(){
 }
 
 function render(){
+ if(gameMode.value==='retrosprite'||gameMode.value==='footprint'){
+  cards.classList.remove('boxModeGrid');
+  cards.innerHTML=current.map((x,i)=>{
+   const url=extraRankImage(x.p,gameMode.value);
+   const footprint=gameMode.value==='footprint';
+   return '<div class="card" id="c'+i+'"><div style="height:200px;display:flex;align-items:center;justify-content:center"><img src="'+url+'" alt="Indice Pokémon" style="max-width:180px;max-height:180px;image-rendering:pixelated;'+(footprint?'filter:brightness(0);clip-path:inset(55% 0 0 0);transform:scale(1.7);':'')+'" onerror="this.style.display=\'none\';this.parentElement.textContent=\'Sprite indisponible\'"></div><div class="gameClue">'+x.clue+'</div><div class="bodyAnswer" style="display:none"><img src="'+(x.p.img||'')+'"><div class="name">'+mpEsc(x.p.name)+'</div></div><button onclick="pick('+i+')">CHOISIR</button></div>'
+  }).join('');
+  return;
+ }
+
  if(gameMode.value==='triochoice'){renderTrio();return;}
  if(gameMode.value==='blinddraft'){renderBlindDraft();return;}
  if(gameMode.value==='hangman'){renderHangman();return;}
