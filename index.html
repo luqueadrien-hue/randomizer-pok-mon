@@ -1228,7 +1228,6 @@ async function smogonTierClue(p){
 
 const EXTRA_RANK_MODES=['footprint','habitat','specialtrait','helditem','capturerate','evyield','genderrate','basefriendship','baseexperience','hiddenability','retrosprite'];
 const HABITAT_FR={cave:'Grotte',forest:'Forêt',grassland:'Prairie',mountain:'Montagne',rare:'Rare',roughterrain:'Terrain accidenté',sea:'Mer',urban:'Ville',watersedge:"Bord de l’eau"};
-const STAT_FR={hp:'PV',attack:'Attaque',defense:'Défense','special-attack':'Attaque spéciale','special-defense':'Défense spéciale',speed:'Vitesse'};
 async function extraRankClue(p,mode){
  switch(mode){
  case 'habitat':return '🌿 Habitat : '+(HABITAT_FR[p.habitat]||'Non répertorié');
