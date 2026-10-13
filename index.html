@@ -370,7 +370,7 @@ async function mpHydrateState(st){
   }else if(!mine){starterOffer.innerHTML=''}
   if(st.mode==='randombox'){render();}else if(mine){if(st.mode!=='learnleave'||st.dealStage!==1)render();else cards.innerHTML='';}
   else if(st.mode==='bodyparts')cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Observe la partie du corps et devine le Pokémon !</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div>'+(x.bodyCrop?'<img src="'+x.bodyCrop+'" alt="Partie du corps mystère" style="width:220px;height:220px;object-fit:contain">':'<div>Image en préparation…</div>')+'<div class="gameClue">'+mpEsc(x.clue||'')+'</div></div>').join('');
-  else cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Indices de la manche — Pokémon masqués</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div><div class="gameClue">'+(x.clue||'Indice indisponible')+'</div></div>').join('');
+  else cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Indices de la manche — Pokémon masqués</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div><div class="gameClue">'+(x.clue||'Indice indisponible')+'</div>'+(mpSession&&mpSession.id===mpSeats[player]&&!st.batchLocked?'<button onclick="pick('+i+')">Choisir ce Pokémon</button>':'')+'</div>').join('');
   drawTeams();
  }catch(e){console.warn('Hydratation multijoueur',e)}finally{mpApplying=false}
 }
@@ -1928,7 +1928,8 @@ function drawTeams(){[1,2].forEach(n=>document.getElementById('team'+n).innerHTM
  }).join(''))}
 function pick(i){
  if(mpSession&&!mpLobbyStarted)return;
- if(mpSession&&mpSession.id!==mpSeats[player===1?2:1])return;
+ // En réseau, l'adversaire génère les propositions mais c'est bien le joueur actif qui choisit.
+ if(mpSession&&mpSession.id!==mpSeats[player])return;
  if(batchLocked||!current[i])return;
  if(gameMode.value==='learnleave'&&dealStage!==4)return;
  batchLocked=true;
