@@ -1380,39 +1380,60 @@ const BODY_CROP_POINTS={
  'Pattes':[[.35,.83],[.68,.84]],'Bouche':[[.51,.43]],
  'Bras':[[.25,.55],[.75,.56]]
 };
+// Détourage transparent des parties visibles sur les sprites PNG.
+// Sans annotations anatomiques, les points sont des heuristiques et non une détection fiable.
+const BODY_SHAPES={
+ 'Yeux':{w:.17,h:.13},'Oreilles':{w:.24,h:.30},'Queue':{w:.36,h:.45},
+ 'Ailes':{w:.40,h:.53},'Pattes':{w:.27,h:.43},
+ 'Bouche':{w:.22,h:.17},'Bras':{w:.31,h:.45}
+};
 function bodyCrop(p,mode=gameMode.value){
  return new Promise(resolve=>{
   const im=new Image();im.crossOrigin='anonymous';
   im.onload=()=>{
    try{
-    // Choisir une zone contenant effectivement des pixels du Pokémon.
-    // Les points anatomiques restent des estimations : ne pas promettre une identification parfaite.
-    const side=Math.min(im.naturalWidth,im.naturalHeight);
-    const source=document.createElement('canvas');
-    source.width=im.naturalWidth;source.height=im.naturalHeight;
+    const source=document.createElement('canvas');source.width=im.naturalWidth;source.height=im.naturalHeight;
     const sc=source.getContext('2d',{willReadFrequently:true});sc.drawImage(im,0,0);
-    const pixels=sc.getImageData(0,0,source.width,source.height).data;
+    const W=source.width,H=source.height,pixels=sc.getImageData(0,0,W,H).data;
+    let minX=W,minY=H,maxX=-1,maxY=-1;
+    for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(pixels[(y*W+x)*4+3]>110){
+      minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+    }
+    if(maxX<0||maxY<0){resolve(null);return}
+    const bw=maxX-minX+1,bh=maxY-minY+1;
     const candidates=[];
-    for(const part of (BODY_MODE_PARTS[mode]?[BODY_MODE_PARTS[mode]]:BODY_PARTS))for(const point of BODY_CROP_POINTS[part]){
-      const crop=Math.max(16,Math.floor(side*.27));
-      const x=Math.max(0,Math.min(source.width-crop,Math.round(source.width*point[0]-crop/2)));
-      const y=Math.max(0,Math.min(source.height-crop,Math.round(source.height*point[1]-crop/2)));
-      let visible=0,checked=0;
-      for(let yy=y;yy<y+crop;yy+=4)for(let xx=x;xx<x+crop;xx+=4){
-       checked++;if(pixels[(yy*source.width+xx)*4+3]>100)visible++;
+    for(const part of (BODY_MODE_PARTS[mode]?[BODY_MODE_PARTS[mode]]:BODY_PARTS)){
+     const shape=BODY_SHAPES[part];
+     for(const point of BODY_CROP_POINTS[part]){
+      const cw=Math.max(8,Math.round(bw*shape.w)),ch=Math.max(8,Math.round(bh*shape.h));
+      const cx=minX+bw*point[0],cy=minY+bh*point[1];
+      const x=Math.max(0,Math.min(W-cw,Math.round(cx-cw/2))),y=Math.max(0,Math.min(H-ch,Math.round(cy-ch/2)));
+      let visible=0,total=0;
+      for(let yy=y;yy<y+ch;yy+=2)for(let xx=x;xx<x+cw;xx+=2){
+       total++;if(pixels[(yy*W+xx)*4+3]>110)visible++;
       }
-      if(checked&&visible/checked>=.30)candidates.push({part,x,y,crop});
+      const coverage=visible/Math.max(1,total);
+      // Rejeter les régions vides ou presque entièrement pleines : privilégier les appendices.
+      if(coverage>=.08&&coverage<=.88)candidates.push({part,x,y,cw,ch,coverage});
+     }
     }
     if(!candidates.length){resolve(null);return}
-    const chosen=candidates[Math.floor(Math.random()*candidates.length)];
-    const canvas=document.createElement('canvas');canvas.width=160;canvas.height=160;
-    const ctx=canvas.getContext('2d');ctx.fillStyle='#f5f7fa';ctx.fillRect(0,0,160,160);
-    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-    ctx.drawImage(im,chosen.x,chosen.y,chosen.crop,chosen.crop,0,0,160,160);
-    resolve({part:chosen.part,image:canvas.toDataURL('image/jpeg',.83)});
-   }catch(e){console.warn('Découpe Pokémon',e);resolve(null)}
+    // Favoriser les formes présentant du contour, plutôt qu'un bloc opaque du torse.
+    candidates.sort((a,b)=>Math.abs(a.coverage-.43)-Math.abs(b.coverage-.43));
+    const pool=candidates.slice(0,Math.min(5,candidates.length));
+    const chosen=pool[Math.floor(Math.random()*pool.length)];
+    const out=document.createElement('canvas');out.width=200;out.height=200;
+    const ctx=out.getContext('2d');
+    ctx.imageSmoothingEnabled=false;
+    const scale=Math.min(184/chosen.cw,184/chosen.ch);
+    const dw=Math.max(1,Math.round(chosen.cw*scale)),dh=Math.max(1,Math.round(chosen.ch*scale));
+    ctx.drawImage(source,chosen.x,chosen.y,chosen.cw,chosen.ch,Math.round((200-dw)/2),Math.round((200-dh)/2),dw,dh);
+    resolve({part:chosen.part,image:out.toDataURL('image/png')});
+   }catch(e){console.warn('Détourage sprite',e);resolve(null)}
   };
-  im.onerror=()=>resolve(null);im.src=p.img;
+  im.onerror=()=>resolve(null);
+  // Le sprite PNG garde les pixels transparents, contrairement à l'ancien JPEG.
+  im.src=p.sprite||p.img;
  });
 }
 // Duel de questions : un Pokémon mystère, catégories non répétables dans une manche, réponse puis éventuelle imposition adverse.
