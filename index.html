@@ -486,7 +486,7 @@ const monoSeen={1:new Set(),2:new Set()};
 const monoExcluded={1:new Set(),2:new Set()};
 function monoReset(){monoDiceType=null;monoDiceFaces=[];monoDiceResult=null;for(const n of [1,2]){monoSeen[n].clear();monoExcluded[n].clear()}}
 function monoEligibleTypes(n){
- const banned=new Set([...monoSeen[n],...monoExcluded[n]]);
+ const banned=new Set(monoSeen[n]);
  for(const p of teams[n])for(const t of p.types)banned.add(t);
  return TYPES.map(x=>x.en).filter(t=>!banned.has(t));
 }
@@ -497,7 +497,7 @@ function monoRoll(n){
  let face,chosen;
  do{face=1+Math.floor(Math.random()*18);chosen=TYPES[face-1].en}while(!available.includes(chosen));
  monoDiceResult=face;monoDiceFaces=TYPES.map(x=>x.en);monoDiceType=chosen;
- monoSeen[n].add(chosen);return chosen;
+ return chosen;
 }
 async function monoDraw(n,type,used){
  const [lo,hi]=range();
@@ -1597,7 +1597,7 @@ async function rollCards(){
  let n=parseInt(choiceCount.value)||3;n=Math.max(2,Math.min(12,n));if(typeMode.value==='random-d10')n=3;if(gameMode.value==='hangman')n=3;else choiceCount.value=n;hangmanState=null;
  const used=new Set();current=[];batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML='<div class="loaderGen"><div class="loaderBall"></div><div>Génération en cours<span class="loaderDots"></span></div></div>';
  const diceMode=typeMode.value==='random-d10';
- if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');monoRoll(player);turn.textContent='🎲 D18 : face '+monoDiceResult+'/18 → '+frt(monoDiceType)+' | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
+ if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');if(!monoDiceType)monoRoll(player);turn.textContent='🎲 D18 : face '+monoDiceResult+'/18 → '+frt(monoDiceType)+' | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
  for(let i=0;i<n;i++){
    const p=diceMode?await monoDraw(player,monoDiceType,used):await draw(used);
    let c=clue(p,gameMode.value);
@@ -2089,11 +2089,11 @@ function pick(i){
  if(gameMode.value==='learnleave'&&dealStage!==4)return;
  batchLocked=true;
  const chooser=player,recipient=typeMode.value==='random-d10'?chooser:sixRoundRecipient(chooser);
- teams[recipient].push(current[i].p);if(typeMode.value==='random-d10'){for(const x of current)monoExcluded[chooser].add(x.p.id);monoDiceType=null;}sixRoundOwners[recipient].push(chooser);sixRoundCounts[chooser]++;
+ teams[recipient].push(current[i].p);if(typeMode.value==='random-d10'){if(monoDiceType)monoSeen[chooser].add(monoDiceType);for(const x of current)monoExcluded[chooser].add(x.p.id);monoDiceType=null;}sixRoundOwners[recipient].push(chooser);sixRoundCounts[chooser]++;
  if(gameMode.value==='learnleave'){dealStage=0;dealStarted=false;dealRemaining=[];starterOffer.innerHTML='';dealInfo.textContent='Manche terminée. Lance une nouvelle manche.';dealButtons();}
  if(sixRoundFinished()){turn.textContent='12 MANCHES TERMINÉES — ÉQUIPES COMPLÈTES';roll.disabled=true;drawTeams();mpSyncState();return}
  player=chooser===1?2:1;if(sixRoundCounts[player]>=6)player=chooser;
- turn.textContent='Manche '+(sixRoundCounts[player]+1)+'/6 du JOUEUR '+player+' — Pokémon pour '+(sixRoundRecipient(player)===player?'soi':'l’adversaire')+'. Génère une nouvelle sélection.';
+ turn.textContent='Manche '+(sixRoundCounts[player]+1)+'/6 du JOUEUR '+player+' — Pokémon pour '+((typeMode.value==='random-d10'||sixRoundRecipient(player)===player)?'soi':'l’adversaire')+'. Génère une nouvelle sélection.';
  drawTeams();render();mpSyncState();
 }
 async function discardDeal(i){if(gameMode.value!=='learnleave'||!current[i])return;if(mpSession&&mpSession.id!==(mpSeats[player===1?2:1]))return;if(dealStage===2){dealRemaining=current.filter((_,j)=>j!==i);dealStage=3;current=[await dealDraw()];starterOffer.innerHTML='<div class="card"><b>Nouvelle proposition</b></div>';dealInfo.textContent='Étape 3 : accepte ce nouveau Pokémon ou refuse-le pour retrouver les deux autres.';}else if(dealStage===4){current.splice(i,1);dealRemaining=[...current];dealInfo.textContent='Choisis le Pokémon restant.';}else return;render();dealButtons();mpSyncState()}
