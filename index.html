@@ -493,7 +493,7 @@ function monoEligibleTypes(n){
 function monoRoll(n){
  const available=monoEligibleTypes(n);
  if(!available.length)throw Error('Aucun type disponible pour ce joueur.');
- const shuffled=[...available].sort(()=>Math.random()-.5);
+ const shuffled=[...available];for(let i=shuffled.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];}
  monoDiceFaces=shuffled.slice(0,10);
  monoDiceType=monoDiceFaces[Math.floor(Math.random()*monoDiceFaces.length)];
  monoSeen[n].add(monoDiceType);
@@ -2102,7 +2102,7 @@ document.getElementById('discardStarter').addEventListener('click',()=>dealRefus
 roll.addEventListener('click',()=>rollCards().catch(e=>{console.error(e);alert(e.message||'Erreur')}));
 reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer,.bodyAnswer').forEach(x=>x.style.display='block')});
 hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer,.bodyAnswer').forEach(x=>x.style.display='none')});
-reset.addEventListener('click',()=>{dealStage=0;dealStarted=false;dealRemaining=[];dealUsed=new Set();starterOffer.innerHTML='';dealButtons();player=1;teams={1:[],2:[]};monoReset();current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
+reset.addEventListener('click',()=>{dealStage=0;dealStarted=false;dealRemaining=[];dealUsed=new Set();starterOffer.innerHTML='';dealButtons();player=1;teams={1:[],2:[]};sixRoundCounts={1:0,2:0};sixRoundOwners={1:[],2:[]};monoReset();current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
 let auctionRound={pokemon:null,highest:0,leader:0,turn:1,locked:false,balances:null,completed:0,loading:false};
 function auctionCanAct(n){return !mpSession||mpSession.id===mpSeats[n]}
 function auctionCounts(a){const awards=a.awards||(mpSession?{1:[],2:[]}:{1:teams[1],2:teams[2]});return {1:(awards[1]||[]).length,2:(awards[2]||[]).length}}
