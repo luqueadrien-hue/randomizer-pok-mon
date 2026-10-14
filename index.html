@@ -155,35 +155,36 @@ img,video,canvas,svg{max-width:100%}
 <option value="progressive">20. 🔢 Génération mystère (indices progressifs)</option>
 <option value="habitat">21. Habitat</option>
 <option value="capturelocation">22. 📍 Lieu de capture</option>
-<option value="multimove">23. ⚔️ Movepool</option>
-<option value="japanesename">24. 🇯🇵 Nom japonais</option>
-<option value="dexnumber">25. 🔢 Numéro du Pokédex</option>
-<option value="regionaldex">26. 🌎 Numéro Pokédex régional</option>
-<option value="helditem">27. Objet tenu</option>
-<option value="egg">28. 🥚 Œuf : type et groupe</option>
-<option value="shinypalette">29. ✨🎨 Palette Shiny</option>
-<option value="specialtrait">30. Particularité spéciale</option>
-<option value="weight">31. ⚖️ Poids</option>
-<option value="zonemusic">32. 🎵 Pokémon par musique de zone</option>
-<option value="wildgift">33. 🎁 Pokémon sauvage ou cadeau ?</option>
-<option value="firstconsole">34. 🎮 Première console d’apparition</option>
-<option value="firstlastletter">35. 🔤 Première et dernière lettre</option>
-<option value="firstregion">36. 🗺️ Première région d’apparition</option>
-<option value="stat-hp">37. ❤️ PV à l'aveugle</option>
-<option value="evyield">38. Rendement EV</option>
-<option value="genderrate">39. Répartition des genres</option>
-<option value="resistances">40. 🛡️ Résistances / immunités</option>
-<option value="smogontier">41. 🏆 Smogon — tiers compétitifs</option>
-<option value="retrosprite">42. Sprite rétro</option>
-<option value="dominantstat">43. 🏆 Stat dominante</option>
-<option value="maxminstat">44. 📊 Statistique maximale et minimale</option>
-<option value="height">45. 📏 Taille</option>
-<option value="hiddenability">46. Talent caché</option>
-<option value="capturerate">47. Taux de capture</option>
-<option value="stats">48. 📊 Total de stats (BST)</option>
-<option value="triochoice">49. 🎰 Trio : accepter ou refuser</option>
-<option value="typeblind">50. ❓ Type à l'aveugle</option>
-<option value="stat-speed">51. 💨 Vitesse à l'aveugle</option>
+<option value="morphology">23. 🦴 Morphologie du Pokémon</option>
+<option value="multimove">24. ⚔️ Movepool</option>
+<option value="japanesename">25. 🇯🇵 Nom japonais</option>
+<option value="dexnumber">26. 🔢 Numéro du Pokédex</option>
+<option value="regionaldex">27. 🌎 Numéro Pokédex régional</option>
+<option value="helditem">28. Objet tenu</option>
+<option value="egg">29. 🥚 Œuf : type et groupe</option>
+<option value="shinypalette">30. ✨🎨 Palette Shiny</option>
+<option value="specialtrait">31. Particularité spéciale</option>
+<option value="weight">32. ⚖️ Poids</option>
+<option value="zonemusic">33. 🎵 Pokémon par musique de zone</option>
+<option value="wildgift">34. 🎁 Pokémon sauvage ou cadeau ?</option>
+<option value="firstconsole">35. 🎮 Première console d’apparition</option>
+<option value="firstlastletter">36. 🔤 Première et dernière lettre</option>
+<option value="firstregion">37. 🗺️ Première région d’apparition</option>
+<option value="stat-hp">38. ❤️ PV à l'aveugle</option>
+<option value="evyield">39. Rendement EV</option>
+<option value="genderrate">40. Répartition des genres</option>
+<option value="resistances">41. 🛡️ Résistances / immunités</option>
+<option value="smogontier">42. 🏆 Smogon — tiers compétitifs</option>
+<option value="retrosprite">43. Sprite rétro</option>
+<option value="dominantstat">44. 🏆 Stat dominante</option>
+<option value="maxminstat">45. 📊 Statistique maximale et minimale</option>
+<option value="height">46. 📏 Taille</option>
+<option value="hiddenability">47. Talent caché</option>
+<option value="capturerate">48. Taux de capture</option>
+<option value="stats">49. 📊 Total de stats (BST)</option>
+<option value="triochoice">50. 🎰 Trio : accepter ou refuser</option>
+<option value="typeblind">51. ❓ Type à l'aveugle</option>
+<option value="stat-speed">52. 💨 Vitesse à l'aveugle</option>
 <option value="vgc">🏆 VGC — format compétitif</option>
 <option value="learnleave">📦 Apprendre ou à laisser</option>
 <option value="randombox">📦 Boîte randomisée</option>
@@ -1275,7 +1276,24 @@ function extraRankImage(p,mode){
  return p.sprite||p.img||'';
 }
 
-function clue(p,m){if(m==='vgc')return '🏆 VGC : format officiel en duo — génération '+(document.getElementById('competitiveGeneration')?.value||'all');if(m==='smogontier')return '🏆 Tier Smogon en préparation…';if(m==='maxminstat')return maxMinStatClue(p);if(m==='firstlastletter')return firstLastLetterClue(p);if(m==='firstconsole')return firstConsoleClue(p);if(m==='japanesename')return 'Nom japonais en préparation…';if(m==='egg')return '🥚 Type : '+p.types.map(frt).join(' / ')+'<br>Groupe d’Œuf : '+((p.eggGroups||[]).map(extraFr).join(' / ')||'Inconnu');if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='shinypalette')return 'Palette Shiny en préparation…';if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind'){const g={'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9};return `Génération ${g[p.gen]||'?'}`;}if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
+const MORPHOLOGY_FR={
+ 'ball':'Corps sphérique, sans membres apparents',
+ 'squiggle':'Corps ondulant, sans membres apparents',
+ 'fish':'Corps de poisson, avec nageoires',
+ 'arms':'Corps avec des bras, sans jambes apparentes',
+ 'blob':'Corps amorphe, sans membres distincts',
+ 'upright':'Bipède avec une queue',
+ 'legs':'Bipède sans queue',
+ 'quadruped':'Quadrupède, se déplace sur quatre pattes',
+ 'wings':'Corps muni d’ailes',
+ 'tentacles':'Corps muni de tentacules',
+ 'heads':'Plusieurs têtes sur un même corps',
+ 'humanoid':'Silhouette humanoïde, généralement bipède',
+ 'bug-wings':'Corps d’insecte avec des ailes',
+ 'armor':'Corps recouvert d’une carapace ou d’une armure'
+};
+function morphologyClue(p){return '🦴 Morphologie : '+(MORPHOLOGY_FR[p.shape]||'Morphologie non répertoriée')}
+function clue(p,m){if(m==='morphology')return morphologyClue(p);if(m==='vgc')return '🏆 VGC : format officiel en duo — génération '+(document.getElementById('competitiveGeneration')?.value||'all');if(m==='smogontier')return '🏆 Tier Smogon en préparation…';if(m==='maxminstat')return maxMinStatClue(p);if(m==='firstlastletter')return firstLastLetterClue(p);if(m==='firstconsole')return firstConsoleClue(p);if(m==='japanesename')return 'Nom japonais en préparation…';if(m==='egg')return '🥚 Type : '+p.types.map(frt).join(' / ')+'<br>Groupe d’Œuf : '+((p.eggGroups||[]).map(extraFr).join(' / ')||'Inconnu');if(m==='stats')return `BST : ${p.total}`;if(m==='stat-hp')return `PV : ${p.stats.hp}`;if(m==='stat-speed')return `Vitesse : ${p.stats.speed}`;if(m==='stat-attack')return `Attaque : ${p.stats.attack}`;if(m==='stat-special-attack')return `Attaque Spé. : ${p.stats['special-attack']}`;if(m==='stat-defense')return `Défense : ${p.stats.defense}`;if(m==='stat-special-defense')return `Défense Spé. : ${p.stats['special-defense']}`;if(m==='shinypalette')return 'Palette Shiny en préparation…';if(m==='species')return p.genus;if(m==='height')return p.height.toFixed(1)+' m';if(m==='weight')return p.weight.toFixed(1)+' kg';if(m==='learnleave')return 'CHOIX MYSTÈRE';if(m==='typeblind')return p.types.map(frt).join(' / ');if(m==='generationblind'){const g={'generation-i':1,'generation-ii':2,'generation-iii':3,'generation-iv':4,'generation-v':5,'generation-vi':6,'generation-vii':7,'generation-viii':8,'generation-ix':9};return `Génération ${g[p.gen]||'?'}`;}if(m==='dexnumber')return `N° ${String(p.id).padStart(4,'0')}`;if(m==='silhouette')return 'Silhouette mystère';if(m==='movelearn')return 'Attaque en préparation…';if(m==='dexdesc')return 'Description Pokédex en préparation…';if(m==='evolution')return 'Méthode d’évolution en préparation…';if(m==='ability')return 'Talent en préparation…';if(m==='pokeballtraits')return 'Poké Ball mystère';
 if(m==='dominantstat')return dominantStat(p);
 if(m==='bstonly')return `BST : ${p.total}`;
 if(m==='egggroup')return (p.eggGroups||[]).map(extraFr).join(' / ')||'Groupe d’Œuf inconnu';
