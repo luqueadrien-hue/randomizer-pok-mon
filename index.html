@@ -362,7 +362,7 @@ async function mpLeaveRoom(){
 }
 function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
 async function mpSnapshot(){
- return {player,mode:gameMode.value,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value,competitiveGeneration:competitiveGeneration.value},current:current.map(x=>({pokemonId:x.p?.id||null,clue:x.clue||'',offerLabel:x.offerLabel||null,bodyCrop:isBodyMode(gameMode.value)?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,monoSeen:{1:[...monoSeen[1]],2:[...monoSeen[2]]},monoExcluded:{1:[...monoExcluded[1]],2:[...monoExcluded[2]]},monoDiceType,monoDiceFaces,monoDiceResult,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
+ return {player,mode:gameMode.value,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value,competitiveGeneration:competitiveGeneration.value},current:current.map(x=>({pokemonId:x.p?.id||null,clue:x.clue||'',offerLabel:x.offerLabel||null,dexSource:x.dexSource||null,dexChoices:gameMode.value==='dexdesc'?(x.dexChoices||[]):null,dexSelected:gameMode.value==='dexdesc'?(x.dexSelected??null):null,bodyCrop:isBodyMode(gameMode.value)?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,monoSeen:{1:[...monoSeen[1]],2:[...monoSeen[2]]},monoExcluded:{1:[...monoExcluded[1]],2:[...monoExcluded[2]]},monoDiceType,monoDiceFaces,monoDiceResult,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
 }
 async function mpSyncState(){
  if(!mpSession||mpApplying||gameMode.value==='triochoice')return;
@@ -379,7 +379,7 @@ async function mpHydrateState(st){
   if(st.mode==='randombox'){pcBoxSlots=st.pcBoxSlots||null;pcBoxPhase=st.pcBoxPhase||'pick';pcBoxBans=st.pcBoxBans||{1:[],2:[]};current=[];}else if(!mine)current=[];
   teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;sixRoundCounts=st.sixRoundCounts||sixRoundCounts;sixRoundOwners=st.sixRoundOwners||sixRoundOwners;if(st.monoSeen)for(const n of [1,2])monoSeen[n]=new Set(st.monoSeen[n]||[]);if(st.monoExcluded)for(const n of [1,2])monoExcluded[n]=new Set(st.monoExcluded[n]||[]);monoDiceType=st.monoDiceType||null;monoDiceFaces=st.monoDiceFaces||[];monoDiceResult=st.monoDiceResult||null;
   if(!mine&&st.mode!=='randombox'&&st.mode!=='learnleave'&&Array.isArray(st.current)){
-   current=await Promise.all(st.current.map(async x=>({p:x.pokemonId?await getP(x.pokemonId):null,clue:x.clue||'',isLie:false})));
+   current=await Promise.all(st.current.map(async x=>({p:x.pokemonId?await getP(x.pokemonId):null,clue:x.clue||'',isLie:false,dexSource:x.dexSource||null,dexChoices:x.dexChoices||null,dexSelected:x.dexSelected??null})));
   }
   if(st.turn)turn.textContent=st.turn;
   if(mpSession)roll.disabled=!mpLobbyStarted||mpSession.id!==mpSeats[player===1?2:1]||sixRoundFinished();
@@ -662,18 +662,40 @@ async function getSpinOffDexDescriptions(p){
  const seen=new Set(),unique=[];for(const x of out){const k=x.source+'|'+x.text.toLowerCase();if(!seen.has(k)){seen.add(k);unique.push(x)}}
  SPINOFF_DEX_CACHE.set(p.id,unique);return unique;
 }
-async function getDexDescription(p){
+async function getDexDescriptions(p){
  const seen=new Set(),choices=[];
  const GEN_NUM={red:1,blue:1,yellow:1,gold:2,silver:2,crystal:2,ruby:3,sapphire:3,emerald:3,firered:3,leafgreen:3,diamond:4,pearl:4,platinum:4,heartgold:4,soulsilver:4,black:5,white:5,'black-2':5,'white-2':5,x:6,y:6,'omega-ruby':6,'alpha-sapphire':6,sun:7,moon:7,'ultra-sun':7,'ultra-moon':7,sword:8,shield:8,'brilliant-diamond':8,'shining-pearl':8,'legends-arceus':8,scarlet:9,violet:9};
  for(const x of (p.flavorTexts||[])){
   const text=(x.text||'').replace(/\s+/g,' ').trim();if(!text)continue;
-  const key=text.toLowerCase();if(seen.has(key))continue;seen.add(key);
   const game=VERSION_FR[x.version]||String(x.version||'Jeu principal').replace(/-/g,' '),gen=GEN_NUM[x.version];
-  choices.push({text,source:game+(gen?' — Génération '+gen:'')});
+  const source=game+(gen?' — Génération '+gen:'');
+  const key=source.toLowerCase()+'|'+text.toLowerCase();if(seen.has(key))continue;seen.add(key);
+  choices.push({text,source});
  }
- for(const x of await getSpinOffDexDescriptions(p)){const key=x.text.toLowerCase();if(!seen.has(key)){seen.add(key);choices.push(x)}}
- if(!choices.length)return {text:'Description Pokédex française indisponible pour ce Pokémon.',source:'Source indisponible'};
+ for(const x of await getSpinOffDexDescriptions(p)){
+  const text=(x.text||'').replace(/\s+/g,' ').trim();if(!text)continue;
+  const source=x.source||'Spin-off Pokémon',key=source.toLowerCase()+'|'+text.toLowerCase();
+  if(!seen.has(key)){seen.add(key);choices.push({text,source});}
+ }
+ return choices.length?choices:[{text:'Description Pokédex française indisponible pour ce Pokémon.',source:'Source indisponible'}];
+}
+async function getDexDescription(p){
+ const choices=await getDexDescriptions(p);
  return choices[Math.floor(Math.random()*choices.length)];
+}
+function dexSelectHtml(x,i){
+ const list=x.dexChoices||[];
+ if(!list.length)return '';
+ const opts=['<option value="random">🎲 Description aléatoire</option>'].concat(list.map((d,n)=>'<option value="'+n+'" '+(x.dexSelected===n?'selected':'')+'>'+mpEsc(d.source||('Description '+(n+1)))+'</option>'));
+ return '<label style="display:block;margin:8px 0;text-align:left">Description<select class="dexDescriptionSelect" onchange="selectDexDescription('+i+',this.value)">'+opts.join('')+'</select></label>';
+}
+async function selectDexDescription(i,value){
+ const x=current[i];if(!x||gameMode.value!=='dexdesc')return;
+ const list=x.dexChoices||await getDexDescriptions(x.p);x.dexChoices=list;
+ let n=value==='random'?Math.floor(Math.random()*list.length):Number(value);
+ if(!Number.isInteger(n)||!list[n])n=0;
+ x.dexSelected=n;x.clue=list[n].text;x.dexSource=list[n].source;
+ render();await mpSyncState();
 }
 
 const evoCache=new Map();
@@ -1633,7 +1655,7 @@ async function rollCards(){
    if(gameMode.value==='smogontier')c=await smogonTierClue(p);
    if(EXTRA_RANK_MODES.includes(gameMode.value))c=await extraRankClue(p,gameMode.value);
    if(gameMode.value==='vgc')c='🏆 VGC — génération '+(competitiveGeneration.value==='all'?'au choix':competitiveGeneration.value)+' (classement historique non disponible)';
-   if(gameMode.value==='dexdesc'){const d=await getDexDescription(p);c=d.text;p._dexSource=d.source;}
+   if(gameMode.value==='dexdesc'){const list=await getDexDescriptions(p),n=Math.floor(Math.random()*list.length),d=list[n];c=d.text;p._dexSource=d.source;p._dexChoices=list;p._dexSelected=n;}
    if(gameMode.value==='evolution'){const e=await getEvolutionClue(p);c='🧬 Chaîne d’évolution : '+e.text;p._evoFinal=e.final;}
    if(gameMode.value==='evolevel')c=await evolutionModeClue(p,'level');
    if(gameMode.value==='evomethod'){const method=await evolutionModeClue(p,'method'),level=await evolutionModeClue(p,'level');c=method+'<br>'+level;}
@@ -1702,7 +1724,7 @@ async function rollCards(){
      const cg=9;const cry=p.cries?.latest||p.cries?.legacy;
      c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br><small data-media-answer>Source : cri le plus récent disponible</small>`:'🔊 Cri indisponible';
    }
-   current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null,shinyAnswer:gameMode.value==='shinypalette'});
+   current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,dexChoices:gameMode.value==='dexdesc'?(p._dexChoices||[]):null,dexSelected:gameMode.value==='dexdesc'?(p._dexSelected??null):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null,shinyAnswer:gameMode.value==='shinypalette'});
  }
  if(gameMode.value==='ranking'){
    current.forEach((x,i)=>{
@@ -2026,7 +2048,7 @@ function render(){
   cards.querySelectorAll('[data-pc-id]').forEach(el=>getP(Number(el.dataset.pcId)).then(p=>{if(el.isConnected)el.innerHTML='<img src="'+(p.sprite||p.img||'')+'" alt=""><span class="slotName">'+mpEsc(p.name)+'</span>'}).catch(()=>{if(el.isConnected)el.textContent='Indisponible'}));return;
  }
  const hidden=!surpriseActive&&revealMode.value==='hidden',deal=gameMode.value==='learnleave';
- cards.innerHTML=current.map((x,i)=>'<div class="card '+(hidden?'hiddenPoke':'')+'" id="c'+i+'"><img src="'+(x.p.img||'')+'"><div class="name">'+(x.displayName||x.p.name)+'</div><div>'+x.p.types.map(t=>'<span class="badge">'+frt(t)+'</span>').join('')+'</div><div class="gameClue">'+(x.clue||'')+'</div>'+(x.shinyAnswer?'<div class="offerTag shinyAnswer" style="display:none"><img src="'+x.p.shiny+'" style="max-width:150px;display:block;margin:8px auto"><b>✨ '+x.p.name+' chromatique</b></div>':'')+(x.musicAnswer?'<div class="offerTag musicAnswer" style="display:none">🎵 '+x.musicAnswer+'</div>':'')+(x.isLie?'<div class="offerTag lieflag" style="display:none">⚠️ '+(x.lieText||'LEURRE')+'</div>':'')+(deal?'<button onclick="pick('+i+')">✅ PRENDRE</button><button class="danger" onclick="discardDeal('+i+')">🗑️ SUPPRIMER</button>':'<button onclick="pick('+i+')">CHOISIR</button>')+'</div>').join('');
+ cards.innerHTML=current.map((x,i)=>'<div class="card '+(hidden?'hiddenPoke':'')+'" id="c'+i+'"><img src="'+(x.p.img||'')+'"><div class="name">'+(x.displayName||x.p.name)+'</div><div>'+x.p.types.map(t=>'<span class="badge">'+frt(t)+'</span>').join('')+'</div><div class="gameClue">'+(x.clue||'')+(gameMode.value==='dexdesc'&&x.dexSource?'<span class="dexSource">'+mpEsc(x.dexSource)+'</span>':'')+'</div>'+(gameMode.value==='dexdesc'?dexSelectHtml(x,i):'')+(x.shinyAnswer?'<div class="offerTag shinyAnswer" style="display:none"><img src="'+x.p.shiny+'" style="max-width:150px;display:block;margin:8px auto"><b>✨ '+x.p.name+' chromatique</b></div>':'')+(x.musicAnswer?'<div class="offerTag musicAnswer" style="display:none">🎵 '+x.musicAnswer+'</div>':'')+(x.isLie?'<div class="offerTag lieflag" style="display:none">⚠️ '+(x.lieText||'LEURRE')+'</div>':'')+(deal?'<button onclick="pick('+i+')">✅ PRENDRE</button><button class="danger" onclick="discardDeal('+i+')">🗑️ SUPPRIMER</button>':'<button onclick="pick('+i+')">CHOISIR</button>')+'</div>').join('');
  if(surpriseActive)cards.insertAdjacentHTML('afterbegin','<div style="grid-column:1/-1;text-align:center"><strong>🔑 Corrigé du générateur</strong> — réponses visibles uniquement sur l’appareil qui effectue le tirage.</div>');
  cards.insertAdjacentHTML('beforeend','<div style="grid-column:1/-1;text-align:center"><button type="button" onclick="hidePrivateProposals()">🔒 Masquer mes propositions</button></div>');
 }
