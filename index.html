@@ -572,7 +572,48 @@ async function preloadNationalDex(onProgress){
 }
 
 function valid(p){const [lo,hi]=range();if(p.id<lo||p.id>hi)return false;if(generation.value==='9'&&!p.sv)return false;const l=legend.value;if(l==='no'&&p.legendary)return false;if(l==='yes'&&!p.legendary)return false;const tf=tfilter();if(tf&&!p.types.includes(tf))return false;return ![...teams[1],...teams[2]].some(x=>x.id===p.id)}
-async function draw(used){const [lo,hi]=range();for(let i=0;i<4000;i++){const id=Math.floor(Math.random()*(hi-lo+1))+lo;if(used.has(id))continue;try{const p=await getP(id);if(valid(p)){used.add(id);return p}}catch(e){}}throw new Error('Aucun Pokémon trouvé avec ces filtres.')}
+const SPECIAL_FORM_POOL=[
+ {base:483,api:'dialga',label:'Dialga'},
+ {base:483,api:'dialga-origin',label:'Dialga Forme Originelle'},
+ {base:484,api:'palkia',label:'Palkia'},
+ {base:484,api:'palkia-origin',label:'Palkia Forme Originelle'},
+ {base:487,api:'giratina-altered',label:'Giratina Forme Alternative'},
+ {base:487,api:'giratina-origin',label:'Giratina Forme Originelle'},
+ {base:386,api:'deoxys-normal',label:'Deoxys Forme Normale'},
+ {base:386,api:'deoxys-attack',label:'Deoxys Forme Attaque'},
+ {base:386,api:'deoxys-defense',label:'Deoxys Forme Défense'},
+ {base:386,api:'deoxys-speed',label:'Deoxys Forme Vitesse'}
+];
+const formCache=new Map();
+async function getSpecialForm(def){
+ if(formCache.has(def.api))return formCache.get(def.api);
+ const base=await getP(def.base),p=await fetch('https://pokeapi.co/api/v2/pokemon/'+def.api).then(r=>{if(!r.ok)throw Error('Forme indisponible : '+def.api);return r.json()});
+ const o={...base,id:def.base,formKey:def.api,apiName:def.api,name:def.label,img:p.sprites.other?.['official-artwork']?.front_default||p.sprites.front_default||base.img,sprite:p.sprites.front_default||base.sprite,shiny:p.sprites.other?.['official-artwork']?.front_shiny||p.sprites.front_shiny||base.shiny,types:p.types.map(x=>x.type.name),height:p.height/10,weight:p.weight/10,total:p.stats.reduce((a,x)=>a+x.base_stat,0),stats:Object.fromEntries(p.stats.map(x=>[x.stat.name,x.base_stat])),moves:p.moves.map(m=>({name:m.move.name,url:m.move.url,version_group_details:(m.version_group_details||[]).map(v=>({level_learned_at:v.level_learned_at||0,move_learn_method:{name:v.move_learn_method?.name||''},version_group:{name:v.version_group?.name||''}}))})),abilities:p.abilities.map(a=>({name:a.ability.name,url:a.ability.url,hidden:!!a.is_hidden,slot:a.slot})),cries:p.cries||base.cries,gameIndices:(p.game_indices||[]).map(x=>x.version?.name).filter(Boolean),baseExperience:p.base_experience??base.baseExperience,evYield:(p.stats||[]).filter(x=>x.effort>0).map(x=>({stat:x.stat.name,amount:x.effort}))};
+ formCache.set(def.api,o);return o;
+}
+function specialFormsForSelection(){
+ const g=String(generation.value);
+ if(g==='3')return SPECIAL_FORM_POOL.filter(x=>x.base===386);
+ if(g==='9')return SPECIAL_FORM_POOL;
+ if(g==='all')return SPECIAL_FORM_POOL;
+ return [];
+}
+async function draw(used){
+ const [lo,hi]=range(),forms=specialFormsForSelection();
+ for(let i=0;i<4000;i++){
+  const chooseForm=forms.length&&Math.random()<(forms.length/(hi-lo+1+forms.length));
+  try{
+   if(chooseForm){
+    const def=forms[Math.floor(Math.random()*forms.length)],key='form:'+def.api;if(used.has(key))continue;
+    const p=await getSpecialForm(def);if(valid(p)){used.add(key);return p}
+   }else{
+    const id=Math.floor(Math.random()*(hi-lo+1))+lo;if(used.has(id))continue;
+    const p=await getP(id);if(valid(p)){used.add(id);return p}
+   }
+  }catch(e){}
+ }
+ throw new Error('Aucun Pokémon trouvé avec ces filtres.');
+}
 
 async function moveFr(move){
  if(moveCache.has(move.name))return moveCache.get(move.name);
