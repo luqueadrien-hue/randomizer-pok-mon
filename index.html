@@ -173,20 +173,21 @@ img,video,canvas,svg{max-width:100%}
 <option value="firstlastletter">38. 🔤 Première et dernière lettre</option>
 <option value="firstregion">39. 🗺️ Première région d’apparition</option>
 <option value="stat-hp">40. ❤️ PV à l'aveugle</option>
-<option value="evyield">41. Rendement EV</option>
-<option value="genderrate">42. Répartition des genres</option>
-<option value="resistances">43. 🛡️ Résistances / immunités</option>
-<option value="smogontier">44. 🏆 Smogon — tiers compétitifs</option>
-<option value="retrosprite">45. Sprite rétro</option>
-<option value="dominantstat">46. 🏆 Stat dominante</option>
-<option value="maxminstat">47. 📊 Statistique maximale et minimale</option>
-<option value="height">48. 📏 Taille</option>
-<option value="hiddenability">49. Talent caché</option>
-<option value="capturerate">50. Taux de capture</option>
-<option value="stats">51. 📊 Total de stats (BST)</option>
-<option value="triochoice">52. 🎰 Trio : accepter ou refuser</option>
-<option value="typeblind">53. ❓ Type à l'aveugle</option>
-<option value="stat-speed">54. 💨 Vitesse à l'aveugle</option>
+<option value="phoneticrebus">41. 🧩 Rébus phonétique</option>
+<option value="evyield">42. Rendement EV</option>
+<option value="genderrate">43. Répartition des genres</option>
+<option value="resistances">44. 🛡️ Résistances / immunités</option>
+<option value="smogontier">45. 🏆 Smogon — tiers compétitifs</option>
+<option value="retrosprite">46. Sprite rétro</option>
+<option value="dominantstat">47. 🏆 Stat dominante</option>
+<option value="maxminstat">48. 📊 Statistique maximale et minimale</option>
+<option value="height">49. 📏 Taille</option>
+<option value="hiddenability">50. Talent caché</option>
+<option value="capturerate">51. Taux de capture</option>
+<option value="stats">52. 📊 Total de stats (BST)</option>
+<option value="triochoice">53. 🎰 Trio : accepter ou refuser</option>
+<option value="typeblind">54. ❓ Type à l'aveugle</option>
+<option value="stat-speed">55. 💨 Vitesse à l'aveugle</option>
 <option value="vgc">🏆 VGC — format compétitif</option>
 <option value="learnleave">📦 Apprendre ou à laisser</option>
 <option value="randombox">📦 Boîte randomisée</option>
@@ -393,6 +394,7 @@ async function mpHydrateState(st){
    }
   }else if(!mine){starterOffer.innerHTML=''}
   if(st.mode==='randombox'){render();}else if(mine){if(st.mode!=='learnleave'||st.dealStage!==1)render();else cards.innerHTML='';}
+  else if(st.mode==='phoneticrebus')cards.innerHTML='<div style="grid-column:1/-1;text-align:center"><strong>🧩 Rébus phonétiques</strong> — devine les Pokémon.</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div><div class="gameClue">'+(x.clue||'Rébus indisponible')+'</div>'+(mpSession&&mpSession.id===mpSeats[player]&&!st.batchLocked?'<button onclick="pick('+i+')">Choisir ce Pokémon</button>':'')+'</div>').join('');
   else if(isBodyMode(st.mode))cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Observe la partie du corps et devine le Pokémon !</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div>'+(x.bodyCrop?'<img src="'+x.bodyCrop+'" alt="Partie du corps mystère" style="width:220px;height:220px;object-fit:contain">':'<div>Image en préparation…</div>')+'<div class="gameClue">'+mpEsc(x.clue||'')+'</div></div>').join('');
   else cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Indices de la manche — Pokémon masqués</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div><div class="gameClue">'+(x.clue||'Indice indisponible')+'</div>'+(mpSession&&mpSession.id===mpSeats[player]&&!st.batchLocked?'<button onclick="pick('+i+')">Choisir ce Pokémon</button>':'')+'</div>').join('');
   drawTeams();
@@ -1342,6 +1344,9 @@ function extraRankImage(p,mode){
  return p.sprite||p.img||'';
 }
 
+const PHONETIC_REBUS_FR={'Roucool':'🛞 + 😎','Tentacool':'⛺ + À + 😎','Canarticho':'🦆 + 🎨 + 🌿','Tournicoton':'🔄 + ☁️','Cadoizo':'🎁 + 🐦','Chevroum':'🐐 + 🏎️💨','Pâtachiot':'🥐 + 🐶','Toutombe':'🐶 + 🪦','Pandarbare':'🐼 + 🧔','Rhinocorne':'🦏 + 📯','Moumouton':'🧶 + 🐑','Flambusard':'🔥 + 🦅','Denticrisse':'🦷 + 😱','Pandespiègle':'🐼 + 😈'};
+function phoneticChunks(name){const s=String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z]/g,'').toUpperCase();if(!s)return ['?'];const vowels='AEIOUY',out=[];let start=0;for(let i=1;i<s.length-1;i++)if(vowels.includes(s[i])&&!vowels.includes(s[i-1])&&i-start>=2){out.push(s.slice(start,i));start=i}out.push(s.slice(start));return out.filter(Boolean)}
+function phoneticRebus(p){const exact=PHONETIC_REBUS_FR[p?.name];if(exact)return exact;return '🔊 '+phoneticChunks(p?.name).map(x=>'【'+x+'】').join(' + ')}
 const MORPHOLOGY_FR={
  'ball':'Corps sphérique, sans membres apparents',
  'squiggle':'Corps ondulant, sans membres apparents',
@@ -1460,7 +1465,7 @@ async function dealKeep(){
  dealInfo.textContent='Pokémon conservé. Lance une nouvelle manche.';dealButtons();mpSyncState();
 }
 
-const SURPRISE_MODES=['egg','stats','stat-hp','stat-speed','stat-attack','stat-special-attack','stat-defense','stat-special-defense','species','height','weight','typeblind','dexnumber','movelearn','dexdesc','evolution','ability','dominantstat','multimove','evomethod','firstregion','wildgift','weaknesses','resistances','effectiveness','capturelocation','regionaldex','color','shinypalette','progressive','pokemoncry'];
+const SURPRISE_MODES=['egg','stats','stat-hp','stat-speed','stat-attack','stat-special-attack','stat-defense','stat-special-defense','species','height','weight','typeblind','dexnumber','movelearn','dexdesc','evolution','ability','dominantstat','multimove','evomethod','firstregion','wildgift','weaknesses','resistances','effectiveness','capturelocation','regionaldex','color','shinypalette','progressive','pokemoncry','phoneticrebus'];
 let surprisePrevious=null,surpriseActive=false,surpriseRemaining=[],surpriseRound=0;
 function surpriseMode(){
  const available=SURPRISE_MODES.filter(x=>[...gameMode.options].some(o=>o.value===x));
@@ -1695,6 +1700,7 @@ async function rollCards(){
    if(isBodyMode(gameMode.value)){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);if(!window.__bodyCropFailures)window.__bodyCropFailures=0;if(++window.__bodyCropFailures>20)throw Error('Illustrations insuffisantes pour créer des extraits. Réessaie avec d’autres filtres.');continue}window.__bodyCropFailures=0;p._bodyCrop=crop;c='🔍 Partie du corps à identifier (découpe automatique, à confirmer par l’organisateur)';}
    if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
    if(gameMode.value==='japanesename')c=await japaneseNameClue(p);
+   if(gameMode.value==='phoneticrebus')c=phoneticRebus(p);
    if(gameMode.value==='smogontier')c=await smogonTierClue(p);
    if(EXTRA_RANK_MODES.includes(gameMode.value))c=await extraRankClue(p,gameMode.value);
    if(gameMode.value==='vgc')c='🏆 VGC — génération '+(competitiveGeneration.value==='all'?'au choix':competitiveGeneration.value)+' (classement historique non disponible)';
@@ -2063,6 +2069,7 @@ function renderHangman(){
 }
 
 function render(){
+ if(gameMode.value==='phoneticrebus'){cards.classList.remove('boxModeGrid');const isGenerator=!mpSession||mpSession.id===mpSeats[player===1?2:1];cards.innerHTML=(isGenerator?'<div style="grid-column:1/-1;text-align:center"><strong>🔑 Vue du joueur qui randomise</strong> — réponses privées.</div>':'<div style="grid-column:1/-1;text-align:center"><strong>🧩 Rébus phonétiques</strong> — devine les Pokémon.</div>')+current.map((x,i)=>'<div class="card" id="c'+i+'"><div class="name">'+(isGenerator?mpEsc(x.p?.name||'Pokémon'):'Pokémon mystère '+(i+1))+'</div><div class="gameClue">'+(x.clue||'Rébus indisponible')+'</div>'+(!isGenerator&&(!mpSession||mpSession.id===mpSeats[player])&&!batchLocked?'<button onclick="pick('+i+')">Choisir ce Pokémon</button>':'')+'</div>').join('')+(isGenerator&&!mpSession?'<div style="grid-column:1/-1;text-align:center"><button type="button" onclick="hidePhoneticAnswers()">🔒 Passer aux joueurs</button></div>':'');return}
  if(gameMode.value==='retrosprite'||gameMode.value==='footprint'){
   cards.classList.remove('boxModeGrid');
   cards.innerHTML=current.map((x,i)=>{
@@ -2095,6 +2102,7 @@ function render(){
  if(surpriseActive)cards.insertAdjacentHTML('afterbegin','<div style="grid-column:1/-1;text-align:center"><strong>🔑 Corrigé du générateur</strong> — réponses visibles uniquement sur l’appareil qui effectue le tirage.</div>');
  cards.insertAdjacentHTML('beforeend','<div style="grid-column:1/-1;text-align:center"><button type="button" onclick="hidePrivateProposals()">🔒 Masquer mes propositions</button></div>');
 }
+function hidePhoneticAnswers(){cards.innerHTML='<div style="grid-column:1/-1;text-align:center"><strong>🧩 Rébus phonétiques</strong> — devine les Pokémon.</div>'+current.map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div><div class="gameClue">'+(x.clue||'Rébus indisponible')+'</div><button onclick="pick('+i+')">Choisir ce Pokémon</button></div>').join('')}
 function hidePrivateProposals(){
  if(!current.length)return;
  cards.innerHTML='<div class="loaderGen"><div>🔒 Propositions masquées</div><div>Appuie sur « Afficher mes propositions » uniquement quand c’est à toi de regarder.</div><button type="button" onclick="render()">Afficher mes propositions</button></div>';
