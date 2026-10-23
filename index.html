@@ -1383,7 +1383,15 @@ const MORPHOLOGY_FR={
  'bug-wings':'Corps d’insecte avec des ailes',
  'armor':'Corps recouvert d’une carapace ou d’une armure'
 };
-function morphologyClue(p){return '🦴 Morphologie : '+(MORPHOLOGY_FR[p.shape]||'Morphologie non répertoriée')}
+function morphologyClue(p){
+ const silhouette=MORPHOLOGY_FR[p.shape]||'Silhouette non répertoriée';
+ const traits=[];
+ if(p.height!=null)traits.push('taille : '+(Number(p.height)/10).toLocaleString('fr-FR')+' m');
+ if(p.weight!=null)traits.push('poids : '+(Number(p.weight)/10).toLocaleString('fr-FR')+' kg');
+ if(p.color&&p.color!=='unknown')traits.push('couleur dominante : '+({'black':'noire','blue':'bleue','brown':'brune','gray':'grise','green':'verte','pink':'rose','purple':'violette','red':'rouge','white':'blanche','yellow':'jaune'}[p.color]||p.color));
+ if(p.hasGenderDifferences)traits.push('différences physiques entre mâle et femelle');
+ return '🦴 Morphologie : '+silhouette+(traits.length?' ; '+traits.join(' ; '):'');
+}
 const REAL_JOB_BY_TYPE={normal:['assistant polyvalent','agent d’accueil'],fire:['pompier','cuisinier','forgeron'],water:['maître-nageur','marin','plongeur'],electric:['électricien','technicien réseau'],grass:['jardinier','botaniste','agriculteur'],ice:['glaciologue','guide de haute montagne'],fighting:['coach sportif','professeur d’arts martiaux'],poison:['toxicologue','chimiste'],ground:['géologue','terrassier'],flying:['pilote','météorologue'],psychic:['psychologue','chercheur'],bug:['entomologiste','apiculteur'],rock:['tailleur de pierre','géologue'],ghost:['enquêteur paranormal','gardien de nuit'],dragon:['paléontologue','guide d’aventure'],dark:['détective','agent de sécurité'],steel:['métallurgiste','mécanicien'],fairy:['animateur','artiste']};
 const REAL_PLACE_BY_TYPE={normal:['ville','banlieue','campagne'],fire:['région volcanique','zone chaude et sèche'],water:['littoral','rivière','lac'],electric:['grande ville','zone industrielle'],grass:['forêt','prairie','campagne'],ice:['région polaire','haute montagne'],fighting:['ville','complexe sportif'],poison:['marais','zone industrielle'],ground:['désert','plaine','grotte'],flying:['montagne','falaises','grands espaces'],psychic:['ville universitaire','observatoire'],bug:['forêt','prairie','jardin'],rock:['montagne','carrière','grotte'],ghost:['lieu ancien','cimetière','bâtiment abandonné'],dragon:['haute montagne','île isolée','grotte'],dark:['forêt dense','ville nocturne'],steel:['zone industrielle','grande ville'],fairy:['forêt','jardin','campagne']};
 function realWorldJobClue(p){const jobs=[];(p.types||[]).forEach(t=>(REAL_JOB_BY_TYPE[t]||[]).forEach(x=>{if(!jobs.includes(x))jobs.push(x)}));return 'Métier(s) possible(s) : '+(jobs.slice(0,4).join(' • ')||'métier polyvalent')}
