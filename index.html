@@ -197,13 +197,21 @@ img,video,canvas,svg{max-width:100%}
 <option value="hangman">🎭 Pendu Pokémon</option>
 <option value="surprise">🎲 Randomizer multi-jeux : jeu aléatoire</option></select>
 <div id="surpriseNotice" aria-live="polite" style="margin:8px 0"></div></label>
-<div id="dexCoverage" class="mpstate" style="margin:8px 0" aria-live="polite">
-<strong>📊 Couverture du Randomizer</strong><br>
-<span id="dexCoverageSpecies">Espèces du Pokédex national : 1 025 / 1 025</span><br>
-<span id="dexCoverageForms">Formes alternatives dédiées : calcul en cours…</span><br>
-<span id="dexCoverageMode">Mode sélectionné : vérification en cours…</span>
+<details class="panel" id="damageCalculator" style="margin-top:12px">
+<summary><strong>⚔️ Calculateur de dégâts Pokémon</strong></summary>
+<div class="controls" style="margin-top:10px">
+<label>Niveau<input id="dmgLevel" type="number" min="1" max="100" value="50"></label>
+<label>Puissance de l'attaque<input id="dmgPower" type="number" min="1" max="500" value="80"></label>
+<label>Stat d'Attaque / Attaque Spéciale<input id="dmgAttack" type="number" min="1" max="9999" value="150"></label>
+<label>Stat de Défense / Défense Spéciale<input id="dmgDefense" type="number" min="1" max="9999" value="120"></label>
+<label>PV actuels du défenseur<input id="dmgHp" type="number" min="1" max="9999" value="200"></label>
+<label>STAB<select id="dmgStab"><option value="1">Non</option><option value="1.5" selected>Oui ×1,5</option><option value="2">Adaptabilité ×2</option></select></label>
+<label>Efficacité<select id="dmgEffect"><option value="0">×0 Immunité</option><option value="0.25">×0,25</option><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option><option value="4">×4</option></select></label>
+<label>Autres modificateurs<input id="dmgOther" type="number" min="0" max="10" step="0.01" value="1"></label>
 </div>
-
+<div class="actions"><button id="dmgCalcBtn" type="button" class="primary">Calculer les dégâts</button></div>
+<div id="dmgResult" class="mpstate" style="margin-top:8px" aria-live="polite">Renseigne les statistiques puis lance le calcul.</div>
+</details>
 <label>Taille équipe<select id="teamSize"><option>3</option><option>4</option><option>5</option><option selected>6</option></select></label>
 <label>Nombre de choix<input id="choiceCount" type="number" min="2" max="12" value="3"></label>
 <label>Légendaires<select id="legend"><option value="all">Autorisés</option><option value="no" selected>Sans légendaires</option><option value="yes">Uniquement légendaires</option></select></label>
@@ -570,18 +578,7 @@ async function getPUncached(id){
 // Base nationale 1–1025 : préchargement progressif et persistant dans le navigateur.
 // Elle évite de retélécharger les mêmes fiches et accélère les modes utilisant beaucoup d'informations.
 const FULL_DEX_MAX=1025;
-function updateDexCoverage(){
- const speciesEl=document.getElementById('dexCoverageSpecies'),formsEl=document.getElementById('dexCoverageForms'),modeEl=document.getElementById('dexCoverageMode');
- if(speciesEl)speciesEl.textContent='Espèces du Pokédex national : '+FULL_DEX_MAX.toLocaleString('fr-FR')+' / '+FULL_DEX_MAX.toLocaleString('fr-FR');
- if(formsEl){const uniqueForms=new Set((SPECIAL_FORM_POOL||[]).map(x=>x.api));formsEl.textContent='Formes alternatives dédiées actuellement : '+uniqueForms.size+' entrées spéciales (couverture des formes encore partielle)';}
- if(modeEl){const m=gameMode?.value||'';let note='les 1 025 espèces peuvent être tirées lorsque « Toutes les générations » est sélectionné';
-  if(m==='phoneticrebus')note='1 025 espèces tirables ; seulement '+Object.keys(PHONETIC_REBUS_FR||{}).length+' rébus sont illustrés manuellement, les autres utilisent encore le générateur phonétique automatique';
-  if(m==='morphology')note='1 025 espèces tirables ; une morphologie non répertoriée peut afficher un indice générique';
-  if(m==='zonemusic'||m==='trainerteam'||m==='capturelocation')note='1 025 espèces tirables, mais certaines données d’indice dépendent des informations disponibles pour le Pokémon';
-  modeEl.textContent='Mode sélectionné : '+note;
- }
-}
-setTimeout(updateDexCoverage,0);
+
 async function preloadNationalDex(onProgress){
  const ids=Array.from({length:FULL_DEX_MAX},(_,i)=>i+1);
  let done=0;
@@ -2361,8 +2358,19 @@ auctionUpdatePrices();auctionRender();
 function syncCompetitiveGeneration(){const mode=gameMode.value;document.getElementById('competitiveGenerationWrap').style.display=(mode==='smogontier'||mode==='vgc')?'':'none'}
 syncCompetitiveGeneration();
 gameMode.addEventListener('change',()=>{syncCompetitiveGeneration();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
-if(gameMode)gameMode.addEventListener('change',updateDexCoverage);
 ['teamSize','choiceCount','legend','generation','competitiveGeneration','typeMode','revealMode','lieMode','boxSize','qdQuestionLimit'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
+
+function calculatePokemonDamage(){
+ const n=id=>Math.max(0,Number(document.getElementById(id)?.value)||0);
+ const level=Math.min(100,Math.max(1,n('dmgLevel'))),power=Math.max(1,n('dmgPower')),atk=Math.max(1,n('dmgAttack')),def=Math.max(1,n('dmgDefense')),hp=Math.max(1,n('dmgHp'));
+ const stab=n('dmgStab')||1,effect=n('dmgEffect'),other=n('dmgOther');
+ const base=Math.floor(Math.floor(Math.floor((2*level/5)+2)*power*atk/def)/50)+2;
+ const max=Math.floor(base*stab*effect*other),min=Math.floor(base*0.85*stab*effect*other);
+ const pctMin=(min/hp*100).toFixed(1),pctMax=(max/hp*100).toFixed(1);
+ const hits=max<=0?'Immunité / aucun dégât':min>=hp?'K.O. garanti en un coup':max>=hp?'K.O. possible en un coup':'Environ '+Math.ceil(hp/Math.max(1,max))+' à '+Math.ceil(hp/Math.max(1,min))+' coups';
+ document.getElementById('dmgResult').innerHTML='<strong>'+min+' – '+max+' dégâts</strong> ('+pctMin+' % – '+pctMax+' % des PV)<br>'+hits+'<br><small>Fourchette aléatoire 85–100 %. Le champ « autres modificateurs » permet de combiner météo, objets, talents, coups critiques ou autres effets.</small>';
+}
+document.getElementById('dmgCalcBtn')?.addEventListener('click',calculatePokemonDamage);
 </script>
 </body>
 </html>
