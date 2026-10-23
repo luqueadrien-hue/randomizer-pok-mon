@@ -197,6 +197,12 @@ img,video,canvas,svg{max-width:100%}
 <option value="hangman">🎭 Pendu Pokémon</option>
 <option value="surprise">🎲 Randomizer multi-jeux : jeu aléatoire</option></select>
 <div id="surpriseNotice" aria-live="polite" style="margin:8px 0"></div></label>
+<div id="dexCoverage" class="mpstate" style="margin:8px 0" aria-live="polite">
+<strong>📊 Couverture du Randomizer</strong><br>
+<span id="dexCoverageSpecies">Espèces du Pokédex national : 1 025 / 1 025</span><br>
+<span id="dexCoverageForms">Formes alternatives dédiées : calcul en cours…</span><br>
+<span id="dexCoverageMode">Mode sélectionné : vérification en cours…</span>
+</div>
 
 <label>Taille équipe<select id="teamSize"><option>3</option><option>4</option><option>5</option><option selected>6</option></select></label>
 <label>Nombre de choix<input id="choiceCount" type="number" min="2" max="12" value="3"></label>
@@ -564,6 +570,18 @@ async function getPUncached(id){
 // Base nationale 1–1025 : préchargement progressif et persistant dans le navigateur.
 // Elle évite de retélécharger les mêmes fiches et accélère les modes utilisant beaucoup d'informations.
 const FULL_DEX_MAX=1025;
+function updateDexCoverage(){
+ const speciesEl=document.getElementById('dexCoverageSpecies'),formsEl=document.getElementById('dexCoverageForms'),modeEl=document.getElementById('dexCoverageMode');
+ if(speciesEl)speciesEl.textContent='Espèces du Pokédex national : '+FULL_DEX_MAX.toLocaleString('fr-FR')+' / '+FULL_DEX_MAX.toLocaleString('fr-FR');
+ if(formsEl){const uniqueForms=new Set((SPECIAL_FORM_POOL||[]).map(x=>x.api));formsEl.textContent='Formes alternatives dédiées actuellement : '+uniqueForms.size+' entrées spéciales (couverture des formes encore partielle)';}
+ if(modeEl){const m=gameMode?.value||'';let note='les 1 025 espèces peuvent être tirées lorsque « Toutes les générations » est sélectionné';
+  if(m==='phoneticrebus')note='1 025 espèces tirables ; seulement '+Object.keys(PHONETIC_REBUS_FR||{}).length+' rébus sont illustrés manuellement, les autres utilisent encore le générateur phonétique automatique';
+  if(m==='morphology')note='1 025 espèces tirables ; une morphologie non répertoriée peut afficher un indice générique';
+  if(m==='zonemusic'||m==='trainerteam'||m==='capturelocation')note='1 025 espèces tirables, mais certaines données d’indice dépendent des informations disponibles pour le Pokémon';
+  modeEl.textContent='Mode sélectionné : '+note;
+ }
+}
+setTimeout(updateDexCoverage,0);
 async function preloadNationalDex(onProgress){
  const ids=Array.from({length:FULL_DEX_MAX},(_,i)=>i+1);
  let done=0;
@@ -2343,6 +2361,7 @@ auctionUpdatePrices();auctionRender();
 function syncCompetitiveGeneration(){const mode=gameMode.value;document.getElementById('competitiveGenerationWrap').style.display=(mode==='smogontier'||mode==='vgc')?'':'none'}
 syncCompetitiveGeneration();
 gameMode.addEventListener('change',()=>{syncCompetitiveGeneration();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
+if(gameMode)gameMode.addEventListener('change',updateDexCoverage);
 ['teamSize','choiceCount','legend','generation','competitiveGeneration','typeMode','revealMode','lieMode','boxSize','qdQuestionLimit'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
 </script>
 </body>
