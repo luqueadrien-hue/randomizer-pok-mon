@@ -113,12 +113,15 @@ img,video,canvas,svg{max-width:100%}
 @media(max-width:850px){.wrap{padding:14px}.controls{grid-template-columns:repeat(2,minmax(0,1fr))}.mpbar{grid-template-columns:1fr 1fr}.cards{gap:10px}}
 @media(max-width:600px){.wrap{padding:10px}.controls,.mpbar,.teams{grid-template-columns:minmax(0,1fr)}.panel,.team,.card{padding:12px;border-radius:14px}.cards{grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr))}.card img{max-height:145px}.name{font-size:clamp(15px,4vw,20px)}h1{font-size:clamp(23px,6vw,34px)}.actions button{min-width:min(100%,140px)}}
 @media(max-width:360px){.cards{grid-template-columns:1fr}.teamgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.hangmanKeys{display:grid;grid-template-columns:repeat(auto-fit,minmax(44px,1fr));gap:6px;max-width:700px;margin:12px auto}.hangmanKeys button{min-width:0;padding:8px 2px}.hangmanKeys button:disabled{opacity:.35}\n</style>
+.hangmanKeys{display:grid;grid-template-columns:repeat(auto-fit,minmax(44px,1fr));gap:6px;max-width:700px;margin:12px auto}.hangmanKeys button{min-width:0;padding:8px 2px}.hangmanKeys button:disabled{opacity:.35}\n.mainTabs{display:flex;gap:10px;margin:16px 0}.mainTabs button{flex:1}.mainTabs button[aria-selected="true"]{background:#e2b744;color:#21152c}.appTab[hidden]{display:none!important}
+</style>
 </head>
 <body>
 <div class="wrap">
 <h1>🎲 Pokémon Randomizer Multi-Jeux</h1>
 <div class="sub">Œufs, stats, espèce, taille, poids, apprendre ou laisser, silhouette et plus.</div>
+<div class="mainTabs" role="tablist" aria-label="Sections du site"><button id="tabRandomizerBtn" type="button" role="tab" aria-selected="true">🎲 Randomizer</button><button id="tabDamageBtn" type="button" role="tab" aria-selected="false">⚔️ Calculateur de dégâts</button></div>
+<div id="randomizerTab" class="appTab" role="tabpanel">
 <div class="panel" id="multiplayerPanel" style="margin-bottom:18px">
 <h2 style="text-align:center;margin-top:0">🌐 Multijoueur en ligne</h2>
 <div class="mpbar">
@@ -197,21 +200,7 @@ img,video,canvas,svg{max-width:100%}
 <option value="hangman">🎭 Pendu Pokémon</option>
 <option value="surprise">🎲 Randomizer multi-jeux : jeu aléatoire</option></select>
 <div id="surpriseNotice" aria-live="polite" style="margin:8px 0"></div></label>
-<details class="panel" id="damageCalculator" style="margin-top:12px">
-<summary><strong>⚔️ Calculateur de dégâts Pokémon</strong></summary>
-<div class="controls" style="margin-top:10px">
-<label>Niveau<input id="dmgLevel" type="number" min="1" max="100" value="50"></label>
-<label>Puissance de l'attaque<input id="dmgPower" type="number" min="1" max="500" value="80"></label>
-<label>Stat d'Attaque / Attaque Spéciale<input id="dmgAttack" type="number" min="1" max="9999" value="150"></label>
-<label>Stat de Défense / Défense Spéciale<input id="dmgDefense" type="number" min="1" max="9999" value="120"></label>
-<label>PV actuels du défenseur<input id="dmgHp" type="number" min="1" max="9999" value="200"></label>
-<label>STAB<select id="dmgStab"><option value="1">Non</option><option value="1.5" selected>Oui ×1,5</option><option value="2">Adaptabilité ×2</option></select></label>
-<label>Efficacité<select id="dmgEffect"><option value="0">×0 Immunité</option><option value="0.25">×0,25</option><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option><option value="4">×4</option></select></label>
-<label>Autres modificateurs<input id="dmgOther" type="number" min="0" max="10" step="0.01" value="1"></label>
-</div>
-<div class="actions"><button id="dmgCalcBtn" type="button" class="primary">Calculer les dégâts</button></div>
-<div id="dmgResult" class="mpstate" style="margin-top:8px" aria-live="polite">Renseigne les statistiques puis lance le calcul.</div>
-</details>
+
 <label>Taille équipe<select id="teamSize"><option>3</option><option>4</option><option>5</option><option selected>6</option></select></label>
 <label>Nombre de choix<input id="choiceCount" type="number" min="2" max="12" value="3"></label>
 <label>Légendaires<select id="legend"><option value="all">Autorisés</option><option value="no" selected>Sans légendaires</option><option value="yes">Uniquement légendaires</option></select></label>
@@ -313,6 +302,22 @@ img,video,canvas,svg{max-width:100%}
 <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-auth-compat.js"></script>
+</div>
+<div id="damageTab" class="appTab" role="tabpanel" hidden><div class="panel" id="damageCalculator"><h2 style="text-align:center;margin-top:0">⚔️ Calculateur de dégâts Pokémon</h2>
+
+<div class="controls" style="margin-top:10px">
+<label>Niveau<input id="dmgLevel" type="number" min="1" max="100" value="50"></label>
+<label>Puissance de l'attaque<input id="dmgPower" type="number" min="1" max="500" value="80"></label>
+<label>Stat d'Attaque / Attaque Spéciale<input id="dmgAttack" type="number" min="1" max="9999" value="150"></label>
+<label>Stat de Défense / Défense Spéciale<input id="dmgDefense" type="number" min="1" max="9999" value="120"></label>
+<label>PV actuels du défenseur<input id="dmgHp" type="number" min="1" max="9999" value="200"></label>
+<label>STAB<select id="dmgStab"><option value="1">Non</option><option value="1.5" selected>Oui ×1,5</option><option value="2">Adaptabilité ×2</option></select></label>
+<label>Efficacité<select id="dmgEffect"><option value="0">×0 Immunité</option><option value="0.25">×0,25</option><option value="0.5">×0,5</option><option value="1" selected>×1</option><option value="2">×2</option><option value="4">×4</option></select></label>
+<label>Autres modificateurs<input id="dmgOther" type="number" min="0" max="10" step="0.01" value="1"></label>
+</div>
+<div class="actions"><button id="dmgCalcBtn" type="button" class="primary">Calculer les dégâts</button></div>
+<div id="dmgResult" class="mpstate" style="margin-top:8px" aria-live="polite">Renseigne les statistiques puis lance le calcul.</div>
+</div></div>
 <script>
 const firebaseConfig={apiKey:"AIzaSyB6cWUJru6vpfdpj5aE59jKAXA523Eka1E",authDomain:"pokemon-randomizer-f3b0f.firebaseapp.com",databaseURL:"https://pokemon-randomizer-f3b0f-default-rtdb.firebaseio.com",projectId:"pokemon-randomizer-f3b0f",storageBucket:"pokemon-randomizer-f3b0f.firebasestorage.app",messagingSenderId:"1031451577108",appId:"1:1031451577108:web:428ade1b96ab7e85489001"};
 let MPDB=null,MPAUTH=null,mpAuthReady=Promise.resolve(null);
@@ -2371,6 +2376,10 @@ function calculatePokemonDamage(){
  document.getElementById('dmgResult').innerHTML='<strong>'+min+' – '+max+' dégâts</strong> ('+pctMin+' % – '+pctMax+' % des PV)<br>'+hits+'<br><small>Fourchette aléatoire 85–100 %. Le champ « autres modificateurs » permet de combiner météo, objets, talents, coups critiques ou autres effets.</small>';
 }
 document.getElementById('dmgCalcBtn')?.addEventListener('click',calculatePokemonDamage);
+
+function switchMainTab(tab){const random=tab!=='damage';document.getElementById('randomizerTab').hidden=!random;document.getElementById('damageTab').hidden=random;document.getElementById('tabRandomizerBtn').setAttribute('aria-selected',String(random));document.getElementById('tabDamageBtn').setAttribute('aria-selected',String(!random));}
+document.getElementById('tabRandomizerBtn')?.addEventListener('click',()=>switchMainTab('randomizer'));
+document.getElementById('tabDamageBtn')?.addEventListener('click',()=>switchMainTab('damage'));
 </script>
 </body>
 </html>
