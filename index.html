@@ -120,7 +120,7 @@ img,video,canvas,svg{max-width:100%}
 <div class="wrap">
 <h1>🎲 Pokémon Randomizer Multi-Jeux</h1>
 <div class="sub">Œufs, stats, espèce, taille, poids, apprendre ou laisser, silhouette et plus.</div>
-<div class="mainTabs" role="tablist" aria-label="Sections du site"><button id="tabRandomizerBtn" type="button" role="tab" aria-selected="true">🎲 Randomizer</button><button id="tabDamageBtn" type="button" role="tab" aria-selected="false">⚔️ Calculateur de dégâts</button></div>
+<div class="mainTabs" role="tablist" aria-label="Sections du site"><button id="tabRandomizerBtn" type="button" role="tab" aria-selected="true">🎲 Randomizer</button><button id="tabDamageBtn" type="button" role="tab" aria-selected="false">⚔️ Calculateur de dégâts</button><button id="tabTypesBtn" type="button" role="tab" aria-selected="false">🎯 Table des faiblesses</button><button id="tabNatureBtn" type="button" role="tab" aria-selected="false">🌿 Natures & boosts/malus</button></div>
 <div id="randomizerTab" class="appTab" role="tabpanel">
 <div class="panel" id="multiplayerPanel" style="margin-bottom:18px">
 <h2 style="text-align:center;margin-top:0">🌐 Multijoueur en ligne</h2>
@@ -317,6 +317,20 @@ img,video,canvas,svg{max-width:100%}
 </div>
 <div class="actions"><button id="dmgCalcBtn" type="button" class="primary">Calculer les dégâts</button></div>
 <div id="dmgResult" class="mpstate" style="margin-top:8px" aria-live="polite">Renseigne les statistiques puis lance le calcul.</div>
+</div></div>
+<div id="typesTab" class="appTab" role="tabpanel" hidden>
+<div class="panel"><h2 style="text-align:center;margin-top:0">🎯 Table des faiblesses — mono et double type</h2>
+<div class="controls"><label>Type 1<select id="typeChart1"></select></label><label>Type 2<select id="typeChart2"><option value="">Aucun — monotype</option></select></label></div>
+<div id="typeChartResult" class="mpstate" style="margin-top:12px" aria-live="polite"></div></div></div>
+<div id="natureTab" class="appTab" role="tabpanel" hidden>
+<div class="panel"><h2 style="text-align:center;margin-top:0">🌿 Natures Pokémon & boosts/malus</h2>
+<p><strong>Natures :</strong> une nature favorable multiplie la statistique par <strong>1,1</strong> (+10 %) et une nature défavorable par <strong>0,9</strong> (−10 %). Les PV ne sont jamais modifiés. Les 5 natures neutres ne changent aucune statistique.</p>
+<div id="natureTable" style="overflow-x:auto"></div>
+<h3>📈 Crans de statistiques en combat</h3>
+<p>Les crans vont de <strong>−6 à +6</strong>. Pour Attaque, Défense, Attaque Spéciale, Défense Spéciale et Vitesse : à +n, multiplicateur = (2+n)/2 ; à −n, multiplicateur = 2/(2+n). Exemple : +1 = ×1,5 ; +2 = ×2 ; −1 = ×0,67 ; −2 = ×0,5.</p>
+<div class="controls"><label>Statistique de départ<input id="stageBase" type="number" min="1" max="9999" value="100"></label><label>Crans<select id="stageLevel"></select></label></div>
+<div class="actions"><button id="stageCalcBtn" type="button" class="primary">Calculer le boost / malus</button></div>
+<div id="stageResult" class="mpstate" style="margin-top:8px" aria-live="polite"></div>
 </div></div>
 <script>
 const firebaseConfig={apiKey:"AIzaSyB6cWUJru6vpfdpj5aE59jKAXA523Eka1E",authDomain:"pokemon-randomizer-f3b0f.firebaseapp.com",databaseURL:"https://pokemon-randomizer-f3b0f-default-rtdb.firebaseio.com",projectId:"pokemon-randomizer-f3b0f",storageBucket:"pokemon-randomizer-f3b0f.firebasestorage.app",messagingSenderId:"1031451577108",appId:"1:1031451577108:web:428ade1b96ab7e85489001"};
@@ -2385,9 +2399,34 @@ function calculatePokemonDamage(){
 }
 document.getElementById('dmgCalcBtn')?.addEventListener('click',calculatePokemonDamage);
 
-function switchMainTab(tab){const random=tab!=='damage';document.getElementById('randomizerTab').hidden=!random;document.getElementById('damageTab').hidden=random;document.getElementById('tabRandomizerBtn').setAttribute('aria-selected',String(random));document.getElementById('tabDamageBtn').setAttribute('aria-selected',String(!random));}
+function switchMainTab(tab){const ids={randomizer:'randomizerTab',damage:'damageTab',types:'typesTab',nature:'natureTab'},btns={randomizer:'tabRandomizerBtn',damage:'tabDamageBtn',types:'tabTypesBtn',nature:'tabNatureBtn'};Object.entries(ids).forEach(([k,id])=>{const el=document.getElementById(id);if(el)el.hidden=k!==tab;const b=document.getElementById(btns[k]);if(b)b.setAttribute('aria-selected',String(k===tab));});}
 document.getElementById('tabRandomizerBtn')?.addEventListener('click',()=>switchMainTab('randomizer'));
-document.getElementById('tabDamageBtn')?.addEventListener('click',()=>switchMainTab('damage'));
+document.getElementById('tabDamageBtn')?.addEventListener('click',()=>switchMainTab('damage'));document.getElementById('tabTypesBtn')?.addEventListener('click',()=>switchMainTab('types'));document.getElementById('tabNatureBtn')?.addEventListener('click',()=>switchMainTab('nature'));
+
+const TYPE_FR={normal:'Normal',fire:'Feu',water:'Eau',electric:'Électrik',grass:'Plante',ice:'Glace',fighting:'Combat',poison:'Poison',ground:'Sol',flying:'Vol',psychic:'Psy',bug:'Insecte',rock:'Roche',ghost:'Spectre',dragon:'Dragon',dark:'Ténèbres',steel:'Acier',fairy:'Fée'};
+const TYPE_CHART={
+normal:{fighting:2,ghost:0},fire:{water:2,ground:2,rock:2,fire:.5,grass:.5,ice:.5,bug:.5,steel:.5,fairy:.5},
+water:{electric:2,grass:2,fire:.5,water:.5,ice:.5,steel:.5},electric:{ground:2,electric:.5,flying:.5,steel:.5},
+grass:{fire:2,ice:2,poison:2,flying:2,bug:2,water:.5,electric:.5,grass:.5,ground:.5},ice:{fire:2,fighting:2,rock:2,steel:2,ice:.5},
+fighting:{flying:2,psychic:2,fairy:2,bug:.5,rock:.5,dark:.5},poison:{ground:2,psychic:2,grass:.5,fighting:.5,poison:.5,bug:.5,fairy:.5},
+ground:{water:2,grass:2,ice:2,poison:.5,rock:.5,electric:0},flying:{electric:2,ice:2,rock:2,grass:.5,fighting:.5,bug:.5,ground:0},
+psychic:{bug:2,ghost:2,dark:2,fighting:.5,psychic:.5},bug:{fire:2,flying:2,rock:2,grass:.5,fighting:.5,ground:.5},
+rock:{water:2,grass:2,fighting:2,ground:2,steel:2,normal:.5,fire:.5,poison:.5,flying:.5},ghost:{ghost:2,dark:2,normal:0,fighting:0,poison:.5,bug:.5},
+dragon:{ice:2,dragon:2,fairy:2,fire:.5,water:.5,electric:.5,grass:.5},dark:{fighting:2,bug:2,fairy:2,ghost:.5,dark:.5,psychic:0},
+steel:{fire:2,fighting:2,ground:2,normal:.5,grass:.5,ice:.5,flying:.5,psychic:.5,bug:.5,rock:.5,dragon:.5,steel:.5,fairy:.5,poison:0},
+fairy:{poison:2,steel:2,fighting:.5,bug:.5,dark:.5,dragon:0}};
+function renderTypeChart(){
+ const a=document.getElementById('typeChart1')?.value,b=document.getElementById('typeChart2')?.value;if(!a)return;
+ const groups={0:[],.25:[],.5:[],1:[],2:[],4:[]};
+ Object.keys(TYPE_FR).forEach(at=>{let m=(TYPE_CHART[a]?.[at]??1)*(b?(TYPE_CHART[b]?.[at]??1):1);(groups[m]||groups[1]).push(TYPE_FR[at])});
+ const labels={0:'Immunités ×0',.25:'Résistances ×0,25',.5:'Résistances ×0,5',1:'Dégâts normaux ×1',2:'Faiblesses ×2',4:'Faiblesses ×4'};
+ document.getElementById('typeChartResult').innerHTML=Object.keys(labels).filter(k=>groups[k].length).map(k=>'<p><strong>'+labels[k]+' :</strong> '+groups[k].join(', ')+'</p>').join('');
+}
+(function initTypeChart(){const a=document.getElementById('typeChart1'),b=document.getElementById('typeChart2');if(!a||!b)return;Object.entries(TYPE_FR).forEach(([v,l])=>{a.add(new Option(l,v));b.add(new Option(l,v))});a.value='normal';a.addEventListener('change',renderTypeChart);b.addEventListener('change',renderTypeChart);renderTypeChart()})();
+const NATURES=[['Assuré','Défense','Attaque'],['Bizarre','—','—'],['Brave','Attaque','Vitesse'],['Calme','Déf. Spé.','Attaque'],['Discret','Att. Spé.','Vitesse'],['Docile','—','—'],['Doux','Att. Spé.','Défense'],['Foufou','Att. Spé.','Déf. Spé.'],['Gentil','Déf. Spé.','Défense'],['Hardi','—','—'],['Jovial','Vitesse','Att. Spé.'],['Lâche','Défense','Déf. Spé.'],['Malin','Défense','Att. Spé.'],['Malpoli','Déf. Spé.','Vitesse'],['Mauvais','Attaque','Déf. Spé.'],['Modeste','Att. Spé.','Attaque'],['Naïf','Vitesse','Déf. Spé.'],['Pressé','Vitesse','Défense'],['Prudent','Déf. Spé.','Att. Spé.'],['Pudique','—','—'],['Relax','Défense','Vitesse'],['Rigide','Attaque','Att. Spé.'],['Sérieux','—','—'],['Solo','Attaque','Défense'],['Timide','Vitesse','Attaque']];
+(function initNatures(){const el=document.getElementById('natureTable');if(el)el.innerHTML='<table style="width:100%;border-collapse:collapse"><thead><tr><th>Nature</th><th>Boost +10 %</th><th>Malus −10 %</th></tr></thead><tbody>'+NATURES.map(n=>'<tr><td>'+n[0]+'</td><td>'+n[1]+'</td><td>'+n[2]+'</td></tr>').join('')+'</tbody></table>';const s=document.getElementById('stageLevel');if(s){for(let i=-6;i<=6;i++)s.add(new Option((i>0?'+':'')+i,String(i)));s.value='0';}})();
+function calcStage(){const base=Math.max(1,Number(document.getElementById('stageBase').value)||1),n=Number(document.getElementById('stageLevel').value)||0,m=n>=0?(2+n)/2:2/(2-n),v=Math.floor(base*m);document.getElementById('stageResult').innerHTML='<strong>×'+m.toFixed(2).replace(/0+$/,'').replace(/\.$/,'')+'</strong> → '+base+' devient <strong>'+v+'</strong>.'}
+document.getElementById('stageCalcBtn')?.addEventListener('click',calcStage);calcStage();
 </script>
 </body>
 </html>
