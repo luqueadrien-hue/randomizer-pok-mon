@@ -11,6 +11,9 @@ tests={
  "Refus salon complet": "if(!joined.committed)" in html,
  "Authentification obligatoire": "function mpAuthenticatedId()" in html and html.count("const id=mpAuthenticatedId();") >= 2,
  "Codes limités à 32 caractères": html.count("{1,32}") >= 2,
+ "Reprise de session": "if(players[id]){await mpEnter(" in html,
+ "Vérification identité à l’entrée": "if(s.id!==mpAuthenticatedId())" in html,
+ "Interdiction de changer de salon sans quitter": "mpSession.room!==s.room" in html,
 }
 for label, ok in tests.items():print(("OK" if ok else "ÉCHEC")+": "+label)
 print("Contrôle statique : vérifier les règles Firebase et tester deux navigateurs en parallèle.")
