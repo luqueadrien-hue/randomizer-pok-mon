@@ -388,7 +388,7 @@ async function mpJoinRoom(){
  const s=await mpRoom(code).once('value');if(!s.exists())throw Error('Salon introuvable');
  const id=mpAuthenticatedId();
  const room=s.val()||{},players=room.players||{};
- if(players[id])throw Error('Tu participes déjà à ce salon sur cet appareil : recharge la page pour reprendre ta session.');
+ if(players[id]){await mpEnter({room:code,id,name:players[id].name||name,role:players[id].role||'player'});return;}
  const role='player';
  const joined=await mpRoom(code).child('players').transaction(existing=>{
   if(!existing||existing[id])return;
