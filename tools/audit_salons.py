@@ -9,6 +9,8 @@ tests={
  "Limite de 4": "filter(p=>p&&p.online!==false).length>=4" in html,
  "Refus code déjà pris": "if(!created.committed)" in html,
  "Refus salon complet": "if(!joined.committed)" in html,
+ "Authentification obligatoire": "function mpAuthenticatedId()" in html and html.count("const id=mpAuthenticatedId();") >= 2,
+ "Codes limités à 32 caractères": html.count("{1,32}") >= 2,
 }
 for label, ok in tests.items():print(("OK" if ok else "ÉCHEC")+": "+label)
 print("Contrôle statique : vérifier les règles Firebase et tester deux navigateurs en parallèle.")
