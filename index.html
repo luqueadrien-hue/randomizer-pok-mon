@@ -466,16 +466,18 @@ function mpReceive(r){
  const p1=ps[mpSeats[1]]?.name||'JOUEUR 1',p2=ps[mpSeats[2]]?.name||'JOUEUR 2';
  document.getElementById('team1').parentElement.querySelector('h2').textContent='JOUEUR 1 — '+p1;
  document.getElementById('team2').parentElement.querySelector('h2').textContent='JOUEUR 2 — '+p2;
- if(r.state&&r.state.mode!=='hangman'&&r.state.mode!=='auction')mpHydrateState(r.state);
+ if(r.state&&r.state.mode!=='hangman'&&r.state.mode!=='auction'&&r.state.mode!=='blinddraft'&&r.state.mode!=='impossibledilemma')mpHydrateState(r.state);
  if(r.state?.mode==='auction'){gameMode.value='auction';auctionPanel.style.display='block';}
  if(r.state?.mode==='hangman'){gameMode.value='hangman';player=r.state.player||player;}
- if(r.state?.mode==='blinddraft')gameMode.value='blinddraft';
+ if(r.state?.mode==='blinddraft')gameMode.value='blinddraft';if(r.impossibleDilemma){gameMode.value='impossibledilemma';impossibleReceive(r.impossibleDilemma);}
  if(r.hangman)hangmanReceive(r.hangman);
  if(r.blindDraft)blindDraftReceive(r.blindDraft);
  if(r.auctionRound)auctionReceive(r.auctionRound);
- if(r.questionDuel)qdReceive(r.questionDuel);if(r.impossibleDilemma)impossibleReceive(r.impossibleDilemma);
+ if(r.questionDuel)qdReceive(r.questionDuel);
 }
 
+window.addEventListener('unhandledrejection',e=>{console.error('Erreur asynchrone non gérée',e.reason);const s=document.getElementById('mpStatus');if(s&&!s.textContent.includes('❌'))s.textContent='⚠️ Une opération a échoué. Le reste du site reste utilisable ; réessaie l’action concernée.'});
+window.addEventListener('error',e=>{console.error('Erreur interface',e.error||e.message)});
 window.addEventListener('DOMContentLoaded',()=>{
  if(MPDB)MPDB.ref('.info/connected').on('value',snap=>{if(!snap.val()&&!mpSession)mpSetStatus('🔴 Firebase déconnecté : vérifie Internet ou les autorisations de la base.');else if(snap.val()&&!mpSession&&!new URLSearchParams(location.search).has('salon'))mpSetStatus('🟢 Serveur disponible — crée un salon pour jouer à distance.')});
  if(!MPDB)mpSetStatus('⚠️ Firebase ne s’est pas chargé. Le jeu solo reste disponible ; vérifie les extensions de blocage ou la connexion.');
