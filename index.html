@@ -354,6 +354,7 @@ try{
  }
 }catch(e){console.error('Initialisation Firebase',e)}
 function mpRequireDB(){if(!MPDB)throw Error('Firebase indisponible : le serveur multijoueur ne répond pas. Désactive les bloqueurs de scripts ou recharge la page.')}
+function mpAuthenticatedId(){mpRequireDB();const id=MPAUTH?.currentUser?.uid;if(!id)throw Error('Authentification Firebase indisponible : impossible de créer ou rejoindre un salon. Réessaie après reconnexion.');return id;}
 
 const mpName=document.getElementById('mpName');
 const mpCode=document.getElementById('mpCode');
@@ -372,10 +373,10 @@ async function mpCreateRoom(){
  await mpAuthReady;
  mpSetStatus('🟡 Création du salon…');
  const name=(mpName.value.trim()||'Hôte').slice(0,24);let code=(mpCode.value.trim().toUpperCase()||mpCodeNew()),s;
- if(!/^[A-Z0-9+]+$/.test(code))throw Error('Code invalide : utilise au moins 1 caractère (A-Z, 0-9 ou +)');
+ if(!/^[A-Z0-9+]{1,32}$/.test(code))throw Error('Code invalide : utilise 1 à 32 caractères (A-Z, 0-9 ou +)');
  s=await mpRoom(code).once('value');
  if(s.exists())throw Error('Ce code est déjà utilisé : choisis un autre code');
- const id=MPAUTH?.currentUser?.uid||mpId();
+ const id=mpAuthenticatedId();
  const created=await mpRoom(code).transaction(existing=>existing===null?{created:Date.now(),hostIds:{[id]:true},players:{[id]:{name,role:'host',online:true}}}:undefined,undefined,false);
  if(!created.committed)throw Error('Ce code vient d’être utilisé : choisis un autre code');
  await mpEnter({room:code,id,name,role:'host'}); await mpSyncState();
@@ -383,9 +384,9 @@ async function mpCreateRoom(){
 async function mpJoinRoom(){
  await mpAuthReady;
  const name=(mpName.value.trim()||'Joueur').slice(0,24),code=mpCode.value.trim().toUpperCase();
- if(!/^[A-Z0-9+]+$/.test(code))throw Error('Code invalide : entre au moins 1 caractère (A-Z, 0-9 ou +)');
+ if(!/^[A-Z0-9+]{1,32}$/.test(code))throw Error('Code invalide : entre 1 à 32 caractères (A-Z, 0-9 ou +)');
  const s=await mpRoom(code).once('value');if(!s.exists())throw Error('Salon introuvable');
- const id=MPAUTH?.currentUser?.uid||mpId();
+ const id=mpAuthenticatedId();
  const room=s.val()||{},players=room.players||{};
  if(players[id])throw Error('Tu participes déjà à ce salon sur cet appareil : recharge la page pour reprendre ta session.');
  const role='player';
