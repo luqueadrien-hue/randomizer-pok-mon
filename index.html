@@ -401,6 +401,8 @@ async function mpJoinRoom(){
 }
 async function mpEnter(s){
  await mpAuthReady;
+ if(mpSession&&mpSession.room!==s.room)throw Error('Quitte d’abord le salon actuel avant d’en rejoindre un autre.');
+ if(s.id!==mpAuthenticatedId())throw Error('Identité Firebase différente de la session demandée.');
  mpSession=s;localStorage.setItem('pkmn-mp-session',JSON.stringify(s));mpCode.value=s.room;
  const online=mpRoom(s.room).child('players/'+s.id+'/online');await online.set(true);online.onDisconnect().set(false);
  if(mpListener)mpRoom(s.room).off('value',mpListener);
