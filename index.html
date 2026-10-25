@@ -195,6 +195,7 @@ img,video,canvas,svg{max-width:100%}
 <option value="learnleave">📦 Apprendre ou à laisser</option>
 <option value="randombox">📦 Boîte randomisée</option>
 <option value="questionduel">❓ Qui est-ce ?</option>
+<option value="impossibledilemma">😈 Dilemmes impossibles</option>
 <option value="blinddraft">🕶️ Draft à l’aveugle — 6 manches par joueur</option>
 <option value="auction">💰 Enchères Pokémon</option>
 <option value="hangman">🎭 Pendu Pokémon</option>
@@ -469,7 +470,7 @@ function mpReceive(r){
  if(r.hangman)hangmanReceive(r.hangman);
  if(r.blindDraft)blindDraftReceive(r.blindDraft);
  if(r.auctionRound)auctionReceive(r.auctionRound);
- if(r.questionDuel)qdReceive(r.questionDuel);
+ if(r.questionDuel)qdReceive(r.questionDuel);if(r.impossibleDilemma)impossibleReceive(r.impossibleDilemma);
 }
 
 window.addEventListener('DOMContentLoaded',()=>{
@@ -1723,6 +1724,7 @@ async function pcBoxPick(i){
 }
 async function rollCards(){
  if(gameMode.value==='questionduel'){document.getElementById('questionDuelPanel').style.display='block';return qd.phase==='idle'?qdCreateBox():qdRender();}
+ if(gameMode.value==='impossibledilemma')return impossibleStart();
  if(gameMode.value==='randombox')return pcBoxStart();
  if(gameMode.value==='surprise')return surpriseRoll();
  if(gameMode.value==='triochoice')return trioEntry()
@@ -2162,6 +2164,19 @@ function blindDraftAllowed(){
  if(!mpSession)return true;
  return mpLobbyStarted&&mpSession.id===mpSeats[blindDraftChooser()];
 }
+let impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:1,chooser:2};
+function impossibleCan(role){if(!mpSession)return true;const seat=role==='generator'?impossible.generator:impossible.chooser;return mpSession.id===mpSeats[seat]}
+async function impossibleSave(){if(mpSession)await mpRoom(mpSession.room).child('impossibleDilemma').set({...impossible,updated:Date.now()})}
+async function impossibleStart(){if(impossible.phase!=='idle'&&impossible.phase!=='done')return impossibleRender();if(mpSession&&!impossibleCan('generator'))return alert('C’est au joueur qui randomise de lancer les trois Pokémon.');const used=new Set([...teams[1],...teams[2]].map(p=>p.id)),ids=[];for(let i=0;i<3;i++){const p=await draw(used);used.add(p.id);ids.push(p.id)}impossible={phase:'ban',ids,banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};await impossibleSave();impossibleRender()}
+async function impossibleBan(i){if(impossible.phase!=='ban'||!impossibleCan('chooser'))return;impossible.banned=i;impossible.phase='constraints';await impossibleSave();impossibleRender()}
+function impossibleSurvivors(){return impossible.ids.map((id,i)=>({id,i})).filter(x=>x.i!==impossible.banned)}
+async function impossibleSetConstraints(){if(impossible.phase!=='constraints'||!impossibleCan('generator'))return;const a=document.getElementById('impConstraint0')?.value.trim(),b=document.getElementById('impConstraint1')?.value.trim();if(!a||!b)return alert('Écris une contrainte pour chacun des deux Pokémon.');impossible.constraints=[a,b];impossible.phase='choice';await impossibleSave();impossibleRender()}
+async function impossibleChoose(n){if(impossible.phase!=='choice'||!impossibleCan('chooser'))return;const s=impossibleSurvivors(),pick=s[n];if(!pick)return;const p=await getP(pick.id);teams[impossible.chooser].push(p);drawTeams();impossible.phase='done';impossible.choice=n;await impossibleSave();impossibleRender()}
+async function impossibleReceive(d){if(!d||gameMode.value!=='impossibledilemma')return;impossible=d;impossibleRender()}
+async function impossibleRender(){if(gameMode.value!=='impossibledilemma')return;let h='<div style="grid-column:1/-1"><h3>😈 Dilemmes impossibles</h3>';if(impossible.phase==='idle'||impossible.phase==='done'){if(impossible.phase==='done')h+='<p>Choix enregistré. Les rôles peuvent être inversés à la prochaine manche.</p>';h+='<p>Le randomiseur tire 3 Pokémon. L’autre joueur en bannit 1 à l’aveugle. Le randomiseur attribue ensuite une contrainte adaptée à chacun des 2 survivants.</p></div>';cards.innerHTML=h;return}
+ if(impossible.phase==='ban'){h+='<p>Joueur '+impossible.chooser+' : bannis un emplacement sans connaître le Pokémon.</p></div>';for(let i=0;i<3;i++)h+='<div class="card"><div class="name">🔒 Pokémon '+String.fromCharCode(65+i)+'</div><button type="button" onclick="impossibleBan('+i+')">Bannir à l’aveugle</button></div>';cards.innerHTML=h;return}
+ const s=impossibleSurvivors(),ps=await Promise.all(s.map(x=>getP(x.id)));h+='<p>Le Pokémon banni était <strong>'+(await getP(impossible.ids[impossible.banned])).name+'</strong>.</p></div>';
+ ps.forEach((p,i)=>{h+='<div class="card"><img src="'+p.img+'"><div class="name">'+p.name+'</div>'+(impossible.phase==='constraints'?(impossibleCan('generator')?'<label>Contrainte adaptée<input id="impConstraint'+i+'" placeholder="Ex. défensif, nature neutre…"></label>':'<p>Le randomiseur prépare les deux contraintes…</p>'):'<p><strong>Contrainte :</strong> '+mpEsc(impossible.constraints[i])+'</p>'+(impossibleCan('chooser')?'<button type="button" onclick="impossibleChoose('+i+')">Choisir ce Pokémon + cette contrainte</button>':''))+'</div>'});if(impossible.phase==='constraints'&&impossibleCan('generator'))h+='<div style="grid-column:1/-1"><button type="button" class="primary" onclick="impossibleSetConstraints()">Valider les deux contraintes</button></div>';cards.innerHTML=h}
 async function blindDraftRoll(){
  if(blindDraftLoading||blindDraft.locked||blindDraft.turn>=12)return;
  if(!blindDraftAllowed())return alert('Ce n’est pas ton tour de choisir.');
@@ -2390,7 +2405,7 @@ document.getElementById('auctionCustomBudget').addEventListener('input',auctionU
 auctionUpdatePrices();auctionRender();
 function syncCompetitiveGeneration(){const mode=gameMode.value;document.getElementById('competitiveGenerationWrap').style.display=(mode==='smogontier'||mode==='vgc')?'':'none'}
 syncCompetitiveGeneration();
-gameMode.addEventListener('change',()=>{syncCompetitiveGeneration();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
+gameMode.addEventListener('change',()=>{syncCompetitiveGeneration();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
 ['teamSize','choiceCount','legend','generation','competitiveGeneration','typeMode','revealMode','lieMode','boxSize','qdQuestionLimit'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
 
 const CALC_NATURE_MAP={Assuré:['defense','attack'],Bizarre:[null,null],Brave:['attack','speed'],Calme:['special-defense','attack'],Discret:['special-attack','speed'],Docile:[null,null],Doux:['special-attack','defense'],Foufou:['special-attack','special-defense'],Gentil:['special-defense','defense'],Hardi:[null,null],Jovial:['speed','special-attack'],Lâche:['defense','special-defense'],Malin:['defense','special-attack'],Malpoli:['special-defense','speed'],Mauvais:['attack','special-defense'],Modeste:['special-attack','attack'],Naïf:['speed','special-defense'],Pressé:['speed','defense'],Prudent:['special-defense','special-attack'],Pudique:[null,null],Relax:['defense','speed'],Rigide:['attack','special-attack'],Sérieux:[null,null],Solo:['attack','defense'],Timide:['speed','attack']};
