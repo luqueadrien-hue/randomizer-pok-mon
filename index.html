@@ -1644,7 +1644,7 @@ async function qdExpected(p,k){if(k==='stats')return 'BST : '+p.total;if(k==='st
  if(k==='ability')return 'Talents : '+(p.abilities||[]).map(a=>a.name+(a.hidden?' (caché)':'')).join(' / ');
  if(k==='evolution')return 'Évolue depuis : '+(p.evolvesFrom||'Aucun')+' ; chaîne évolutive : '+(p.evolutionChainUrl?'existante':'non renseignée');
  if(k==='forms')return 'Formes : '+(p.varieties||[]).map(v=>v.name).join(' / ');
- if(k==='weakness'){const chart=await apiJson('https://pokeapi.co/api/v2/type/'+p.types[0]);const types=new Set((chart.damage_relations?.double_damage_from||[]).map(x=>x.name));return 'Faiblesses du premier type (à recouper avec le second) : '+([...types].map(frt).join(' / ')||'Aucune')}
+ if(k==='weakness'){const charts=await Promise.all(p.types.map(t=>apiJson('https://pokeapi.co/api/v2/type/'+t)));const multipliers={};for(const chart of charts){for(const [key,mul] of [['double_damage_from',2],['half_damage_from',0.5],['no_damage_from',0]])for(const t of chart.damage_relations?.[key]||[])multipliers[t.name]=(multipliers[t.name]??1)*mul}const weak=Object.entries(multipliers).filter(([t,v])=>v>1).sort((a,b)=>b[1]-a[1]);return 'Faiblesses : '+(weak.length?weak.map(([t,v])=>frt(t)+' ×'+v).join(' / '):'Aucune faiblesse de type')}
  return ''}
 async function qdCreateBox(){
  if(mpSession&&(!mpLobbyStarted||mpSession.id!==mpSeats[1]))return;
