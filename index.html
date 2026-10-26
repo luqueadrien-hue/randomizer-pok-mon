@@ -1628,12 +1628,24 @@ function bodyCrop(p,mode=gameMode.value){
 }
 // Duel de questions : un Pokémon mystère, catégories non répétables dans une manche, réponse puis éventuelle imposition adverse.
 const QD_CATS=[
- ['stats','📊 Total de stats (BST)'],['stat-hp','❤️ PV'],['stat-speed','💨 Vitesse'],['stat-attack','⚔️ Attaque'],['stat-defense','🛡️ Défense'],
- ['stat-special-attack','✨ Attaque Spé.'],['stat-special-defense','🔮 Défense Spé.'],['generationblind','🗺️ Génération'],['typeblind','❓ Type']
+ ['stats','📊 Total de stats (BST)'],['stat-hp','❤️ PV'],['stat-speed','💨 Vitesse'],['stat-attack','⚔️ Attaque'],['stat-defense','🛡️ Défense'],['stat-special-attack','✨ Attaque Spé.'],['stat-special-defense','🔮 Défense Spé.'],
+ ['generationblind','🗺️ Génération'],['typeblind','❓ Type(s)'],['weakness','🎯 Faiblesses de type'],['category','📖 Catégorie Pokédex'],['height','📏 Taille'],['weight','⚖️ Poids'],['color','🎨 Couleur'],['shape','🧍 Morphologie'],['egg','🥚 Groupes d’œufs'],['capture','🎯 Taux de capture'],['ability','✨ Talents'],['evolution','🌱 Évolution'],['forms','🔄 Formes spéciales']
 ];
 let qd={phase:'idle',asker:1,box:[],targets:{1:null,2:null},used:{1:[],2:[]},answers:[],limit:3,cycle:1,pending:null};
 function qdGenLabel(p){return ({'generation-i':'1 — Kanto','generation-ii':'2 — Johto','generation-iii':'3 — Hoenn','generation-iv':'4 — Sinnoh','generation-v':'5 — Unys','generation-vi':'6 — Kalos','generation-vii':'7 — Alola','generation-viii':'8 — Galar','generation-ix':'9 — Paldea'})[p.gen]||p.gen}
-async function qdExpected(p,k){if(k==='stats')return 'BST : '+p.total;if(k==='stat-hp')return 'PV : '+p.stats.hp;if(k==='stat-speed')return 'Vitesse : '+p.stats.speed;if(k==='stat-attack')return 'Attaque : '+p.stats.attack;if(k==='stat-defense')return 'Défense : '+p.stats.defense;if(k==='stat-special-attack')return 'Attaque Spé. : '+p.stats['special-attack'];if(k==='stat-special-defense')return 'Défense Spé. : '+p.stats['special-defense'];if(k==='generationblind')return 'Génération : '+qdGenLabel(p);if(k==='typeblind')return 'Type : '+p.types.map(frt).join(' / ');return ''}
+async function qdExpected(p,k){if(k==='stats')return 'BST : '+p.total;if(k==='stat-hp')return 'PV : '+p.stats.hp;if(k==='stat-speed')return 'Vitesse : '+p.stats.speed;if(k==='stat-attack')return 'Attaque : '+p.stats.attack;if(k==='stat-defense')return 'Défense : '+p.stats.defense;if(k==='stat-special-attack')return 'Attaque Spé. : '+p.stats['special-attack'];if(k==='stat-special-defense')return 'Défense Spé. : '+p.stats['special-defense'];if(k==='generationblind')return 'Génération : '+qdGenLabel(p);if(k==='typeblind')return 'Type : '+p.types.map(frt).join(' / ');
+ if(k==='category')return 'Catégorie : '+p.genus;
+ if(k==='height')return 'Taille : '+p.height+' m';
+ if(k==='weight')return 'Poids : '+p.weight+' kg';
+ if(k==='color')return 'Couleur Pokédex : '+p.color;
+ if(k==='shape')return 'Morphologie : '+(p.shape||'Non renseignée');
+ if(k==='egg')return 'Groupes d’œufs : '+(p.eggGroups.length?p.eggGroups.join(' / '):'Aucun');
+ if(k==='capture')return 'Taux de capture : '+(p.captureRate??'Inconnu')+' / 255';
+ if(k==='ability')return 'Talents : '+(p.abilities||[]).map(a=>a.name+(a.hidden?' (caché)':'')).join(' / ');
+ if(k==='evolution')return 'Évolue depuis : '+(p.evolvesFrom||'Aucun')+' ; chaîne évolutive : '+(p.evolutionChainUrl?'existante':'non renseignée');
+ if(k==='forms')return 'Formes : '+(p.varieties||[]).map(v=>v.name).join(' / ');
+ if(k==='weakness'){const chart=await apiJson('https://pokeapi.co/api/v2/type/'+p.types[0]);const types=new Set((chart.damage_relations?.double_damage_from||[]).map(x=>x.name));return 'Faiblesses du premier type (à recouper avec le second) : '+([...types].map(frt).join(' / ')||'Aucune')}
+ return ''}
 async function qdCreateBox(){
  if(mpSession&&(!mpLobbyStarted||mpSession.id!==mpSeats[1]))return;
  const used=new Set(),box=[];for(let i=0;i<30;i++){const p=await draw(used);box.push(p.id)}
