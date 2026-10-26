@@ -1638,7 +1638,7 @@ const QD_CATS=[
  ['capture45','🎯 Capture','Son taux de capture est-il inférieur ou égal à 45 ?'],['capture100','🎯 Capture','Son taux de capture est-il supérieur ou égal à 100 ?'],['happy70','😊 Pokédex','Son bonheur de base est-il au moins de 70 ?'],['held-item','🎒 Objets','Peut-il tenir naturellement un objet sauvage ?'],['ev-multi','📈 EV','Donne-t-il au moins 2 EV lorsqu’il est vaincu ?'],
  ['habitat-water','🌍 Habitat','Son habitat Pokédex est-il lié à l’eau ?'],['habitat-cave','🌍 Habitat','Son habitat Pokédex est-il une grotte ?'],['habitat-forest','🌍 Habitat','Son habitat Pokédex est-il une forêt ?'],['habitat-grassland','🌍 Habitat','Son habitat Pokédex est-il une prairie ?'],['habitat-mountain','🌍 Habitat','Son habitat Pokédex est-il la montagne ?']
 ];
-let qd={phase:'idle',asker:1,box:[],targets:{1:null,2:null},used:{1:[],2:[]},answers:[],limit:3,candidates:{1:[],2:[]}};
+let qd={phase:'idle',asker:1,box:[],targets:{1:null,2:null},used:{1:[],2:[]},answers:[],limit:3,candidates:{1:[],2:[]},busy:false};
 const qdFactCache=new Map();
 async function qdFacts(p){if(qdFactCache.has(p.id))return qdFactCache.get(p.id);let evo=null;try{if(p.evolutionChainUrl)evo=await fetch(p.evolutionChainUrl).then(r=>r.ok?r.json():null)}catch(e){}const nodes=[];function walk(n){if(!n)return;nodes.push(n);(n.evolves_to||[]).forEach(walk)}walk(evo?.chain);const self=nodes.find(n=>n.species?.name===p.apiName),details=nodes.flatMap(n=>n.evolution_details||[]),vars=p.varieties||[],names=vars.map(v=>v.name);const x={hasEvolution:!!self?.evolves_to?.length,evolved:!!p.evolvesFrom,final:!!self&&!self.evolves_to?.length,evoLevel:details.some(d=>d.trigger?.name==='level-up'&&d.min_level!=null),evoItem:details.some(d=>d.trigger?.name==='use-item'||d.item),evoTrade:details.some(d=>d.trigger?.name==='trade'),evoFriendship:details.some(d=>d.min_happiness!=null),mega:names.some(n=>/-mega(?:-|$)/.test(n)),gmax:names.some(n=>/gmax|gigantamax/.test(n)),regional:names.some(n=>/alola|galar|hisui|paldea/.test(n)),multiForm:vars.length>1};qdFactCache.set(p.id,x);return x}
 function qdWeak(p,attackType){return(p.types||[]).reduce((m,t)=>m*(TYPE_CHART[t]?.[attackType]??1),1)>1}
@@ -1651,18 +1651,19 @@ async function qdCreateBox(){
 }
 async function qdChoose(i){const who=qd.phase==='choose1'?1:qd.phase==='choose2'?2:0;if(!who||!qd.box[i]||mpSession&&mpSession.id!==mpSeats[who])return;qd.targets[who]=qd.box[i];qd.phase=who===1?'choose2':'questions';qd.asker=1;await qdSync();qdRender()}
 async function qdAsk(k){
- const asker=qd.asker;if(qd.phase!=='questions'||qd.used[asker].length>=3||qd.used[asker].includes(k)||mpSession&&mpSession.id!==mpSeats[asker])return;
+ const asker=qd.asker;if(qd.busy||qd.phase!=='questions'||qd.used[asker].length>=3||qd.used[asker].includes(k)||mpSession&&mpSession.id!==mpSeats[asker])return;qd.busy=true;qdRender();
+ try{
  const answerer=3-asker,target=await getP(qd.targets[answerer]),yes=await qdPredicate(target,k),cat=QD_CATS.find(x=>x[0]===k),label=cat?.[2]||k;
  qd.used[asker].push(k);const before=qd.candidates[asker]?.length||qd.box.length,next=[];
  for(const id of(qd.candidates[asker]||qd.box)){const p=await getP(Number(id));if(await qdPredicate(p,k)===yes)next.push(Number(id))}
  qd.candidates[asker]=next;qd.answers.push({asker,label,answer:yes?'Oui':'Non',remaining:next.length,removed:before-next.length});
  if(qd.used[asker].length>=3){if(asker===1&&qd.used[2].length<3)qd.asker=2;else if(asker===2&&qd.used[1].length<3)qd.asker=1;else qd.phase='guess1'}
- await qdSync();qdRender();
+ await qdSync();}finally{qd.busy=false;qdRender()}
 }
 async function qdGuess(id){const who=qd.phase==='guess1'?1:qd.phase==='guess2'?2:0;if(!who||!id||mpSession&&mpSession.id!==mpSeats[who])return;const victim=3-who,ok=Number(id)===Number(qd.targets[victim]);qd.answers.push({asker:who,label:ok?'✅ Proposition correcte':'❌ Proposition fausse',answer:ok?'Joueur '+who+' a trouvé le Pokémon de J'+victim+'.':'Mauvaise réponse.'});qd.phase=who===1?'guess2':'result';await qdSync();qdRender()}
 async function qdNext(){if(qd.phase!=='result'||mpSession&&mpSession.id!==mpSeats[1])return;qd={phase:'choose1',asker:1,box:qd.box,targets:{1:null,2:null},used:{1:[],2:[]},answers:[],limit:3,candidates:{1:[...qd.box],2:[...qd.box]}};await qdSync();qdRender()}
 async function qdSync(){if(!mpSession)return;await mpRoom(mpSession.room).child('questionDuel').set(qd)}
-async function qdReceive(st){if(!st)return;qd={...qd,...st,candidates:st.candidates||{1:[...(st.box||[])],2:[...(st.box||[])]}};qdRender()}
+async function qdReceive(st){if(!st)return;qd={...qd,...st,busy:false,used:st.used||{1:[],2:[]},targets:st.targets||{1:null,2:null},answers:st.answers||[],candidates:st.candidates||{1:[...(st.box||[])],2:[...(st.box||[])]}};qdRender()}
 function qdCandidateGrid(ids,canGuess=false,who=0){return'<div class="pcBoxSlots">'+ids.map((id,i)=>'<button class="pcSlot" '+(canGuess?'onclick="qdGuess('+Number(id)+')"':'disabled')+'><span class="slotNo">'+(i+1)+'</span><span class="pcPoke" data-qd-id="'+id+'">Chargement…</span></button>').join('')+'</div>'}
 function qdLoadGrid(c){c.querySelectorAll('[data-qd-id]').forEach(el=>getP(Number(el.dataset.qdId)).then(p=>{if(el.isConnected)el.innerHTML='<img src="'+(p.sprite||p.img||'')+'"><span class="slotName">'+mpEsc(p.name)+'</span>'}))}
 function qdRender(){
@@ -1673,7 +1674,7 @@ function qdRender(){
  q.innerHTML=qd.answers.map(x=>'<div class="turn"><b>J'+x.asker+' · '+mpEsc(x.label)+'</b> — <strong>'+mpEsc(x.answer)+'</strong>'+(x.remaining!=null?' • '+x.remaining+' restant(s), '+x.removed+' supprimé(s)':'')+'</div>').join('');
  if(qd.phase==='idle'){c.innerHTML=me(1)?'<button class="primary" onclick="qdCreateBox()">📦 Générer une boîte PC de 30 Pokémon</button>':'En attente de J1';return}
  if(qd.phase==='choose1'||qd.phase==='choose2'){const who=qd.phase==='choose1'?1:2,can=me(who);c.innerHTML='<div class="pcBoxHeader">📦 BOÎTE PC — J'+who+' sélectionne secrètement son Pokémon</div><div class="pcBoxSlots">'+qd.box.map((id,i)=>'<button class="pcSlot" '+(can?'':'disabled')+' onclick="qdChoose('+i+')"><span class="slotNo">'+(i+1)+'</span><span class="pcPoke" data-qd-id="'+id+'">Chargement…</span></button>').join('')+'</div>';qdLoadGrid(c);return}
- if(qd.phase==='questions'){const a=qd.asker,ids=qd.candidates[a]||qd.box;c.innerHTML=(me(a)?'<div><strong>Questions '+qd.used[a].length+'/3</strong> — choisis une question. La réponse et les suppressions sont automatiques.</div>'+qdQuestionButtons(a):'J'+a+' choisit sa question…')+'<h3>🔎 Boîte à deviner de J'+a+' — '+ids.length+' candidat(s)</h3>'+qdCandidateGrid(ids);qdLoadGrid(c);return}
+ if(qd.phase==='questions'){const a=qd.asker,ids=qd.candidates[a]||qd.box;c.innerHTML=(me(a)?'<div><strong>Questions '+qd.used[a].length+'/3</strong> — '+(qd.busy?'Calcul et suppression en cours…':'choisis une question. La réponse et les suppressions sont automatiques.')+'</div>'+(qd.busy?'':qdQuestionButtons(a)):'J'+a+' choisit sa question…')+'<h3>🔎 Boîte à deviner de J'+a+' — '+ids.length+' candidat(s)</h3>'+qdCandidateGrid(ids);qdLoadGrid(c);return}
  if(qd.phase==='guess1'||qd.phase==='guess2'){const who=qd.phase==='guess1'?1:2,ids=qd.candidates[who]||qd.box;c.innerHTML='<h3>🎯 J'+who+' — '+ids.length+' candidat(s) restant(s)</h3>'+(me(who)?'<p>Clique sur le Pokémon que tu penses être celui de J'+(3-who)+'.</p>':'J'+who+' choisit sa réponse…')+qdCandidateGrid(ids,me(who),who);qdLoadGrid(c);return}
  c.innerHTML=me(1)?'<button class="primary" onclick="qdNext()">Nouvelle partie avec la même boîte</button>':'Partie terminée';
 }
