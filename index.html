@@ -247,7 +247,7 @@ img,video,canvas,svg{max-width:100%}
 </div>
 <div id="questionDuelPanel" class="panel" style="display:none;margin-top:18px">
 <h2 style="text-align:center;margin-top:0">❓ Qui est-ce ? Pokémon</h2>
-<div class="mpstate">Chaque joueur dispose de <strong>3 questions automatiques</strong>. Après chaque réponse Oui/Non, les Pokémon incompatibles sont supprimés automatiquement de sa boîte à deviner.</div>
+<div class="mpstate">Chaque joueur dispose de <strong>3 questions automatiques</strong>, au choix entre <strong>Oui/Non</strong> et <strong>questions ouvertes</strong>. Les réponses sont calculées depuis le Pokémon secret et, quand la réponse est structurée, les Pokémon incompatibles sont supprimés automatiquement.</div>
 <div id="qdStatus" class="turn">Lance une manche.</div><div id="qdQuestions"></div>
 <div id="qdControls" class="controls"></div>
 </div>
@@ -1654,12 +1654,30 @@ const QD_CATS=[
  ['capture45','🎯 Capture','Son taux de capture est-il inférieur ou égal à 45 ?'],['capture100','🎯 Capture','Son taux de capture est-il supérieur ou égal à 100 ?'],['happy70','😊 Pokédex','Son bonheur de base est-il au moins de 70 ?'],['held-item','🎒 Objets','Peut-il tenir naturellement un objet sauvage ?'],['ev-multi','📈 EV','Donne-t-il au moins 2 EV lorsqu’il est vaincu ?'],
  ['habitat-water','🌍 Habitat','Son habitat Pokédex est-il lié à l’eau ?'],['habitat-cave','🌍 Habitat','Son habitat Pokédex est-il une grotte ?'],['habitat-forest','🌍 Habitat','Son habitat Pokédex est-il une forêt ?'],['habitat-grassland','🌍 Habitat','Son habitat Pokédex est-il une prairie ?'],['habitat-mountain','🌍 Habitat','Son habitat Pokédex est-il la montagne ?']
 ];
+const QD_STAT_FR={hp:'PV',attack:'Attaque',defense:'Défense','special-attack':'Attaque Spéciale','special-defense':'Défense Spéciale',speed:'Vitesse'};
+const QD_OPEN=[
+ ['open-best-stat','📊 Question ouverte','Quelle est sa meilleure statistique de base ?'],
+ ['open-worst-stat','📊 Question ouverte','Quelle est sa pire statistique de base ?'],
+ ['open-types','🏷️ Question ouverte','Quel(s) est/sont son/ses type(s) ?'],
+ ['open-generation','🗺️ Question ouverte','De quelle génération vient-il ?'],
+ ['open-color','🎨 Question ouverte','Quelle est sa couleur Pokédex ?'],
+ ['open-egg','🥚 Question ouverte','À quel(s) groupe(s) d’œufs appartient-il ?'],
+ ['open-ability-count','✨ Question ouverte','Combien de talents possibles possède-t-il ?'],
+ ['open-bst','📊 Question ouverte','Quel est son total de statistiques de base (BST) ?'],
+ ['open-height','📏 Question ouverte','Quelle est sa taille ?'],
+ ['open-weight','⚖️ Question ouverte','Quel est son poids ?'],
+ ['open-capture','🎯 Question ouverte','Quel est son taux de capture de base ?']
+];
+function qdStatExtremes(p,mode){const vals=Object.entries(p.stats||{}).filter(([k,v])=>QD_STAT_FR[k]&&Number.isFinite(Number(v)));if(!vals.length)return[];const x=mode==='max'?Math.max(...vals.map(v=>Number(v[1]))):Math.min(...vals.map(v=>Number(v[1])));return vals.filter(v=>Number(v[1])===x).map(v=>v[0]).sort()}
+function qdGenFr(g){return String(g||'').replace('generation-','').replace('i','I').replace('v','V').replace('x','X')}
+async function qdOpenValue(p,k){if(k==='open-best-stat')return qdStatExtremes(p,'max').join('|');if(k==='open-worst-stat')return qdStatExtremes(p,'min').join('|');if(k==='open-types')return[...(p.types||[])].sort().join('|');if(k==='open-generation')return p.gen||'';if(k==='open-color')return p.color||'';if(k==='open-egg')return[...(p.eggGroups||[])].sort().join('|');if(k==='open-ability-count')return String((p.abilities||[]).length);if(k==='open-bst')return String(p.total??'');if(k==='open-height')return String(p.height??'');if(k==='open-weight')return String(p.weight??'');if(k==='open-capture')return String(p.captureRate??'');return''}
+function qdOpenDisplay(k,v){if(k==='open-best-stat'||k==='open-worst-stat')return v.split('|').filter(Boolean).map(x=>QD_STAT_FR[x]||x).join(' / ');if(k==='open-types')return v.split('|').filter(Boolean).map(x=>TYPE_FR[x]||x).join(' / ');if(k==='open-generation')return'Génération '+qdGenFr(v);if(k==='open-color'){const x=QD_COLORS.find(a=>a[0]===v);return x?.[1]||v}if(k==='open-egg')return v.split('|').filter(Boolean).map(x=>QD_EGGS.find(a=>a[0]===x)?.[1]||x).join(' / ');if(k==='open-ability-count')return v+' talent(s) possible(s)';if(k==='open-bst')return v+' de BST';if(k==='open-height')return v+' m';if(k==='open-weight')return v+' kg';if(k==='open-capture')return v+' / 255';return v}
 let qd={phase:'idle',asker:1,box:[],targets:{1:null,2:null},used:{1:[],2:[]},answers:[],limit:3,candidates:{1:[],2:[]},busy:false};
 const qdFactCache=new Map();
 async function qdFacts(p){if(qdFactCache.has(p.id))return qdFactCache.get(p.id);let evo=null;try{if(p.evolutionChainUrl)evo=await fetch(p.evolutionChainUrl).then(r=>r.ok?r.json():null)}catch(e){}const nodes=[];function walk(n){if(!n)return;nodes.push(n);(n.evolves_to||[]).forEach(walk)}walk(evo?.chain);const self=nodes.find(n=>n.species?.name===p.apiName),details=nodes.flatMap(n=>n.evolution_details||[]),vars=p.varieties||[],names=vars.map(v=>v.name);const x={hasEvolution:!!self?.evolves_to?.length,evolved:!!p.evolvesFrom,final:!!self&&!self.evolves_to?.length,evoLevel:details.some(d=>d.trigger?.name==='level-up'&&d.min_level!=null),evoItem:details.some(d=>d.trigger?.name==='use-item'||d.item),evoTrade:details.some(d=>d.trigger?.name==='trade'),evoFriendship:details.some(d=>d.min_happiness!=null),mega:names.some(n=>/-mega(?:-|$)/.test(n)),gmax:names.some(n=>/gmax|gigantamax/.test(n)),regional:names.some(n=>/alola|galar|hisui|paldea/.test(n)),multiForm:vars.length>1};qdFactCache.set(p.id,x);return x}
 function qdWeak(p,attackType){return(p.types||[]).reduce((m,t)=>m*(TYPE_CHART[t]?.[attackType]??1),1)>1}
 async function qdPredicate(p,k){if(k.startsWith('weak-'))return qdWeak(p,k.slice(5));if(k.startsWith('type-'))return(p.types||[]).includes(k.slice(5));if(k.startsWith('gen-'))return p.gen===k.slice(4);if(k.startsWith('color-'))return p.color===k.slice(6);if(k.startsWith('egg-'))return(p.eggGroups||[]).includes(k.slice(4));if(k==='dualtype')return(p.types||[]).length>1;if(k==='legendary')return!!p.isLegendary;if(k==='mythical')return!!p.isMythical;if(k==='baby')return!!p.isBaby;if(k==='hidden-ability')return(p.abilities||[]).some(a=>a.hidden);if(k==='multi-ability')return(p.abilities||[]).length>1;if(k==='genderless')return p.genderRate===-1;if(k==='female-only')return p.genderRate===8;if(k==='male-only')return p.genderRate===0;if(k==='gender-diff')return!!p.hasGenderDifferences;if(k==='height1')return p.height>=1;if(k==='height2')return p.height>=2;if(k==='weight10')return p.weight>=10;if(k==='weight50')return p.weight>=50;if(k==='weight100')return p.weight>=100;if(k==='bst400')return p.total>=400;if(k==='bst500')return p.total>=500;if(k==='bst600')return p.total>=600;if(k==='hp100')return p.stats.hp>=100;if(k==='atk100')return p.stats.attack>=100;if(k==='spa100')return p.stats['special-attack']>=100;if(k==='def100')return p.stats.defense>=100;if(k==='spd100')return p.stats['special-defense']>=100;if(k==='speed100')return p.stats.speed>=100;if(k==='capture45')return p.captureRate!=null&&p.captureRate<=45;if(k==='capture100')return p.captureRate!=null&&p.captureRate>=100;if(k==='happy70')return p.baseHappiness!=null&&p.baseHappiness>=70;if(k==='held-item')return(p.heldItems||[]).length>0;if(k==='ev-multi')return(p.evYield||[]).reduce((s,x)=>s+x.amount,0)>=2;if(k.startsWith('habitat-'))return p.habitat===k.slice(8);if(k==='switch-form')return!!p.formsSwitchable;const f=await qdFacts(p);return!!({ 'has-evolution':f.hasEvolution,evolved:f.evolved,'final-evo':f.final,'evo-level':f.evoLevel,'evo-item':f.evoItem,'evo-trade':f.evoTrade,'evo-friendship':f.evoFriendship,mega:f.mega,gmax:f.gmax,regional:f.regional,'multi-form':f.multiForm}[k])}
-function qdQuestionButtons(a){const groups={};for(const x of QD_CATS)(groups[x[1]]??=[]).push(x);return Object.entries(groups).map(([g,arr])=>'<details><summary><strong>'+g+'</strong> ('+arr.length+')</summary><div class="actions">'+arr.map(x=>'<button '+(qd.used[a].includes(x[0])?'disabled':'')+' onclick="qdAsk(\''+x[0]+'\')">'+x[2]+'</button>').join('')+'</div></details>').join('')}
+function qdQuestionButtons(a){const groups={};for(const x of QD_CATS)(groups[x[1]]??=[]).push(x);const yn=Object.entries(groups).map(([g,arr])=>'<details><summary><strong>'+g+'</strong> ('+arr.length+')</summary><div class="actions">'+arr.map(x=>'<button '+(qd.used[a].includes(x[0])?'disabled':'')+' onclick="qdAsk(\''+x[0]+'\')">'+x[2]+'</button>').join('')+'</div></details>').join('');const op='<details open><summary><strong>💬 Questions ouvertes</strong> ('+QD_OPEN.length+')</summary><div class="actions">'+QD_OPEN.map(x=>'<button '+(qd.used[a].includes(x[0])?'disabled':'')+' onclick="qdAsk(\''+x[0]+'\')">'+x[2]+'</button>').join('')+'</div></details>';return op+yn}
 async function qdCreateBox(){
  if(mpSession&&(!mpLobbyStarted||mpSession.id!==mpSeats[1]))return;
  const used=new Set(),box=[];for(let i=0;i<30;i++){const p=await draw(used);box.push(p.id)}
@@ -1669,10 +1687,10 @@ async function qdChoose(i){const who=qd.phase==='choose1'?1:qd.phase==='choose2'
 async function qdAsk(k){
  const asker=qd.asker;if(qd.busy||qd.phase!=='questions'||qd.used[asker].length>=3||qd.used[asker].includes(k)||mpSession&&mpSession.id!==mpSeats[asker])return;qd.busy=true;qdRender();
  try{
- const answerer=3-asker,target=await getP(qd.targets[answerer]),yes=await qdPredicate(target,k),cat=QD_CATS.find(x=>x[0]===k),label=cat?.[2]||k;
- qd.used[asker].push(k);const before=qd.candidates[asker]?.length||qd.box.length,next=[];
- for(const id of(qd.candidates[asker]||qd.box)){const p=await getP(Number(id));if(await qdPredicate(p,k)===yes)next.push(Number(id))}
- qd.candidates[asker]=next;qd.answers.push({asker,label,answer:yes?'Oui':'Non',remaining:next.length,removed:before-next.length});
+ const answerer=3-asker,target=await getP(qd.targets[answerer]),open=QD_OPEN.find(x=>x[0]===k),cat=open||QD_CATS.find(x=>x[0]===k),label=cat?.[2]||k;let answer,next=[],before=qd.candidates[asker]?.length||qd.box.length;
+ if(open){const value=await qdOpenValue(target,k);answer=qdOpenDisplay(k,value);for(const id of(qd.candidates[asker]||qd.box)){const p=await getP(Number(id));if(await qdOpenValue(p,k)===value)next.push(Number(id))}}
+ else{const yes=await qdPredicate(target,k);answer=yes?'Oui':'Non';for(const id of(qd.candidates[asker]||qd.box)){const p=await getP(Number(id));if(await qdPredicate(p,k)===yes)next.push(Number(id))}}
+ qd.used[asker].push(k);qd.candidates[asker]=next;qd.answers.push({asker,label,answer,kind:open?'open':'yesno',remaining:next.length,removed:before-next.length});
  if(qd.used[asker].length>=3){if(asker===1&&qd.used[2].length<3)qd.asker=2;else if(asker===2&&qd.used[1].length<3)qd.asker=1;else qd.phase='guess1'}
  await qdSync();}finally{qd.busy=false;qdRender()}
 }
