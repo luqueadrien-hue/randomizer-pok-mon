@@ -621,6 +621,18 @@ async function preloadNationalDex(onProgress){
  }
  return cache;
 }
+const DEX_REQUIRED_FIELDS=['id','apiName','name','types','stats','abilities','moves','gen','color','eggGroups','growthRate','captureRate','genderRate','varieties','pokedexNumbers','flavorTexts'];
+async function auditNationalDex1025(onProgress){
+ const missing=[],failed=[];let done=0;
+ for(let start=1;start<=FULL_DEX_MAX;start+=20){
+  const ids=Array.from({length:Math.min(20,FULL_DEX_MAX-start+1)},(_,i)=>start+i);
+  const batch=await Promise.all(ids.map(async id=>{try{return await getP(id)}catch(e){failed.push({id,error:String(e?.message||e)});return null}}));
+  batch.forEach(p=>{if(!p)return;const fields=DEX_REQUIRED_FIELDS.filter(k=>p[k]===undefined||p[k]===null&& !['captureRate','genderRate'].includes(k));if(!p.name||!p.types?.length||!Object.keys(p.stats||{}).length||!p.abilities?.length)fields.push('core');if(fields.length)missing.push({id:p.id,name:p.name,fields:[...new Set(fields)]})});
+  done+=ids.length;if(onProgress)onProgress(done,FULL_DEX_MAX,{missing:missing.length,failed:failed.length});
+ }
+ return{ok:failed.length===0&&missing.length===0,total:FULL_DEX_MAX,missing,failed};
+}
+
 
 function valid(p){const [lo,hi]=range();if(p.id<lo||p.id>hi)return false;if(generation.value==='9'&&!p.sv)return false;const l=legend.value;if(l==='no'&&p.legendary)return false;if(l==='yes'&&!p.legendary)return false;const tf=tfilter();if(tf&&!p.types.includes(tf))return false;return ![...teams[1],...teams[2]].some(x=>x.id===p.id)}
 const SPECIAL_FORM_POOL=[
