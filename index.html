@@ -246,7 +246,7 @@ img,video,canvas,svg{max-width:100%}
 </div>
 <div id="questionDuelPanel" class="panel" style="display:none;margin-top:18px">
 <h2 style="text-align:center;margin-top:0">❓ Qui est-ce ? Pokémon</h2>
-<div class="controls"><label>Cycles de questions<select id="qdQuestionLimit"><option value="3" selected>3 cycles (6 questions)</option><option value="4">4 cycles (8 questions)</option></select></label></div>
+<div class="mpstate">Chaque joueur dispose de <strong>3 questions automatiques</strong>. Après chaque réponse Oui/Non, les Pokémon incompatibles sont supprimés automatiquement de sa boîte à deviner.</div>
 <div id="qdStatus" class="turn">Lance une manche.</div><div id="qdQuestions"></div>
 <div id="qdControls" class="controls"></div>
 </div>
@@ -1619,53 +1619,43 @@ function bodyCrop(p,mode=gameMode.value){
 }
 // Duel de questions : un Pokémon mystère, catégories non répétables dans une manche, réponse puis éventuelle imposition adverse.
 const QD_CATS=[
- ['stats','📊 Total de stats (BST)'],['stat-hp','❤️ PV'],['stat-speed','💨 Vitesse'],['stat-attack','⚔️ Attaque'],['stat-defense','🛡️ Défense'],
- ['stat-special-attack','✨ Attaque Spé.'],['stat-special-defense','🔮 Défense Spé.'],['generationblind','🗺️ Génération'],['typeblind','❓ Type']
+ ['weak-fire','🔥 Faible au Feu ?'],['weak-water','💧 Faible à l’Eau ?'],['weak-grass','🍃 Faible à la Plante ?'],['weak-electric','⚡ Faible à l’Électrik ?'],['weak-ice','❄️ Faible à la Glace ?'],['weak-fighting','🥊 Faible au Combat ?'],['weak-ground','🪨 Faible au Sol ?'],['weak-flying','🪽 Faible au Vol ?'],['weak-psychic','🔮 Faible au Psy ?'],['weak-rock','🪨 Faible à la Roche ?'],['weak-ghost','👻 Faible au Spectre ?'],['weak-dragon','🐉 Faible au Dragon ?'],['weak-dark','🌑 Faible aux Ténèbres ?'],['weak-steel','⚙️ Faible à l’Acier ?'],['weak-fairy','✨ Faible à la Fée ?'],
+ ['type-grass','🍃 Est-il de type Plante ?'],['type-fire','🔥 Est-il de type Feu ?'],['type-water','💧 Est-il de type Eau ?'],['type-electric','⚡ Est-il de type Électrik ?'],['type-normal','⚪ Est-il de type Normal ?'],['type-flying','🪽 Est-il de type Vol ?'],['type-poison','☠️ Est-il de type Poison ?'],['type-psychic','🔮 Est-il de type Psy ?'],['type-fairy','✨ Est-il de type Fée ?'],['type-dragon','🐉 Est-il de type Dragon ?'],['legendary','👑 Est-ce un légendaire ?'],['speed100','💨 A-t-il au moins 100 en Vitesse ?'],['bst500','📊 A-t-il au moins 500 de BST ?']
 ];
-let qd={phase:'idle',asker:1,box:[],targets:{1:null,2:null},used:{1:[],2:[]},answers:[],limit:3,cycle:1,pending:null};
-function qdGenLabel(p){return ({'generation-i':'1 — Kanto','generation-ii':'2 — Johto','generation-iii':'3 — Hoenn','generation-iv':'4 — Sinnoh','generation-v':'5 — Unys','generation-vi':'6 — Kalos','generation-vii':'7 — Alola','generation-viii':'8 — Galar','generation-ix':'9 — Paldea'})[p.gen]||p.gen}
-async function qdExpected(p,k){if(k==='stats')return 'BST : '+p.total;if(k==='stat-hp')return 'PV : '+p.stats.hp;if(k==='stat-speed')return 'Vitesse : '+p.stats.speed;if(k==='stat-attack')return 'Attaque : '+p.stats.attack;if(k==='stat-defense')return 'Défense : '+p.stats.defense;if(k==='stat-special-attack')return 'Attaque Spé. : '+p.stats['special-attack'];if(k==='stat-special-defense')return 'Défense Spé. : '+p.stats['special-defense'];if(k==='generationblind')return 'Génération : '+qdGenLabel(p);if(k==='typeblind')return 'Type : '+p.types.map(frt).join(' / ');return ''}
+let qd={phase:'idle',asker:1,box:[],targets:{1:null,2:null},used:{1:[],2:[]},answers:[],limit:3,candidates:{1:[],2:[]}};
+function qdWeak(p,attackType){return (p.types||[]).reduce((m,t)=>m*(TYPE_CHART[t]?.[attackType]??1),1)>1}
+function qdPredicate(p,k){if(k.startsWith('weak-'))return qdWeak(p,k.slice(5));if(k.startsWith('type-'))return(p.types||[]).includes(k.slice(5));if(k==='legendary')return!!p.legendary;if(k==='speed100')return Number(p.stats?.speed||0)>=100;if(k==='bst500')return Number(p.total||0)>=500;return false}
 async function qdCreateBox(){
  if(mpSession&&(!mpLobbyStarted||mpSession.id!==mpSeats[1]))return;
  const used=new Set(),box=[];for(let i=0;i<30;i++){const p=await draw(used);box.push(p.id)}
- qd={phase:'choose1',asker:1,box,targets:{1:null,2:null},used:{1:[],2:[]},answers:[],limit:Number(document.getElementById('qdQuestionLimit').value)||3,cycle:1,pending:null};await qdSync();qdRender();
+ qd={phase:'choose1',asker:1,box,targets:{1:null,2:null},used:{1:[],2:[]},answers:[],limit:3,candidates:{1:[...box],2:[...box]}};await qdSync();qdRender();
 }
-async function qdChoose(i){
- const who=qd.phase==='choose1'?1:qd.phase==='choose2'?2:0;if(!who||!qd.box[i]||mpSession&&mpSession.id!==mpSeats[who])return;
- // Dans Qui est-ce ?, les deux joueurs peuvent choisir exactement le même Pokémon de la boîte.
- qd.targets[who]=qd.box[i];qd.phase=who===1?'choose2':'questions';qd.asker=1;await qdSync();qdRender();
-}
+async function qdChoose(i){const who=qd.phase==='choose1'?1:qd.phase==='choose2'?2:0;if(!who||!qd.box[i]||mpSession&&mpSession.id!==mpSeats[who])return;qd.targets[who]=qd.box[i];qd.phase=who===1?'choose2':'questions';qd.asker=1;await qdSync();qdRender()}
 async function qdAsk(k){
- if(qd.phase!=='questions'||qd.used[qd.asker].includes(k))return;if(mpSession&&mpSession.id!==mpSeats[qd.asker])return;
- const asker=qd.asker,answerer=3-asker,p=await getP(qd.targets[answerer]),label=QD_CATS.find(x=>x[0]===k)?.[1]||k;
- qd.used[asker].push(k);qd.answers.push({cycle:qd.cycle,asker,label,answer:await qdExpected(p,k)});
- if(asker===1)qd.asker=2;else if(qd.cycle>=qd.limit)qd.phase='guess1';else{qd.asker=1;qd.cycle++}
+ const asker=qd.asker;if(qd.phase!=='questions'||qd.used[asker].length>=3||qd.used[asker].includes(k)||mpSession&&mpSession.id!==mpSeats[asker])return;
+ const answerer=3-asker,target=await getP(qd.targets[answerer]),yes=qdPredicate(target,k),label=QD_CATS.find(x=>x[0]===k)?.[1]||k;
+ qd.used[asker].push(k);const before=qd.candidates[asker]?.length||qd.box.length,next=[];
+ for(const id of(qd.candidates[asker]||qd.box)){const p=await getP(Number(id));if(qdPredicate(p,k)===yes)next.push(Number(id))}
+ qd.candidates[asker]=next;qd.answers.push({asker,label,answer:yes?'Oui':'Non',remaining:next.length,removed:before-next.length});
+ if(qd.used[asker].length>=3){if(asker===1&&qd.used[2].length<3)qd.asker=2;else if(asker===2&&qd.used[1].length<3)qd.asker=1;else qd.phase='guess1'}
  await qdSync();qdRender();
 }
-async function qdGuess(id){
- const who=qd.phase==='guess1'?1:qd.phase==='guess2'?2:0;if(!who||!id||mpSession&&mpSession.id!==mpSeats[who])return;
- const victim=3-who,ok=Number(id)===Number(qd.targets[victim]);qd.answers.push({cycle:qd.cycle,asker:who,label:ok?'✅ Proposition correcte':'❌ Proposition fausse',answer:ok?'Joueur '+who+' a trouvé le Pokémon de J'+victim+'.':'Mauvaise réponse : aucune conséquence.'});
- qd.phase=ok?(who===1?'replace1':'replace2'):(who===1?'guess2':'result');await qdSync();qdRender();
-}
-async function qdReplace(id){const who=qd.phase==='replace1'?1:qd.phase==='replace2'?2:0;if(!who||!id||mpSession&&mpSession.id!==mpSeats[who])return;const victim=3-who,p=await getP(Number(id));qd.targets[victim]=p.id;qd.answers.push({cycle:qd.cycle,asker:who,label:'🔄 Remplacement imposé',answer:'J'+who+' impose '+p.name+' à J'+victim});qd.phase=who===1?'guess2':'result';await qdSync();qdRender()}
-async function qdNext(){if(qd.phase!=='result'||mpSession&&mpSession.id!==mpSeats[1])return;qd.phase='choose1';qd.targets={1:null,2:null};qd.used={1:[],2:[]};qd.answers=[];qd.cycle=1;qd.asker=1;qd.pending=null;await qdSync();qdRender()}
+async function qdGuess(id){const who=qd.phase==='guess1'?1:qd.phase==='guess2'?2:0;if(!who||!id||mpSession&&mpSession.id!==mpSeats[who])return;const victim=3-who,ok=Number(id)===Number(qd.targets[victim]);qd.answers.push({asker:who,label:ok?'✅ Proposition correcte':'❌ Proposition fausse',answer:ok?'Joueur '+who+' a trouvé le Pokémon de J'+victim+'.':'Mauvaise réponse.'});qd.phase=who===1?'guess2':'result';await qdSync();qdRender()}
+async function qdNext(){if(qd.phase!=='result'||mpSession&&mpSession.id!==mpSeats[1])return;qd={phase:'choose1',asker:1,box:qd.box,targets:{1:null,2:null},used:{1:[],2:[]},answers:[],limit:3,candidates:{1:[...qd.box],2:[...qd.box]}};await qdSync();qdRender()}
 async function qdSync(){if(!mpSession)return;await mpRoom(mpSession.room).child('questionDuel').set(qd)}
-async function qdReceive(st){if(!st)return;qd={...qd,...st};qdRender()}
+async function qdReceive(st){if(!st)return;qd={...qd,...st,candidates:st.candidates||{1:[...(st.box||[])],2:[...(st.box||[])]}};qdRender()}
+function qdCandidateGrid(ids,canGuess=false,who=0){return'<div class="pcBoxSlots">'+ids.map((id,i)=>'<button class="pcSlot" '+(canGuess?'onclick="qdGuess('+Number(id)+')"':'disabled')+'><span class="slotNo">'+(i+1)+'</span><span class="pcPoke" data-qd-id="'+id+'">Chargement…</span></button>').join('')+'</div>'}
+function qdLoadGrid(c){c.querySelectorAll('[data-qd-id]').forEach(el=>getP(Number(el.dataset.qdId)).then(p=>{if(el.isConnected)el.innerHTML='<img src="'+(p.sprite||p.img||'')+'"><span class="slotName">'+mpEsc(p.name)+'</span>'}))}
 function qdRender(){
  const panel=document.getElementById('questionDuelPanel');if(!panel)return;panel.style.display=gameMode.value==='questionduel'?'block':'none';if(gameMode.value!=='questionduel')return;
  const q=document.getElementById('qdQuestions'),c=document.getElementById('qdControls'),me=n=>!mpSession||mpSession.id===mpSeats[n];
- let status=qd.phase==='idle'?'Crée la boîte PC commune':qd.phase==='choose1'?'Joueur 1 choisit secrètement son Pokémon':qd.phase==='choose2'?'Joueur 2 choisit secrètement son Pokémon':qd.phase==='questions'?'Cycle '+qd.cycle+'/'+qd.limit+' — J'+qd.asker+' pose une question':qd.phase==='guess1'?'Joueur 1 propose sa réponse':qd.phase==='guess2'?'Joueur 2 propose sa réponse':qd.phase==='replace1'?'J1 choisit le remplacement de J2':qd.phase==='replace2'?'J2 choisit le remplacement de J1':'Partie terminée';
+ const status=qd.phase==='idle'?'Crée la boîte PC commune':qd.phase==='choose1'?'Joueur 1 choisit secrètement son Pokémon':qd.phase==='choose2'?'Joueur 2 choisit secrètement son Pokémon':qd.phase==='questions'?'J'+qd.asker+' — question '+((qd.used[qd.asker]?.length||0)+1)+'/3':qd.phase==='guess1'?'Joueur 1 choisit parmi ses candidats':qd.phase==='guess2'?'Joueur 2 choisit parmi ses candidats':'Partie terminée';
  document.getElementById('qdStatus').textContent=status;
- q.innerHTML=qd.answers.map(x=>'<div class="turn"><b>J'+x.asker+' · '+mpEsc(x.label)+'</b> — Réponse de J'+(3-x.asker)+' : '+mpEsc(x.answer)+'</div>').join('');
+ q.innerHTML=qd.answers.map(x=>'<div class="turn"><b>J'+x.asker+' · '+mpEsc(x.label)+'</b> — <strong>'+mpEsc(x.answer)+'</strong>'+(x.remaining!=null?' • '+x.remaining+' restant(s), '+x.removed+' supprimé(s)':'')+'</div>').join('');
  if(qd.phase==='idle'){c.innerHTML=me(1)?'<button class="primary" onclick="qdCreateBox()">📦 Générer une boîte PC de 30 Pokémon</button>':'En attente de J1';return}
- if(qd.phase==='choose1'||qd.phase==='choose2'){
-  const who=qd.phase==='choose1'?1:2,can=me(who);c.innerHTML='<div class="pcBoxHeader">📦 BOÎTE PC — J'+who+' sélectionne son Pokémon</div><div style="margin:6px 0">Le même Pokémon peut être choisi par les deux joueurs.</div><div class="pcBoxSlots">'+qd.box.map((id,i)=>'<button class="pcSlot" '+(can?'':'disabled')+' onclick="qdChoose('+i+')"><span class="slotNo">'+(i+1)+'</span><span class="pcPoke" data-qd-id="'+id+'">Chargement…</span></button>').join('')+'</div>';c.querySelectorAll('[data-qd-id]').forEach(el=>getP(Number(el.dataset.qdId)).then(p=>{if(el.isConnected)el.innerHTML='<img src="'+(p.sprite||p.img||'')+'"><span class="slotName">'+mpEsc(p.name)+'</span>'}));return
- }
- if(qd.phase==='questions'){
-  const a=qd.asker;c.innerHTML=me(a)?'<div>Choisis la question à poser à J'+(3-a)+'. Le jeu affiche automatiquement la réponse.</div>'+QD_CATS.map(x=>'<button '+(qd.used[a].includes(x[0])?'disabled':'')+' onclick="qdAsk(\''+x[0]+'\')">'+x[1]+'</button>').join(''):'J'+a+' choisit sa question…';return
- }
- if(qd.phase==='guess1'||qd.phase==='guess2'){const who=qd.phase==='guess1'?1:2;c.innerHTML=me(who)?'<label>Quel est le Pokémon de J'+(3-who)+' ? — n° Pokédex <input id="qdGuessId" type="number" min="1" max="1025"></label><button class="primary" onclick="qdGuess(document.getElementById(\'qdGuessId\').value)">Proposer</button>':'J'+who+' réfléchit…';return}
- if(qd.phase==='replace1'||qd.phase==='replace2'){const who=qd.phase==='replace1'?1:2;c.innerHTML=me(who)?'<label>Pokémon à imposer à J'+(3-who)+' — n° Pokédex <input id="qdReplaceId" type="number" min="1" max="1025"></label><button class="primary" onclick="qdReplace(document.getElementById(\'qdReplaceId\').value)">🔄 Imposer</button>':'J'+who+' choisit le remplacement…';return}
+ if(qd.phase==='choose1'||qd.phase==='choose2'){const who=qd.phase==='choose1'?1:2,can=me(who);c.innerHTML='<div class="pcBoxHeader">📦 BOÎTE PC — J'+who+' sélectionne secrètement son Pokémon</div><div class="pcBoxSlots">'+qd.box.map((id,i)=>'<button class="pcSlot" '+(can?'':'disabled')+' onclick="qdChoose('+i+')"><span class="slotNo">'+(i+1)+'</span><span class="pcPoke" data-qd-id="'+id+'">Chargement…</span></button>').join('')+'</div>';qdLoadGrid(c);return}
+ if(qd.phase==='questions'){const a=qd.asker,ids=qd.candidates[a]||qd.box;c.innerHTML=(me(a)?'<div><strong>Questions '+qd.used[a].length+'/3</strong> — choisis une question. La réponse et les suppressions sont automatiques.</div>'+QD_CATS.map(x=>'<button '+(qd.used[a].includes(x[0])?'disabled':'')+' onclick="qdAsk(\''+x[0]+'\')">'+x[1]+'</button>').join(''):'J'+a+' choisit sa question…')+'<h3>🔎 Boîte à deviner de J'+a+' — '+ids.length+' candidat(s)</h3>'+qdCandidateGrid(ids);qdLoadGrid(c);return}
+ if(qd.phase==='guess1'||qd.phase==='guess2'){const who=qd.phase==='guess1'?1:2,ids=qd.candidates[who]||qd.box;c.innerHTML='<h3>🎯 J'+who+' — '+ids.length+' candidat(s) restant(s)</h3>'+(me(who)?'<p>Clique sur le Pokémon que tu penses être celui de J'+(3-who)+'.</p>':'J'+who+' choisit sa réponse…')+qdCandidateGrid(ids,me(who),who);qdLoadGrid(c);return}
  c.innerHTML=me(1)?'<button class="primary" onclick="qdNext()">Nouvelle partie avec la même boîte</button>':'Partie terminée';
 }
 // Boîte PC commune : draft Pick J1 → Pick J2 → Ban J1 → Ban J2, répété jusqu'à 6 Pokémon par équipe.
@@ -2412,7 +2402,7 @@ auctionUpdatePrices();auctionRender();
 function syncCompetitiveGeneration(){const mode=gameMode.value;document.getElementById('competitiveGenerationWrap').style.display=(mode==='smogontier'||mode==='vgc')?'':'none'}
 syncCompetitiveGeneration();
 gameMode.addEventListener('change',()=>{syncCompetitiveGeneration();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
-['teamSize','choiceCount','legend','generation','competitiveGeneration','typeMode','revealMode','lieMode','boxSize','qdQuestionLimit'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
+['teamSize','choiceCount','legend','generation','competitiveGeneration','typeMode','revealMode','lieMode','boxSize'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
 
 const CALC_NATURE_MAP={Assuré:['defense','attack'],Bizarre:[null,null],Brave:['attack','speed'],Calme:['special-defense','attack'],Discret:['special-attack','speed'],Docile:[null,null],Doux:['special-attack','defense'],Foufou:['special-attack','special-defense'],Gentil:['special-defense','defense'],Hardi:[null,null],Jovial:['speed','special-attack'],Lâche:['defense','special-defense'],Malin:['defense','special-attack'],Malpoli:['special-defense','speed'],Mauvais:['attack','special-defense'],Modeste:['special-attack','attack'],Naïf:['speed','special-defense'],Pressé:['speed','defense'],Prudent:['special-defense','special-attack'],Pudique:[null,null],Relax:['defense','speed'],Rigide:['attack','special-attack'],Sérieux:[null,null],Solo:['attack','defense'],Timide:['speed','attack']};
 let calcAtkP=null,calcDefP=null,calcMoves=[];
