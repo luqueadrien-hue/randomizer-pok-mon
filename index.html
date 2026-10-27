@@ -2157,13 +2157,19 @@ async function hangmanChoose(i){
 }
 
 function anagramLetters(name){
- const a=[...String(name||'').toLocaleUpperCase('fr-FR')].filter(c=>/[A-ZÀ-Ÿ]/i.test(c));
- const original=a.join('');if(a.length<2)return original;
- for(let attempt=0;attempt<8;attempt++){
-  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
-  if(a.join('')!==original)break;
+ // Mélange global de toutes les lettres, y compris celles des noms composés.
+ // On cherche à déplacer chaque lettre de sa position initiale si c'est possible.
+ const original=[...String(name||'').toLocaleUpperCase('fr-FR')].filter(c=>/[A-ZÀ-Ÿ]/i.test(c));
+ if(original.length<2)return original.join(' ');
+ let best=original.slice(),bestFixed=original.length;
+ for(let attempt=0;attempt<120;attempt++){
+  const candidate=original.slice();
+  for(let i=candidate.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[candidate[i],candidate[j]]=[candidate[j],candidate[i]]}
+  const fixed=candidate.reduce((n,c,i)=>n+(c===original[i]?1:0),0);
+  if(fixed<bestFixed){best=candidate;bestFixed=fixed}
+  if(bestFixed===0)break;
  }
- return a.join(' ');
+ return best.join(' ');
 }
 async function anagramStart(i){
  if(!current[i]||(hangmanState&&hangmanState.phase!=='setup'))return;
