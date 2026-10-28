@@ -1065,7 +1065,7 @@ const TRAINER_HINTS={
 1018:[['Kassis','Jeux vidéo','Génération 9']]
 };
 function trainerCandidates(id){const media=document.getElementById('trainerMedia')?.value||'all',gen=document.getElementById('trainerGen')?.value||'all';return (TRAINER_HINTS[id]||[]).filter(x=>(media==='all'||(media==='game'&&x[1].includes('Jeux vidéo'))||(media==='anime'&&x[1].includes('Animé'))||(media==='manga'&&x[1].includes('Manga'))||(media==='film'&&x[1].includes('Film')))&&(gen==='all'||x[2]==='Génération '+gen))}
-function trainerTeamClue(p){const a=trainerCandidates(p.id);if(!a.length)return 'Aucune association disponible pour ces filtres';const x=a[Math.floor(Math.random()*a.length)];return document.getElementById('trainerVariant')?.value==='trainer'?'Pokémon : '+p.name+' • Support : '+x[1]+' • '+x[2]+' — Devine le dresseur (réponse : '+x[0]+')':'Dresseur : '+x[0]+' • Support : '+x[1]+' • '+x[2]+' — Devine le Pokémon';}
+function trainerTeamClue(p){const a=trainerCandidates(p.id);if(!a.length)return 'Aucune association disponible pour ces filtres';const x=a[Math.floor(Math.random()*a.length)];return document.getElementById('trainerVariant')?.value==='trainer'?'Pokémon : '+p.name+' • Support : '+x[1]+' • '+x[2]+' — Devine le dresseur':'Dresseur : '+x[0]+' • Support : '+x[1]+' • '+x[2]+' — Devine le Pokémon';}
 
 async function getEvolutionClue(p){
  if(evoCache.has(p.id))return evoCache.get(p.id);
