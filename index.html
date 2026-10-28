@@ -115,6 +115,9 @@ img,video,canvas,svg{max-width:100%}
 @media(max-width:360px){.cards{grid-template-columns:1fr}.teamgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .hangmanKeys{display:grid;grid-template-columns:repeat(auto-fit,minmax(44px,1fr));gap:6px;max-width:700px;margin:12px auto}.hangmanKeys button{min-width:0;padding:8px 2px}.hangmanKeys button:disabled{opacity:.35}\n.mainTabs{display:flex;gap:10px;margin:16px 0}.mainTabs button{flex:1}.mainTabs button[aria-selected="true"]{background:#e2b744;color:#21152c}.appTab[hidden]{display:none!important}
 .primarySiteTabs{position:sticky;top:0;z-index:50;background:#092b48;padding:10px 0;box-shadow:0 4px 12px rgba(0,0,0,.25)}.primarySiteTabs button{font-weight:800;font-size:1.05rem}.utilitySiteTabs[hidden]{display:none!important}.utilitySiteTabs{flex-wrap:wrap}.utilitySiteTabs button{flex:1 1 180px}@media(max-width:600px){.primarySiteTabs button{font-size:.92rem;padding:12px 5px}.utilitySiteTabs button{flex:1 1 130px}}
+
+/* Attente et libération des Pokémon : trois Poké Balls côté joueur qui devine. */
+.pokeWaiting{grid-column:1/-1;text-align:center;padding:20px}.pokeBallRow{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin:14px auto}.pokeBall{position:relative;display:inline-block;width:74px;height:74px;border:4px solid #17212b;border-radius:50%;background:linear-gradient(to bottom,#ec464a 0 46%,#17212b 46% 54%,#f9fafb 54%);box-shadow:0 7px 15px #0005;animation:pokeSway 1.7s ease-in-out infinite}.pokeBall:nth-child(2){animation-delay:.25s}.pokeBall:nth-child(3){animation-delay:.5s}.pokeBall:after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border:5px solid #17212b;border-radius:50%;background:white}.pokeRevealLayer{position:fixed;inset:0;z-index:10000;background:#081d33ed;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;color:white}.pokeRevealLayer .pokeBall{width:112px;height:112px;animation:pokeRelease .8s ease-in forwards}.pokeRevealLayer img{max-width:min(65vw,300px);max-height:45vh;object-fit:contain;animation:pokeAppear .7s ease-out both}.pokeRevealLayer button{margin-top:12px}@keyframes pokeSway{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(9deg)}}@keyframes pokeRelease{0%{transform:scale(1) rotate(0)}55%{transform:scale(1.25) rotate(-22deg);filter:brightness(1)}100%{transform:scale(1.7);opacity:0;filter:brightness(5)}}@keyframes pokeAppear{from{opacity:0;transform:scale(.15);filter:brightness(4)}to{opacity:1;transform:scale(1);filter:brightness(1)}}@media(prefers-reduced-motion:reduce){.pokeBall,.pokeRevealLayer img{animation:none!important}}
 </style>
 </head>
 <body>
@@ -459,6 +462,7 @@ async function mpHydrateState(st){
   if(st.mode==='randombox'){render();}else if(mine){if(st.mode!=='learnleave'||st.dealStage!==1)render();else cards.innerHTML='';}
   else if(st.mode==='phoneticrebus')cards.innerHTML='<div style="grid-column:1/-1;text-align:center"><strong>🧩 Rébus phonétiques</strong> — devine les Pokémon.</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div><div class="gameClue">'+(x.clue||'Rébus indisponible')+'</div>'+(mpSession&&mpSession.id===mpSeats[player]&&!st.batchLocked?'<button onclick="pick('+i+')">Choisir ce Pokémon</button>':'')+'</div>').join('');
   else if(isBodyMode(st.mode))cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Observe la partie du corps et devine le Pokémon !</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div>'+(x.bodyCrop?'<img src="'+x.bodyCrop+'" alt="Partie du corps mystère" style="width:220px;height:220px;object-fit:contain">':'<div>Image en préparation…</div>')+'<div class="gameClue">'+mpEsc(x.clue||'')+'</div></div>').join('');
+  else if(!st.batchLocked&&(!st.current||!st.current.length))cards.innerHTML=pokeWaitingHTML('Le joueur adverse prépare les Pokémon…');
   else cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Indices de la manche — Pokémon masqués</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div><div class="gameClue">'+(x.clue||'Indice indisponible')+'</div>'+(mpSession&&mpSession.id===mpSeats[player]&&!st.batchLocked?'<button onclick="pick('+i+')">Choisir ce Pokémon</button>':'')+'</div>').join('');
   drawTeams();
  }catch(e){console.warn('Hydratation multijoueur',e)}finally{mpApplying=false}
@@ -1841,7 +1845,7 @@ async function rollCards(){
  }
  dealPanel.style.display='none';
  let n=parseInt(choiceCount.value)||3;n=Math.max(2,Math.min(12,n));if(typeMode.value==='random-d10')n=3;if(['hangman','anagramtrio'].includes(gameMode.value))n=3;else choiceCount.value=n;hangmanState=null;
- const used=new Set();current=[];batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML='<div class="loaderGen"><div class="loaderBall"></div><div>Génération en cours<span class="loaderDots"></span></div></div>';
+ const used=new Set();current=[];batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML=pokeWaitingHTML('Trois Pokémon mystères en préparation…');
  const diceMode=typeMode.value==='random-d10';
  if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');if(!monoDiceType)monoRoll(player);turn.textContent='🎲 D18 : face '+monoDiceResult+'/18 → '+frt(monoDiceType)+' | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
  for(let i=0;i<n;i++){
@@ -2409,6 +2413,8 @@ function drawTeams(){[1,2].forEach(n=>document.getElementById('team'+n).innerHTM
  const visible=gameMode.value==='randombox'||!mpSession||sixRoundFinished();
  return visible?'<div class="mini"><img src="'+(p.img||'')+'"><b>'+p.name+'</b></div>':'<div class="mini">🔒 Pokémon secret</div>';
  }).join(''))}
+function pokeWaitingHTML(message='Le Pokémon arrive…'){return '<div class="pokeWaiting" aria-live="polite"><div class="pokeBallRow"><span class="pokeBall"></span><span class="pokeBall"></span><span class="pokeBall"></span></div><strong>'+mpEsc(message)+'</strong></div>'}
+function pokeReleaseAnimation(p){if(!p)return;document.getElementById('pokeReleaseLayer')?.remove();const layer=document.createElement('div');layer.id='pokeReleaseLayer';layer.className='pokeRevealLayer';layer.setAttribute('role','dialog');layer.setAttribute('aria-label','Pokémon sélectionné');const ball=document.createElement('span');ball.className='pokeBall';layer.appendChild(ball);document.body.appendChild(layer);setTimeout(()=>{if(!layer.isConnected)return;ball.remove();const img=document.createElement('img');img.src=p.img||p.sprite||'';img.alt=p.name||'Pokémon';layer.appendChild(img);const title=document.createElement('h2');title.textContent=p.name||'Pokémon dévoilé';layer.appendChild(title);const btn=document.createElement('button');btn.textContent='Continuer';btn.className='primary';btn.onclick=()=>layer.remove();layer.appendChild(btn);setTimeout(()=>layer.remove(),4200)},850)}
 function pick(i){
  if(mpSession&&!mpLobbyStarted)return;
  // En réseau, l'adversaire génère les propositions mais c'est bien le joueur actif qui choisit.
@@ -2416,6 +2422,7 @@ function pick(i){
  if(batchLocked||!current[i]||!current[i].p)return;
  if(gameMode.value==='learnleave'&&dealStage!==4)return;
  batchLocked=true;
+ pokeReleaseAnimation(current[i].p);
  const chooser=player,recipient=typeMode.value==='random-d10'?chooser:sixRoundRecipient(chooser);
  teams[recipient].push(current[i].p);const revealedForm=formRevealText(current[i].p);if(revealedForm){gmInfo.textContent='🔓 '+revealedForm;gmPanel.style.display='block';}if(typeMode.value==='random-d10'){if(monoDiceType)monoSeen[chooser].add(monoDiceType);for(const x of current)monoExcluded[chooser].add(x.p.id);monoDiceType=null;}sixRoundOwners[recipient].push(chooser);sixRoundCounts[chooser]++;
  if(gameMode.value==='learnleave'){dealStage=0;dealStarted=false;dealRemaining=[];starterOffer.innerHTML='';dealInfo.textContent='Manche terminée. Lance une nouvelle manche.';dealButtons();}
