@@ -253,6 +253,7 @@ img,video,canvas,svg{max-width:100%}
 <div class="actions"><button id="roll" class="primary">🎲 GÉNÉRER</button><button id="reveal">👁 Révéler tous</button><button id="hide">🙈 Masquer tous</button><button id="reset">↺ Nouvelle partie</button></div>
 <div id="turn" class="turn">Tour du JOUEUR 1</div>
 </div>
+<div id="trainerOptions" class="panel" style="display:none;margin-top:18px"><h2>🧢 Équipe de dresseur — paramètres</h2><div class="controls"><label>Variante<select id="trainerVariant"><option value="pokemon">Deviner le Pokémon du dresseur</option><option value="trainer">Deviner le dresseur du Pokémon</option></select></label><label>Support<select id="trainerMedia"><option value="all">Tous</option><option value="game">Jeux vidéo</option><option value="anime">Animé</option><option value="manga">Manga</option><option value="film">Film</option></select></label><label>Génération du dresseur<select id="trainerGen"><option value="all">Toutes (1–9)</option><option value="1">Génération 1</option><option value="2">Génération 2</option><option value="3">Génération 3</option><option value="4">Génération 4</option><option value="5">Génération 5</option><option value="6">Génération 6</option><option value="7">Génération 7</option><option value="8">Génération 8</option><option value="9">Génération 9</option></select></label></div><p class="mpstate">Seules les associations présentes dans la base sont proposées. Les personnages et équipes ne sont pas encore exhaustifs.</p></div>
 <div id="moduloPanel" class="panel" style="display:none;margin-top:18px">
 <h2 style="text-align:center;margin-top:0">🔢 Modulo Pokédex</h2>
 <p>À partir du numéro national d'un Pokémon, trouve un autre Pokémon utilisant les mêmes chiffres dans un ordre différent. Un zéro supplémentaire est autorisé, et le numéro initial reste valable.</p>
@@ -1063,7 +1064,8 @@ const TRAINER_HINTS={
 1000:[['Kassis','Jeux vidéo','Génération 9']],
 1018:[['Kassis','Jeux vidéo','Génération 9']]
 };
-function trainerTeamClue(p){const a=TRAINER_HINTS[p.id];if(!a)return 'Aucun dresseur nommé vérifié dans la base pour ce Pokémon';const x=a[Math.floor(Math.random()*a.length)];return 'Dresseur : '+x[0]+' • Support : '+x[1]+' • '+x[2];}
+function trainerCandidates(id){const media=document.getElementById('trainerMedia')?.value||'all',gen=document.getElementById('trainerGen')?.value||'all';return (TRAINER_HINTS[id]||[]).filter(x=>(media==='all'||(media==='game'&&x[1].includes('Jeux vidéo'))||(media==='anime'&&x[1].includes('Animé'))||(media==='manga'&&x[1].includes('Manga'))||(media==='film'&&x[1].includes('Film')))&&(gen==='all'||x[2]==='Génération '+gen))}
+function trainerTeamClue(p){const a=trainerCandidates(p.id);if(!a.length)return 'Aucune association disponible pour ces filtres';const x=a[Math.floor(Math.random()*a.length)];return document.getElementById('trainerVariant')?.value==='trainer'?'Pokémon : '+p.name+' • Support : '+x[1]+' • '+x[2]+' — Devine le dresseur (réponse : '+x[0]+')':'Dresseur : '+x[0]+' • Support : '+x[1]+' • '+x[2]+' — Devine le Pokémon';}
 
 async function getEvolutionClue(p){
  if(evoCache.has(p.id))return evoCache.get(p.id);
@@ -1812,6 +1814,7 @@ async function pcBoxPick(i){
  finally{pcBoxBusy=false}
 }
 async function rollCards(){
+ if(gameMode.value==='trainerteam'&&!Object.keys(TRAINER_HINTS).some(id=>trainerCandidates(Number(id)).length)){alert('Aucun dresseur disponible avec ces filtres.');return}
  if(gameMode.value==='questionduel'){document.getElementById('questionDuelPanel').style.display='block';return qd.phase==='idle'?qdCreateBox():qdRender();}
  if(gameMode.value==='impossibledilemma')return impossibleStart();
  if(gameMode.value==='randombox')return pcBoxStart();
@@ -1834,7 +1837,7 @@ async function rollCards(){
  const diceMode=typeMode.value==='random-d10';
  if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');if(!monoDiceType)monoRoll(player);turn.textContent='🎲 D18 : face '+monoDiceResult+'/18 → '+frt(monoDiceType)+' | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
  for(let i=0;i<n;i++){
-   const p=diceMode?await monoDraw(player,monoDiceType,used):await draw(used);
+   let p;if(gameMode.value==='trainerteam'){const pool=Object.keys(TRAINER_HINTS).map(Number).filter(id=>trainerCandidates(id).length&&!used.has(id));const validPool=[];for(const id of pool){try{const q=await getP(id);if(valid(q))validPool.push(q)}catch(e){}}if(!validPool.length)throw Error('Aucun Pokémon de dresseur disponible pour ces filtres.');p=validPool[Math.floor(Math.random()*validPool.length)];used.add(p.id)}else p=diceMode?await monoDraw(player,monoDiceType,used):await draw(used);
    let c=clue(p,gameMode.value);
    if(isBodyMode(gameMode.value)){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);if(!window.__bodyCropFailures)window.__bodyCropFailures=0;if(++window.__bodyCropFailures>20)throw Error('Illustrations insuffisantes pour créer des extraits. Réessaie avec d’autres filtres.');continue}window.__bodyCropFailures=0;p._bodyCrop=crop;c='🔍 Partie du corps à identifier (découpe automatique, à confirmer par l’organisateur)';}
    if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
@@ -2560,7 +2563,7 @@ document.getElementById('auctionCustomBudget').addEventListener('input',auctionU
 auctionUpdatePrices();auctionRender();
 function syncCompetitiveGeneration(){const mode=gameMode.value;document.getElementById('competitiveGenerationWrap').style.display=(mode==='smogontier'||mode==='vgc')?'':'none'}
 syncCompetitiveGeneration();
-gameMode.addEventListener('change',()=>{syncCompetitiveGeneration();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';document.getElementById('moduloPanel').style.display=gameMode.value==='modulodex'?'block':'none';if(gameMode.value==='modulodex')moduloRender();if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
+gameMode.addEventListener('change',()=>{syncCompetitiveGeneration();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';document.getElementById('trainerOptions').style.display=gameMode.value==='trainerteam'?'block':'none';document.getElementById('moduloPanel').style.display=gameMode.value==='modulodex'?'block':'none';if(gameMode.value==='modulodex')moduloRender();if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
 ['teamSize','choiceCount','legend','generation','competitiveGeneration','typeMode','revealMode','lieMode','boxSize'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
 
 const CALC_NATURE_MAP={Assuré:['defense','attack'],Bizarre:[null,null],Brave:['attack','speed'],Calme:['special-defense','attack'],Discret:['special-attack','speed'],Docile:[null,null],Doux:['special-attack','defense'],Foufou:['special-attack','special-defense'],Gentil:['special-defense','defense'],Hardi:[null,null],Jovial:['speed','special-attack'],Lâche:['defense','special-defense'],Malin:['defense','special-attack'],Malpoli:['special-defense','speed'],Mauvais:['attack','special-defense'],Modeste:['special-attack','attack'],Naïf:['speed','special-defense'],Pressé:['speed','defense'],Prudent:['special-defense','special-attack'],Pudique:[null,null],Relax:['defense','speed'],Rigide:['attack','special-attack'],Sérieux:[null,null],Solo:['attack','defense'],Timide:['speed','attack']};
