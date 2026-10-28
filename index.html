@@ -567,14 +567,16 @@ const monoSeen={1:new Set(),2:new Set()};
 const monoExcluded={1:new Set(),2:new Set()};
 function monoReset(){monoDiceType=null;monoDiceFaces=[];monoDiceResult=null;for(const n of [1,2]){monoSeen[n].clear();monoExcluded[n].clear()}}
 function monoEligibleTypes(n){
- const banned=new Set(monoSeen[n]);
+ // Une seule réserve de types pour les deux joueurs : un type tiré est définitivement exclu pour tous.
+ const banned=new Set([...monoSeen[1],...monoSeen[2]]);
  for(const p of teams[n])for(const t of p.types)banned.add(t);
+ if(monoDiceType)banned.add(monoDiceType);
  return TYPES.map(x=>x.en).filter(t=>!banned.has(t));
 }
 let monoDiceResult=null;
 function monoRoll(n){
  const available=monoEligibleTypes(n);
- if(!available.length)throw Error('Aucun type disponible pour ce joueur.');
+ if(!available.length)throw Error('Aucun type inédit disponible : les types déjà tirés par les deux joueurs sont exclus.');
  let face,chosen;
  do{face=1+Math.floor(Math.random()*18);chosen=TYPES[face-1].en}while(!available.includes(chosen));
  monoDiceResult=face;monoDiceFaces=TYPES.map(x=>x.en);monoDiceType=chosen;
