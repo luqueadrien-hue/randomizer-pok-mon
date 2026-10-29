@@ -25,3 +25,10 @@ Ce document est un protocole de test, pas un certificat de sécurité. Ne pas pu
 
 ## Publication
 Ne remplacer les règles de production qu'après validation de ces scénarios et résolution des limitations bloquantes. Sauvegarder les règles précédentes pour permettre un retour arrière.
+
+## Intégration du 29 octobre 2026
+- Vérification côté client de l'UID Firebase du propriétaire avant le lancement du challenge.
+- Validation renforcée des profils et sièges dans le fichier de règles préparatoire.
+- **Non déployé dans Firebase** : les règles de production restent provisoires.
+- **Non terminé** : confidentialité des salons et des réponses, contrôle serveur des manches, protection complète des tables, validation de toutes les branches de jeu, tests émulateur.
+- Ne pas présenter ces changements comme l'intégration complète des douze protections.
