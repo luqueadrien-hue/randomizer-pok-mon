@@ -32,3 +32,10 @@ Ne remplacer les règles de production qu'après validation de ces scénarios et
 - **Non déployé dans Firebase** : les règles de production restent provisoires.
 - **Non terminé** : confidentialité des salons et des réponses, contrôle serveur des manches, protection complète des tables, validation de toutes les branches de jeu, tests émulateur.
 - Ne pas présenter ces changements comme l'intégration complète des douze protections.
+
+## Audit complémentaire — fuite des réponses (29 octobre)
+- `mpSnapshot()` place `current[].pokemonId` dans `/rooms/$room/state`, lu par les deux joueurs.
+- `mpHydrateState()` reconstruit le Pokémon depuis ce champ ; le supprimer sans protocole de sélection/révélation casserait le déroulement du jeu.
+- `state.current[].dexChoices`, `teams`, et d'autres champs doivent être audités pour éviter des divulgations avant révélation.
+- La correction exige une séparation des propositions publiques et des tirages privés, avec un protocole de révélation, et des règles empêchant le devineur de lire les tirages privés.
+- Ne pas publier les règles tant que cette séparation n'est pas implémentée et testée.
