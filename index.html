@@ -520,7 +520,7 @@ window.addEventListener('DOMContentLoaded',()=>{
  mpSetStatus('🟡 Vérification des participants…');
  try{
   const roomRef=mpRoom(mpSession.room),snap=await roomRef.once('value'),room=snap.val()||{};
-  if(!(mpSession.role==='host'||room.hostIds?.[mpSession.id]||room.players?.[mpSession.id]?.role==='host'))throw Error('Seul l’organisateur peut lancer le challenge.');
+  if(room.ownerUid!==MPAUTH?.currentUser?.uid||mpSession.id!==room.ownerUid)throw Error('Seul le propriétaire authentifié peut lancer le challenge.');
   const connected=Object.entries(room.players||{}).filter(([id,p])=>p&&p.online!==false);
   if(connected.length<2)throw Error('Deux participants connectés sont nécessaires. Actuellement : '+connected.length+'. Demande au second joueur de rejoindre ce salon et de rester connecté.');
   let seats={...(room.seats||{})};
