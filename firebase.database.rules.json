@@ -72,8 +72,7 @@
         },
         "modulo": {
           ".write": "auth != null && root.child('rooms').child($room).child('players').child(auth.uid).exists() && (root.child('rooms').child($room).child('started').val() === true || root.child('rooms').child($room).child('ownerUid').val() === auth.uid)"
-        },
-        ".validate": "newData.hasChildren(['ownerUid','created','hostIds']) && newData.child('ownerUid').val() === auth.uid && newData.child('hostIds').child(auth.uid).val() === true"
+        }
       }
     }
   }
