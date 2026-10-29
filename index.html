@@ -529,7 +529,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(!seats[1]||!seats[2]||seats[1]===seats[2])throw Error('Impossible d’attribuer deux joueurs distincts.');
   // Au lancement, le joueur 1 génère et le joueur 2 devine.
   player=2;current=[];batchLocked=false;mpPrivateBatchOwner=null;
-  await roomRef.update({seats,started:true,state:await mpSnapshot()});
+  await roomRef.update({'seats/1':seats[1],'seats/2':seats[2],started:true,state:await mpSnapshot()});
   mpSetStatus('▶ Challenge lancé ! Joueur 1 et Joueur 2 ont été attribués.');
  }catch(e){mpSetStatus('❌ '+mpEsc(e.message))}
 };
