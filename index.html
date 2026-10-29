@@ -396,7 +396,7 @@ async function mpCreateRoom(){
  const name=(mpName.value.trim()||'Hôte').slice(0,24);let code=(mpCode.value.trim().toUpperCase()||mpCodeNew()),s;
  if(!/^[A-Z0-9+]+$/.test(code))throw Error('Code invalide : utilise au moins 1 caractère (A-Z, 0-9 ou +)');
  s=await mpRoom(code).once('value');
- if(s.exists())throw Error('Ce code est déjà utilisé : choisis un autre code');
+ if(s.exists()){const old=s.val()||{},connected=Object.values(old.players||{}).filter(p=>p&&p.online!==false);if(connected.length)throw Error('Ce code correspond à un salon encore actif. Rejoins-le ou choisis un autre code.');await mpRoom(code).remove();}
  const id=MPAUTH?.currentUser?.uid||mpId();await mpRoom(code).set({created:Date.now(),hostIds:{[id]:true},players:{[id]:{name,role:'host',online:true}}});
  await mpEnter({room:code,id,name,role:'host'}); await mpSyncState();
 }
@@ -421,7 +421,7 @@ async function mpEnter(s){
  mpSetStatus('🟢 Salon en ligne <b>'+mpEsc(s.room)+'</b> — '+(s.role==='host'?'Hôte':'Joueur')+' · Partage le lien pour inviter un ami.');
 }
 async function mpLeaveRoom(){
- if(mpSession){try{await mpRoom(mpSession.room).child('players/'+mpSession.id).remove()}catch(e){}}
+ if(mpSession){try{await mpRoom(mpSession.room).child('players/'+mpSession.id).remove()}catch(e){} try{const ref=mpRoom(mpSession.room),snap=await ref.child('players').once('value');if(!snap.exists())await ref.remove()}catch(e){console.warn('Nettoyage du salon',e)}}
  if(mpSession&&mpListener)mpRoom(mpSession.room).off('value',mpListener);
  mpSession=null;mpListener=null;localStorage.removeItem('pkmn-mp-session');mpPlayers.innerHTML='';mpSetStatus('Hors salon — crée ou rejoins un salon pour utiliser le Randomizer.');
 }
