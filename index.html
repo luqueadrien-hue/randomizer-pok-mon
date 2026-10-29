@@ -133,7 +133,7 @@ img,video,canvas,svg{max-width:100%}
 <div><input id="mpName" placeholder="Pseudo" maxlength="24"><button id="mpCreate" class="primary">👑 Créer un salon</button></div>
 <div><input id="mpCode" placeholder="Code du salon (1 caractère ou +)"><button id="mpJoin">🎮 Rejoindre</button></div>
 </div>
-<div id="mpStatus" class="mpstate">🌐 Pour jouer à distance, crée un salon puis partage son lien avec tes amis.</div>
+<div class="controls" style="margin:10px 0"><label>Nombre de tables (2 joueurs par table)<input id="mpTableCount" type="number" min="1" max="50" value="1" style="max-width:110px"></label></div><div id="mpTablesPanel" class="mpstate" style="margin:8px 0"></div><div id="mpStatus" class="mpstate">🌐 Pour jouer à distance, crée un salon puis partage son lien avec tes amis.</div>
 <div id="mpPlayers" class="mpplayers"></div><div id="mpRoleStatus" class="turn">Attribution des rôles en attente.</div><div id="mpLobbyHelp" class="mpstate" style="margin-top:8px">Connecte-toi comme organisateur pour attribuer les joueurs.</div><div id="mpLobby" class="mpstate" style="margin-top:8px">Les participants apparaîtront ici.</div><div class="actions"><button id="mpStartChallenge" class="primary">▶ Lancer le challenge</button></div>
 <div class="actions"><button id="mpCopy">🔗 Copier le lien d’invitation</button><button id="mpShare" type="button" class="primary">📤 Partager le salon</button><button id="mpLeave" class="danger">Quitter le salon</button></div><div id="mpShareOptions" class="shareOptions" hidden></div>
 </div>
@@ -387,6 +387,10 @@ const mpPlayers=document.getElementById('mpPlayers');
 let mpSession=null,mpApplying=false,mpListener=null,mpPrivateBatchOwner=null,mpLobbyStarted=false,mpSeats={},mpGenerators={};
 function mpEsc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function mpRoom(c){mpRequireDB();return MPDB.ref('rooms/'+c)}
+function mpTableCode(root,n){return root+'+T'+n}
+function mpTableRoot(code){return code.replace(/\+T[1-9][0-9]*$/,'')}
+async function mpGoTable(n){if(!mpSession)return;const root=mpTableRoot(mpSession.room),code=mpTableCode(root,n),snap=await mpRoom(code).once('value');if(!snap.exists())throw Error('Cette table n’existe pas.');const name=mpSession.name,id=mpSession.id,host=!!snap.val()?.hostIds?.[id];if(mpListener)mpRoom(mpSession.room).off('value',mpListener);try{await mpRoom(mpSession.room).child('players/'+id).remove()}catch(e){}await mpRoom(code).child('players/'+id).set({name,role:host?'host':'player',online:true});await mpEnter({room:code,id,name,role:host?'host':'player'});}
+async function mpReturnLobby(){if(!mpSession)return;const root=mpTableRoot(mpSession.room);if(root===mpSession.room)return;const id=mpSession.id,name=mpSession.name,host=mpSession.role==='host';if(mpListener)mpRoom(mpSession.room).off('value',mpListener);await mpRoom(mpSession.room).child('players/'+id).remove();await mpRoom(root).child('players/'+id).set({name,role:host?'host':'player',online:true});await mpEnter({room:root,id,name,role:host?'host':'player'});}
 function mpCodeNew(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('')}
 function mpId(){return (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)).replace(/-/g,'').slice(0,12)}
 function mpSetStatus(t){const e=document.getElementById('mpStatus');if(e)e.innerHTML=t}
@@ -397,7 +401,7 @@ async function mpCreateRoom(){
  if(!/^[A-Z0-9+]+$/.test(code))throw Error('Code invalide : utilise au moins 1 caractère (A-Z, 0-9 ou +)');
  s=await mpRoom(code).once('value');
  if(s.exists()){const old=s.val()||{},connected=Object.values(old.players||{}).filter(p=>p&&p.online!==false);if(connected.length)throw Error('Ce code correspond à un salon encore actif. Rejoins-le ou choisis un autre code.');await mpRoom(code).remove();}
- const id=MPAUTH?.currentUser?.uid||mpId();await mpRoom(code).set({created:Date.now(),hostIds:{[id]:true},players:{[id]:{name,role:'host',online:true}}});
+ const id=MPAUTH?.currentUser?.uid||mpId();const count=Math.max(1,Math.min(50,Number(document.getElementById('mpTableCount').value)||1));await mpRoom(code).set({created:Date.now(),tableCount:count,hostIds:{[id]:true},players:{[id]:{name,role:'host',online:true}}});if(count>1){const updates={};for(let n=1;n<=count;n++)updates[mpTableCode(code,n)]={created:Date.now(),parentRoom:code,tableNumber:n,hostIds:{[id]:true},players:{}};await MPDB.ref('rooms').update(updates)}
  await mpEnter({room:code,id,name,role:'host'}); await mpSyncState();
 }
 async function mpJoinRoom(){
@@ -471,6 +475,7 @@ function mpReceive(r){
  if(!r)return;
  try{if(typeof moduloReceive==='function')moduloReceive(r.modulo||null)}catch(e){console.warn('Module modulo isolé :',e)}
  const ps=r.players||{},entries=Object.entries(ps).filter(([id,p])=>p&&p.online!==false);
+ const tablesPanel=document.getElementById('mpTablesPanel');if(tablesPanel){const root=mpTableRoot(mpSession?.room||'');if(r.tableCount>1){tablesPanel.innerHTML='<strong>🏆 Tournoi : '+r.tableCount+' tables indépendantes — '+(r.tableCount*2)+' places</strong><div class="actions">'+Array.from({length:r.tableCount},(_,i)=>'<button type="button" data-table="'+(i+1)+'">Table '+(i+1)+' · 2 joueurs</button>').join('')+'</div><small>Chaque table possède son propre tirage, ses équipes et ses manches. Clique sur une table pour y jouer.</small>';tablesPanel.querySelectorAll('[data-table]').forEach(b=>b.onclick=()=>mpGoTable(Number(b.dataset.table)).catch(e=>mpSetStatus('❌ '+mpEsc(e.message))))}else if(r.parentRoom){tablesPanel.innerHTML='<strong>🎮 Table '+r.tableNumber+' — partie indépendante</strong> <button id="mpBackLobby" type="button">↩ Retour au salon principal</button>';document.getElementById('mpBackLobby').onclick=()=>mpReturnLobby().catch(e=>mpSetStatus('❌ '+mpEsc(e.message)))}else tablesPanel.innerHTML='';}
  mpSeats=r.seats||{};mpGenerators={1:mpSeats[2]||'',2:mpSeats[1]||''};mpLobbyStarted=!!r.started;
  mpPlayers.innerHTML=entries.map(([id,p])=>'<span class="mpbadge">'+(p.role==='host'?'👑 ':'')+mpEsc(p.name)+(p.online===false?' ⚫':' 🟢')+'</span>').join('');
  const isHost=!!mpSession&&(mpSession.role==='host'||!!r.hostIds?.[mpSession.id]||ps[mpSession.id]?.role==='host');
