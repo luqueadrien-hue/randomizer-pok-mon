@@ -389,7 +389,7 @@ function mpEsc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'
 function mpRoom(c){mpRequireDB();return MPDB.ref('rooms/'+c)}
 function mpTableCode(root,n){return root+'+T'+n}
 function mpTableRoot(code){return code.replace(/\+T[1-9][0-9]*$/,'')}
-async function mpGoTable(n){if(!mpSession)return;const root=mpTableRoot(mpSession.room),code=mpTableCode(root,n),snap=await mpRoom(code).once('value');if(!snap.exists())throw Error('Cette table n’existe pas.');const name=mpSession.name,id=mpSession.id,host=!!snap.val()?.hostIds?.[id];if(mpListener)mpRoom(mpSession.room).off('value',mpListener);try{await mpRoom(mpSession.room).child('players/'+id).remove()}catch(e){}await mpRoom(code).child('players/'+id).set({name,role:host?'host':'player',online:true});await mpEnter({room:code,id,name,role:host?'host':'player'});}
+async function mpGoTable(n){if(!mpSession)return;const root=mpTableRoot(mpSession.room),code=mpTableCode(root,n),snap=await mpRoom(code).once('value');if(!snap.exists())throw Error('Cette table n’existe pas.');const name=mpSession.name,id=mpSession.id,host=!!snap.val()?.hostIds?.[id];const occupied=Object.entries(snap.val()?.players||{}).filter(([pid,p])=>pid!==id&&p?.online!==false);if(occupied.length>=2)throw Error('Cette table possède déjà deux joueurs.');if(mpListener)mpRoom(mpSession.room).off('value',mpListener);try{await mpRoom(mpSession.room).child('players/'+id).remove()}catch(e){}await mpRoom(code).child('players/'+id).set({name,role:host?'host':'player',online:true});await mpEnter({room:code,id,name,role:host?'host':'player'});}
 async function mpReturnLobby(){if(!mpSession)return;const root=mpTableRoot(mpSession.room);if(root===mpSession.room)return;const id=mpSession.id,name=mpSession.name,host=mpSession.role==='host';if(mpListener)mpRoom(mpSession.room).off('value',mpListener);await mpRoom(mpSession.room).child('players/'+id).remove();await mpRoom(root).child('players/'+id).set({name,role:host?'host':'player',online:true});await mpEnter({room:root,id,name,role:host?'host':'player'});}
 function mpCodeNew(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join('')}
 function mpId(){return (crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)).replace(/-/g,'').slice(0,12)}
@@ -410,7 +410,7 @@ async function mpJoinRoom(){
  if(!/^[A-Z0-9+]+$/.test(code))throw Error('Code invalide : entre au moins 1 caractère (A-Z, 0-9 ou +)');
  const s=await mpRoom(code).once('value');if(!s.exists())throw Error('Salon introuvable');
  const id=MPAUTH?.currentUser?.uid||mpId();
- const room=s.val()||{},players=room.players||{};
+ const room=s.val()||{},players=room.players||{};if(room.parentRoom&&Object.values(players).filter(p=>p?.online!==false).length>=2)throw Error('Cette table est complète (2 joueurs).');
  if(players[id])throw Error('Tu participes déjà à ce salon sur cet appareil : recharge la page pour reprendre ta session.');
  const role='player';
  await mpRoom(code).child('players/'+id).set({name,role,online:true});
