@@ -163,41 +163,42 @@ img,video,canvas,svg{max-width:100%}
 <option value="weaknesses">20. Faiblesses</option>
 <option value="progressive">21. Génération mystère (indices progressifs)</option>
 <option value="habitat">22. Habitat</option>
-<option value="capturelocation">23. Lieu de capture</option>
-<option value="realjob">24. Métier dans notre monde</option>
-<option value="morphology">25. Morphologie du Pokémon</option>
-<option value="multimove">26. Movepool</option>
-<option value="japanesename">27. Nom japonais</option>
-<option value="dexnumber">28. Numéro du Pokédex</option>
-<option value="regionaldex">29. Numéro Pokédex régional</option>
-<option value="helditem">30. Objet tenu</option>
-<option value="realhabitat">31. Où il pourrait vivre dans notre monde</option>
-<option value="shinypalette">32. Palette Shiny</option>
-<option value="specialtrait">33. Particularité spéciale</option>
-<option value="weight">34. Poids</option>
-<option value="zonemusic">35. Pokémon par musique de zone</option>
-<option value="wildgift">36. Pokémon sauvage ou cadeau ?</option>
-<option value="firstconsole">37. Première console d’apparition</option>
-<option value="firstlastletter">38. Première et dernière lettre</option>
-<option value="firstregion">39. Première région d’apparition</option>
-<option value="stat-hp">40. PV à l'aveugle</option>
-<option value="phoneticrebus">41. Rébus phonétique</option>
-<option value="evyield">42. Rendement EV</option>
-<option value="genderrate">43. Répartition des genres</option>
-<option value="resistances">44. Résistances / immunités</option>
-<option value="smogontier">45. Smogon — tiers compétitifs</option>
-<option value="retrosprite">46. Sprite rétro</option>
-<option value="dominantstat">47. Stat dominante</option>
-<option value="stat-lowest">48. Statistique la plus basse</option>
-<option value="stat-highest">49. Statistique la plus haute</option>
-<option value="height">50. Taille</option>
-<option value="hiddenability">51. Talent caché</option>
-<option value="capturerate">52. Taux de capture</option>
-<option value="stats">53. Total de stats (BST)</option>
-<option value="triochoice">54. Trio : accepter ou refuser</option>
-<option value="typeblind">55. Type à l'aveugle</option>
-<option value="egg">56. uf : type et groupe</option>
-<option value="stat-speed">57. Vitesse à l'aveugle</option>
+<option value="luckdice">23. 🎲 Lancer de dés — Chance aléatoire</option>
+<option value="capturelocation">24. Lieu de capture</option>
+<option value="realjob">25. Métier dans notre monde</option>
+<option value="morphology">26. Morphologie du Pokémon</option>
+<option value="multimove">27. Movepool</option>
+<option value="japanesename">28. Nom japonais</option>
+<option value="dexnumber">29. Numéro du Pokédex</option>
+<option value="regionaldex">30. Numéro Pokédex régional</option>
+<option value="helditem">31. Objet tenu</option>
+<option value="realhabitat">32. Où il pourrait vivre dans notre monde</option>
+<option value="shinypalette">33. Palette Shiny</option>
+<option value="specialtrait">34. Particularité spéciale</option>
+<option value="weight">35. Poids</option>
+<option value="zonemusic">36. Pokémon par musique de zone</option>
+<option value="wildgift">37. Pokémon sauvage ou cadeau ?</option>
+<option value="firstconsole">38. Première console d’apparition</option>
+<option value="firstlastletter">39. Première et dernière lettre</option>
+<option value="firstregion">40. Première région d’apparition</option>
+<option value="stat-hp">41. PV à l'aveugle</option>
+<option value="phoneticrebus">42. Rébus phonétique</option>
+<option value="evyield">43. Rendement EV</option>
+<option value="genderrate">44. Répartition des genres</option>
+<option value="resistances">45. Résistances / immunités</option>
+<option value="smogontier">46. Smogon — tiers compétitifs</option>
+<option value="retrosprite">47. Sprite rétro</option>
+<option value="dominantstat">48. Stat dominante</option>
+<option value="stat-lowest">49. Statistique la plus basse</option>
+<option value="stat-highest">50. Statistique la plus haute</option>
+<option value="height">51. Taille</option>
+<option value="hiddenability">52. Talent caché</option>
+<option value="capturerate">53. Taux de capture</option>
+<option value="stats">54. Total de stats (BST)</option>
+<option value="triochoice">55. Trio : accepter ou refuser</option>
+<option value="typeblind">56. Type à l'aveugle</option>
+<option value="egg">57. uf : type et groupe</option>
+<option value="stat-speed">58. Vitesse à l'aveugle</option>
 <option value="vgc">🏆 VGC — format compétitif</option>
 <option value="learnleave">📦 Apprendre ou à laisser</option>
 <option value="randombox">📦 Boîte randomisée</option>
@@ -434,7 +435,7 @@ function formRevealText(p){return p?.formKey&&concealedFormName(p)!==p.name?'For
 function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
 let mpLastReveal=null,mpSeenRevealId=null;
 async function mpSnapshot(){
- return {player,revealEvent:mpLastReveal,mode:gameMode.value,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,evolutionStage:document.getElementById("evolutionStage")?.value||"all",typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value,competitiveGeneration:competitiveGeneration.value},current:current.map(x=>({pokemonId:x.p?.id||null,clue:x.clue||'',offerLabel:x.offerLabel||null,dexSource:x.dexSource||null,dexChoices:gameMode.value==='dexdesc'?(x.dexChoices||[]):null,dexSelected:gameMode.value==='dexdesc'?(x.dexSelected??null):null,bodyCrop:isBodyMode(gameMode.value)?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,monoSeen:{1:[...monoSeen[1]],2:[...monoSeen[2]]},monoExcluded:{1:[...monoExcluded[1]],2:[...monoExcluded[2]]},monoDiceType,monoDiceFaces,monoDiceResult,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
+ return {player,revealEvent:mpLastReveal,mode:gameMode.value,luckDie:gameMode.value==='luckdice'?luckDie:null,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,evolutionStage:document.getElementById("evolutionStage")?.value||"all",typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value,competitiveGeneration:competitiveGeneration.value},current:current.map(x=>({pokemonId:x.p?.id||null,clue:x.clue||'',offerLabel:x.offerLabel||null,dexSource:x.dexSource||null,dexChoices:gameMode.value==='dexdesc'?(x.dexChoices||[]):null,dexSelected:gameMode.value==='dexdesc'?(x.dexSelected??null):null,bodyCrop:isBodyMode(gameMode.value)?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,monoSeen:{1:[...monoSeen[1]],2:[...monoSeen[2]]},monoExcluded:{1:[...monoExcluded[1]],2:[...monoExcluded[2]]},monoDiceType,monoDiceFaces,monoDiceResult,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
 }
 async function mpSyncState(){
  if(!mpSession||mpApplying||gameMode.value==='triochoice')return;
@@ -444,7 +445,7 @@ async function mpHydrateState(st){
  if(!st||mpApplying)return;mpApplying=true;
  try{
   if(st.mode&&gameMode.value!=='triochoice'&&st.mode!=='triochoice'){if(gameMode.value!==st.mode)surpriseActive=false;gameMode.value=(st.mode==='olddesc'?'dexdesc':st.mode==='bstonly'?'stats':st.mode);}
-  const z=st.settings||{};for(const [k,v] of Object.entries(z)){const el=document.getElementById(k);if(el&&v!=null)el.value=v}
+  luckDie=st.mode==='luckdice'?(st.luckDie||null):null;const z=st.settings||{};for(const [k,v] of Object.entries(z)){const el=document.getElementById(k);if(el&&v!=null)el.value=v}
   if(typeof updateModePanels==='function')updateModePanels();if(typeof syncCompetitiveGeneration==='function')syncCompetitiveGeneration();
   const mine=!!mpSession&&!!st.proposalOwnerId&&st.proposalOwnerId===mpSession.id;
   mpPrivateBatchOwner=st.proposalOwnerId||null;
@@ -564,7 +565,25 @@ window.addEventListener('DOMContentLoaded',()=>{
 const TYPES=[['normal','Normal'],['fire','Feu'],['water','Eau'],['electric','Électrik'],['grass','Plante'],['ice','Glace'],['fighting','Combat'],['poison','Poison'],['ground','Sol'],['flying','Vol'],['psychic','Psy'],['bug','Insecte'],['rock','Roche'],['ghost','Spectre'],['dragon','Dragon'],['dark','Ténèbres'],['steel','Acier'],['fairy','Fée']].map(x=>({en:x[0],fr:x[1]}));
 const GEN={1:[1,151],2:[152,251],3:[252,386],4:[387,493],5:[494,649],6:[650,721],7:[722,809],8:[810,905],9:[1,1025]};
 const cache=new Map();
-const pokePending=new Map();const moveCache=new Map();let player=1,teams={1:[],2:[]},current=[];let starterPokemon=null;let dealStarted=false;let dealStage=0,dealRemaining=[],dealUsed=new Set(),dealClueFixed="height";let batchLocked=false;let auctionState={active:false,pokemon:null,bids:{1:0,2:0},passed:{1:false,2:false},budget:{1:100,2:100},malus:null};
+const pokePending=new Map();const moveCache=new Map();let player=1,teams={1:[],2:[]},current=[];
+let luckDie=null;
+const LUCK_FACES=[
+ {name:'Malchance : seulement deux choix',count:2},
+ {name:'Coup du sort : premier Pokémon imposé',count:3,forced:0},
+ {name:'Coup du sort : dernier Pokémon imposé',count:3,forced:2},
+ {name:'Hasard total : choix imposé au hasard',count:3,random:true},
+ {name:'Choix classique : trois propositions',count:3},
+ {name:'Bonne pioche : quatre propositions',count:4},
+ {name:'Grande chance : cinq propositions',count:5},
+ {name:'Indice bonus : type révélé',count:3,hint:'type'},
+ {name:'Indice bonus : génération révélée',count:3,hint:'gen'},
+ {name:'Indice bonus : taille révélée',count:3,hint:'height'},
+ {name:'Indice bonus : BST révélé',count:3,hint:'bst'},
+ {name:'Jackpot : six propositions',count:6}
+];
+function luckRoll(){const face=Math.floor(Math.random()*LUCK_FACES.length);luckDie={face:face+1,...LUCK_FACES[face]};if(luckDie.random)luckDie.forced=Math.floor(Math.random()*3);return luckDie}
+function luckClue(p){if(!luckDie?.hint)return '🎲 Pokémon mystère';if(luckDie.hint==='type')return '🏷️ Type : '+p.types.map(frt).join(' / ');if(luckDie.hint==='gen')return '🗺️ '+(p.gen||'Génération inconnue');if(luckDie.hint==='height')return '📏 '+p.height+' m';return '📊 BST : '+p.total}
+let starterPokemon=null;let dealStarted=false;let dealStage=0,dealRemaining=[],dealUsed=new Set(),dealClueFixed="height";let batchLocked=false;let auctionState={active:false,pokemon:null,bids:{1:0,2:0},passed:{1:false,2:false},budget:{1:100,2:100},malus:null};
 function range(){return generation.value==='all'?[1,1025]:GEN[generation.value]}
 let monoDiceType=null;
 let monoDiceFaces=[];
@@ -1706,6 +1725,9 @@ const QD_CATS=[
  ...QD_GENS.map(([k,n])=>['gen-'+k,'🗺️ Génération','Est-il apparu en génération '+n+' ?']),
  ...QD_COLORS.map(([k,n])=>['color-'+k,'🎨 Pokédex','Sa couleur Pokédex est-elle '+n+' ?']),
  ...QD_EGGS.map(([k,n])=>['egg-'+k,'🥚 Reproduction','Appartient-il au groupe d’œufs '+n+' ?']),
+ ['position-left','🗳️ Humour — position','Le Pokémon est-il de gauche (colonne gauche de la boîte) ?'],
+ ['position-center','🗳️ Humour — position','Le Pokémon est-il du centre (colonne centrale) ?'],
+ ['position-right','🗳️ Humour — position','Le Pokémon est-il de droite (colonne droite) ?'],
  ['dualtype','🏷️ Types','Possède-t-il deux types ?'],['legendary','⭐ Statut','Est-ce un Pokémon légendaire ?'],['mythical','⭐ Statut','Est-ce un Pokémon fabuleux ?'],['baby','⭐ Statut','Est-ce un bébé Pokémon ?'],
  ['has-evolution','🌱 Évolution','Peut-il encore évoluer ?'],['evolved','🌱 Évolution','A-t-il déjà évolué depuis un autre Pokémon ?'],['final-evo','🌱 Évolution','Est-il au dernier stade de sa lignée ?'],['evo-level','🌱 Évolution','Sa lignée comporte-t-elle une évolution par niveau ?'],['evo-item','🌱 Évolution','Sa lignée comporte-t-elle une évolution avec un objet ?'],['evo-trade','🌱 Évolution','Sa lignée comporte-t-elle une évolution par échange ?'],['evo-friendship','🌱 Évolution','Sa lignée comporte-t-elle une évolution liée au bonheur ?'],
  ['mega','✨ Formes spéciales','Possède-t-il une Méga-Évolution ?'],['gmax','✨ Formes spéciales','Possède-t-il une forme Gigamax ?'],['regional','✨ Formes spéciales','Possède-t-il une forme régionale ?'],['multi-form','✨ Formes spéciales','Possède-t-il plusieurs formes/variétés ?'],['switch-form','✨ Formes spéciales','Peut-il changer de forme ?'],
@@ -1751,7 +1773,8 @@ async function qdAsk(k){
  const asker=qd.asker;if(qd.busy||qd.phase!=='questions'||qd.used[asker].length>=3||qd.used[asker].includes(k)||mpSession&&mpSession.id!==mpSeats[asker])return;qd.busy=true;qdRender();
  try{
  const answerer=3-asker,target=await getP(qd.targets[answerer]),open=QD_OPEN.find(x=>x[0]===k),cat=open||QD_CATS.find(x=>x[0]===k),label=cat?.[2]||k;let answer,next=[],before=qd.candidates[asker]?.length||qd.box.length;
- if(open){const value=await qdOpenValue(target,k);answer=qdOpenDisplay(k,value);for(const id of(qd.candidates[asker]||qd.box)){const p=await getP(Number(id));if(await qdOpenValue(p,k)===value)next.push(Number(id))}}
+ if(k.startsWith('position-')){const position={left:0,center:1,right:2}[k.slice(9)];const targetIndex=qd.box.indexOf(qd.targets[answerer]);const yes=targetIndex>=0&&targetIndex%3===position;answer=yes?'Oui':'Non';next=(qd.candidates[asker]||qd.box).filter(id=>{const index=qd.box.indexOf(id);return (index>=0&&index%3===position)===yes})}
+ else if(open){const value=await qdOpenValue(target,k);answer=qdOpenDisplay(k,value);for(const id of(qd.candidates[asker]||qd.box)){const p=await getP(Number(id));if(await qdOpenValue(p,k)===value)next.push(Number(id))}}
  else{const yes=await qdPredicate(target,k);answer=yes?'Oui':'Non';for(const id of(qd.candidates[asker]||qd.box)){const p=await getP(Number(id));if(await qdPredicate(p,k)===yes)next.push(Number(id))}}
  qd.used[asker].push(k);qd.candidates[asker]=next;qd.answers.push({asker,label,answer,kind:open?'open':'yesno',remaining:next.length,removed:before-next.length});
  if(qd.used[asker].length>=3){if(asker===1&&qd.used[2].length<3)qd.asker=2;else if(asker===2&&qd.used[1].length<3)qd.asker=1;else qd.phase='guess1'}
@@ -1854,7 +1877,7 @@ async function rollCards(){
    return;
  }
  dealPanel.style.display='none';
- let n=parseInt(choiceCount.value)||3;n=Math.max(2,Math.min(12,n));if(typeMode.value==='random-d10')n=3;if(['hangman','anagramtrio'].includes(gameMode.value))n=3;else choiceCount.value=n;hangmanState=null;
+ let n=parseInt(choiceCount.value)||3;n=Math.max(2,Math.min(12,n));if(gameMode.value==='luckdice'){luckRoll();n=luckDie.count;}if(typeMode.value==='random-d10')n=3;if(['hangman','anagramtrio'].includes(gameMode.value))n=3;else choiceCount.value=n;hangmanState=null;
  const used=new Set();current=[];batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML=pokeWaitingHTML('Trois Pokémon mystères en préparation…');if(mpSession){current=[];mpLastReveal=null;await mpSyncState()}
  const diceMode=typeMode.value==='random-d10';
  if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');if(!monoDiceType)monoRoll(player);turn.textContent='🎲 D18 : face '+monoDiceResult+'/18 → '+frt(monoDiceType)+' | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
@@ -1937,7 +1960,7 @@ async function rollCards(){
      const cg=9;const cry=p.cries?.latest||p.cries?.legacy;
      c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br><small data-media-answer>Source : cri le plus récent disponible</small>`:'🔊 Cri indisponible';
    }
-   current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,dexChoices:gameMode.value==='dexdesc'?(p._dexChoices||[]):null,dexSelected:gameMode.value==='dexdesc'?(p._dexSelected??null):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null,shinyAnswer:gameMode.value==='shinypalette'});
+   if(gameMode.value==='luckdice')c='🎲 D12 : '+luckDie.face+'/12 — '+luckDie.name+'<hr>'+luckClue(p);current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,dexChoices:gameMode.value==='dexdesc'?(p._dexChoices||[]):null,dexSelected:gameMode.value==='dexdesc'?(p._dexSelected??null):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null,shinyAnswer:gameMode.value==='shinypalette'});
  }
  if(gameMode.value==='ranking'){
    current.forEach((x,i)=>{
@@ -2429,7 +2452,7 @@ function pick(i){
  if(mpSession&&!mpLobbyStarted)return;
  // En réseau, l'adversaire génère les propositions mais c'est bien le joueur actif qui choisit.
  if(mpSession&&mpSession.id!==mpSeats[player])return;
- if(batchLocked||!current[i]||!current[i].p)return;
+ if(batchLocked||!current[i]||!current[i].p)return;if(gameMode.value==='luckdice'&&luckDie?.forced!=null&&i!==luckDie.forced)return alert('🎲 Le dé impose le Pokémon n°'+(luckDie.forced+1)+'.');
  if(gameMode.value==='learnleave'&&dealStage!==4)return;
  batchLocked=true;
  if(mpSession){mpLastReveal={id:mpSession.id+':'+Date.now()+':'+i,origin:mpSession.id,pokemonId:current[i].p.id};mpSeenRevealId=mpLastReveal.id}
