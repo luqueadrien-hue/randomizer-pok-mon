@@ -29,14 +29,15 @@
         "players": {
           "$uid": {
             ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($room).exists() && (data.exists() || !root.child('rooms').child($room).child('parentRoom').exists() || root.child('rooms').child($room).child('players').numChildren() < 2)",
-            ".validate": "newData.hasChildren(['name','role','online']) && newData.numChildren() === 3 && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 24 && newData.child('role').val() === (root.child('rooms').child($room).child('ownerUid').val() === $uid ? 'host' : 'player') && newData.child('online').isBoolean()"
+            ".validate": "newData.hasChildren(['name','role','online']) && newData.numChildren() === 3 && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 24 && newData.child('role').isString() && newData.child('role').val() === (root.child('rooms').child($room).child('ownerUid').val() === $uid ? 'host' : 'player') && newData.child('online').isBoolean()"
           }
         },
         "seats": {
           "$seat": {
             ".write": "auth != null && root.child('rooms').child($room).child('ownerUid').val() === auth.uid && ($seat === '1' || $seat === '2')",
             ".validate": "newData.isString() && root.child('rooms').child($room).child('players').child(newData.val()).exists()"
-          }
+          },
+          ".validate": "!newData.child('1').exists() || !newData.child('2').exists() || newData.child('1').val() !== newData.child('2').val()"
         },
         "started": {
           ".write": "auth != null && root.child('rooms').child($room).child('ownerUid').val() === auth.uid",
