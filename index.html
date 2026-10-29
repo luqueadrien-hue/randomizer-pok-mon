@@ -408,18 +408,16 @@ async function mpJoinRoom(){
  const id=MPAUTH?.currentUser?.uid||mpId();
  const room=s.val()||{},players=room.players||{};
  if(players[id])throw Error('Tu participes déjà à ce salon sur cet appareil : recharge la page pour reprendre ta session.');
- const hostCount=Object.values(players).filter(p=>p&&p.role==='host').length;
  const role='player';
  await mpRoom(code).child('players/'+id).set({name,role,online:true});
- if(role==='host')await mpRoom(code).child('hostIds/'+id).set(true);
  await mpEnter({room:code,id,name,role});
 }
 async function mpEnter(s){
  await mpAuthReady;
  mpSession=s;localStorage.setItem('pkmn-mp-session',JSON.stringify(s));mpCode.value=s.room;
- const online=mpRoom(s.room).child('players/'+s.id+'/online');await online.set(true);online.onDisconnect().set(false);
+ const online=mpRoom(s.room).child('players/'+s.id+'/online');await online.onDisconnect().set(false);await online.set(true);
  if(mpListener)mpRoom(s.room).off('value',mpListener);
- mpListener=mpRoom(s.room).on('value',snap=>mpReceive(snap.val()));
+ mpListener=mpRoom(s.room).on('value',snap=>{try{mpReceive(snap.val())}catch(e){console.error('Affichage des participants',e);mpSetStatus('❌ Erreur d’affichage du salon : '+mpEsc(e.message))}},e=>mpSetStatus('❌ Lecture du salon refusée : '+mpEsc(e.code||e.message)));
  mpSetStatus('🟢 Salon en ligne <b>'+mpEsc(s.room)+'</b> — '+(s.role==='host'?'Hôte':'Joueur')+' · Partage le lien pour inviter un ami.');
 }
 async function mpLeaveRoom(){
@@ -471,7 +469,7 @@ async function mpHydrateState(st){
 }
 function mpReceive(r){
  if(!r)return;
- if(typeof moduloReceive==='function')moduloReceive(r.modulo||null);
+ try{if(typeof moduloReceive==='function')moduloReceive(r.modulo||null)}catch(e){console.warn('Module modulo isolé :',e)}
  const ps=r.players||{},entries=Object.entries(ps).filter(([id,p])=>p&&p.online!==false);
  mpSeats=r.seats||{};mpGenerators={1:mpSeats[2]||'',2:mpSeats[1]||''};mpLobbyStarted=!!r.started;
  mpPlayers.innerHTML=entries.map(([id,p])=>'<span class="mpbadge">'+(p.role==='host'?'👑 ':'')+mpEsc(p.name)+(p.online===false?' ⚫':' 🟢')+'</span>').join('');
