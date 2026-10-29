@@ -568,21 +568,50 @@ const cache=new Map();
 const pokePending=new Map();const moveCache=new Map();let player=1,teams={1:[],2:[]},current=[];
 let luckDie=null;
 const LUCK_FACES=[
- {name:'Malchance : seulement deux choix',count:2},
- {name:'Coup du sort : premier Pokémon imposé',count:3,forced:0},
- {name:'Coup du sort : dernier Pokémon imposé',count:3,forced:2},
- {name:'Hasard total : choix imposé au hasard',count:3,random:true},
+ {name:'Couleur Pokédex révélée',count:3,hint:'color'},
+ {name:'Poids révélé',count:3,hint:'weight'},
+ {name:'Première lettre révélée',count:3,hint:'first'},
+ {name:'Dernière lettre révélée',count:3,hint:'last'},
  {name:'Choix classique : trois propositions',count:3},
- {name:'Bonne pioche : quatre propositions',count:4},
- {name:'Grande chance : cinq propositions',count:5},
- {name:'Indice bonus : type révélé',count:3,hint:'type'},
- {name:'Indice bonus : génération révélée',count:3,hint:'gen'},
- {name:'Indice bonus : taille révélée',count:3,hint:'height'},
- {name:'Indice bonus : BST révélé',count:3,hint:'bst'},
- {name:'Jackpot : six propositions',count:6}
+ {name:'Groupe d’œufs révélé',count:3,hint:'egg'},
+ {name:'Habitat révélé',count:3,hint:'habitat'},
+ {name:'Type révélé',count:3,hint:'type'},
+ {name:'Génération révélée',count:3,hint:'gen'},
+ {name:'Taille révélée',count:3,hint:'height'},
+ {name:'BST révélé',count:3,hint:'bst'},
+ {name:'Talent révélé',count:3,hint:'ability'},
+ {name:'Taux de capture révélé',count:3,hint:'capture'},
+ {name:'Amitié de base révélée',count:3,hint:'friendship'},
+ {name:'Rendement EV révélé',count:3,hint:'ev'},
+ {name:'Statistique dominante révélée',count:3,hint:'best'},
+ {name:'Statistique la plus faible révélée',count:3,hint:'worst'},
+ {name:'Statut légendaire ou fabuleux révélé',count:3,hint:'legendary'},
+ {name:'Répartition des sexes révélée',count:3,hint:'gender'},
+ {name:'Nombre de types révélé',count:3,hint:'typecount'}
 ];
-function luckRoll(){const face=Math.floor(Math.random()*LUCK_FACES.length);luckDie={face:face+1,...LUCK_FACES[face]};if(luckDie.random)luckDie.forced=Math.floor(Math.random()*3);return luckDie}
-function luckClue(p){if(!luckDie?.hint)return '🎲 Pokémon mystère';if(luckDie.hint==='type')return '🏷️ Type : '+p.types.map(frt).join(' / ');if(luckDie.hint==='gen')return '🗺️ '+(p.gen||'Génération inconnue');if(luckDie.hint==='height')return '📏 '+p.height+' m';return '📊 BST : '+p.total}
+function luckRoll(){const face=Math.floor(Math.random()*LUCK_FACES.length);luckDie={face:face+1,...LUCK_FACES[face]};return luckDie}
+function luckClue(p){
+ const h=luckDie?.hint;if(!h)return '🎲 Pokémon mystère';
+ if(h==='type')return '🏷️ Type : '+p.types.map(frt).join(' / ');
+ if(h==='gen')return '🗺️ '+(p.gen||'Génération inconnue');
+ if(h==='height')return '📏 '+p.height+' m';
+ if(h==='bst')return '📊 BST : '+p.total;
+ if(h==='color')return '🎨 Couleur Pokédex : '+(p.color||'Inconnue');
+ if(h==='weight')return '⚖️ Poids : '+p.weight+' kg';
+ if(h==='first')return '🔤 Première lettre : '+p.name.charAt(0);
+ if(h==='last')return '🔤 Dernière lettre : '+p.name.slice(-1);
+ if(h==='egg')return '🥚 Groupe(s) d’œufs : '+(p.eggGroups||[]).join(', ');
+ if(h==='habitat')return '🌍 Habitat : '+(p.habitat||'Non répertorié');
+ if(h==='ability')return '✨ Talent : '+((p.abilities||[])[0]?.name||(p.abilities||[])[0]?.en||'Non répertorié');
+ if(h==='capture')return '🎯 Taux de capture : '+(p.captureRate??'Inconnu');
+ if(h==='friendship')return '😊 Amitié de base : '+(p.baseHappiness??'Inconnue');
+ if(h==='ev')return '📈 EV : '+(p.evYield||[]).map(x=>x.stat+' +'+x.amount).join(', ');
+ if(h==='best'||h==='worst'){const entries=Object.entries(p.stats||{}).filter(x=>typeof x[1]==='number').sort((a,b)=>h==='best'?b[1]-a[1]:a[1]-b[1]);return '📊 '+(h==='best'?'Meilleure':'Plus faible')+' stat : '+(entries[0]?.[0]||'Inconnue')+' ('+(entries[0]?.[1]??'?')+')'}
+ if(h==='legendary')return '⭐ '+(p.isMythical?'Fabuleux':p.isLegendary?'Légendaire':'Ni légendaire ni fabuleux');
+ if(h==='gender')return '⚥ Taux femelle : '+(p.genderRate===-1?'Sans sexe':(p.genderRate/8*100)+' %');
+ if(h==='typecount')return '🏷️ '+p.types.length+' type(s)';
+ return '🎲 Pokémon mystère';
+}
 let starterPokemon=null;let dealStarted=false;let dealStage=0,dealRemaining=[],dealUsed=new Set(),dealClueFixed="height";let batchLocked=false;let auctionState={active:false,pokemon:null,bids:{1:0,2:0},passed:{1:false,2:false},budget:{1:100,2:100},malus:null};
 function range(){return generation.value==='all'?[1,1025]:GEN[generation.value]}
 let monoDiceType=null;
@@ -1960,7 +1989,7 @@ async function rollCards(){
      const cg=9;const cry=p.cries?.latest||p.cries?.legacy;
      c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br><small data-media-answer>Source : cri le plus récent disponible</small>`:'🔊 Cri indisponible';
    }
-   if(gameMode.value==='luckdice')c='🎲 D12 : '+luckDie.face+'/12 — '+luckDie.name+'<hr>'+luckClue(p);current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,dexChoices:gameMode.value==='dexdesc'?(p._dexChoices||[]):null,dexSelected:gameMode.value==='dexdesc'?(p._dexSelected??null):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null,shinyAnswer:gameMode.value==='shinypalette'});
+   if(gameMode.value==='luckdice')c='🎲 D20 : '+luckDie.face+'/20 — '+luckDie.name+'<hr>'+luckClue(p);current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,dexChoices:gameMode.value==='dexdesc'?(p._dexChoices||[]):null,dexSelected:gameMode.value==='dexdesc'?(p._dexSelected??null):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null,shinyAnswer:gameMode.value==='shinypalette'});
  }
  if(gameMode.value==='ranking'){
    current.forEach((x,i)=>{
