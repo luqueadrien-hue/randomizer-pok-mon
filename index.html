@@ -669,6 +669,116 @@ const LUCK_FACES=[
   "hint": "best"
  }
 ];
+const LUCK_EXTRA_RULES=[
+ {
+  "number": 21,
+  "name": "La personne qui lance le dé peut connaître le movepool des 3 starters, mais le Pokémon choisi ne pourra porter aucun objet.",
+  "hint": "moves",
+  "restriction": "no-item"
+ },
+ {
+  "number": 22,
+  "name": "La personne qui lance le dé peut connaître le movepool des 3 starters, mais le Pokémon choisi ne pourra recevoir aucun EV.",
+  "hint": "moves",
+  "restriction": "no-ev"
+ },
+ {
+  "number": 23,
+  "name": "La personne qui lance le dé peut voir les 3 starters, mais le Pokémon choisi ne pourra pas évoluer.",
+  "hint": "reveal-all",
+  "restriction": "no-evolution"
+ },
+ {
+  "number": 24,
+  "name": "La personne qui lance le dé peut connaître les statistiques de base des 3 starters, mais le Pokémon choisi ne pourra utiliser aucune attaque de statut.",
+  "hint": "allstats",
+  "restriction": "no-status"
+ },
+ {
+  "number": 25,
+  "name": "La personne qui lance le dé peut connaître les talents des 3 starters, mais le Pokémon choisi devra conserver son premier talent standard.",
+  "hint": "ability",
+  "restriction": "first-ability"
+ },
+ {
+  "number": 26,
+  "name": "La personne qui lance le dé peut voir 2 des 3 starters, mais le Pokémon choisi ne pourra porter aucun objet.",
+  "hint": "reveal-two",
+  "restriction": "no-item"
+ },
+ {
+  "number": 27,
+  "name": "La personne qui lance le dé peut connaître les faiblesses des 3 starters, mais le Pokémon choisi ne pourra recevoir que 252 EV au total.",
+  "hint": "weakness",
+  "restriction": "ev-252"
+ },
+ {
+  "number": 28,
+  "name": "La personne qui lance le dé peut connaître les résistances et immunités des 3 starters, mais le Pokémon choisi ne pourra utiliser aucune attaque de priorité.",
+  "hint": "resistance",
+  "restriction": "no-priority"
+ },
+ {
+  "number": 29,
+  "name": "La personne qui lance le dé peut connaître les six statistiques de base des 3 starters, mais le Pokémon choisi devra conserver une nature neutre.",
+  "hint": "allstats",
+  "restriction": "neutral-nature"
+ },
+ {
+  "number": 32,
+  "name": "La personne qui lance le dé peut connaître les talents cachés des 3 starters, mais le Pokémon choisi ne pourra pas utiliser son talent caché.",
+  "hint": "hiddenability",
+  "restriction": "no-hidden-ability"
+ },
+ {
+  "number": 33,
+  "name": "La personne qui lance le dé peut connaître le type Téracristal des 3 starters, mais le Pokémon choisi ne pourra pas se téracristalliser.",
+  "hint": "tera",
+  "restriction": "no-tera"
+ },
+ {
+  "number": 34,
+  "name": "La personne qui lance le dé peut connaître la chaîne d’évolution des 3 starters, mais le Pokémon choisi devra rester à son stade actuel.",
+  "hint": "stage",
+  "restriction": "no-evolution"
+ },
+ {
+  "number": 35,
+  "name": "La personne qui lance le dé peut connaître les attaques de couverture des 3 starters, mais le Pokémon choisi ne pourra utiliser que des attaques de ses propres types.",
+  "hint": "moves",
+  "restriction": "stab-only"
+ },
+ {
+  "number": 36,
+  "name": "La personne qui lance le dé peut voir un starter de son choix, mais s’il ne le sélectionne pas, il devra choisir entre les deux autres sans autre indice.",
+  "hint": "reveal-one",
+  "restriction": "other-two"
+ },
+ {
+  "number": 37,
+  "name": "La personne qui lance le dé peut connaître les PV et la Vitesse des 3 starters, mais le Pokémon choisi ne pourra recevoir aucun EV dans ces deux statistiques.",
+  "hint": "hp-speed",
+  "restriction": "no-hp-speed-ev"
+ },
+ {
+  "number": 38,
+  "name": "La personne qui lance le dé peut demander trois indices différents, mais uniquement sur un seul des 3 starters.",
+  "hint": "triple-one",
+  "restriction": null
+ },
+ {
+  "number": 39,
+  "name": "La personne qui lance le dé peut connaître les attaques les plus puissantes des 3 starters, mais le Pokémon choisi devra utiliser au moins deux attaques de statut dans son set.",
+  "hint": "moves",
+  "restriction": "two-status"
+ },
+ {
+  "number": 40,
+  "name": "La personne qui lance le dé peut connaître les types et talents des 3 starters, mais le Pokémon choisi ne pourra pas utiliser d’objet tenu ni de talent caché.",
+  "hint": "type-ability",
+  "restriction": "no-item-hidden"
+ }
+];
 function luckRoll(){const face=Math.floor(Math.random()*LUCK_FACES.length);luckDie={face:face+1,...LUCK_FACES[face],revealed:[]};return luckDie}
 function luckStage(p){if(p.evolvesFrom)return 'Pokémon ayant déjà évolué';return p.isBaby?'Bébé Pokémon':'Pokémon de base ou sans évolution'}
 function luckClue(p,i){
