@@ -568,49 +568,147 @@ const cache=new Map();
 const pokePending=new Map();const moveCache=new Map();let player=1,teams={1:[],2:[]},current=[];
 let luckDie=null;
 const LUCK_FACES=[
- {name:'Couleur Pokédex révélée',count:3,hint:'color'},
- {name:'Poids révélé',count:3,hint:'weight'},
- {name:'Première lettre révélée',count:3,hint:'first'},
- {name:'Dernière lettre révélée',count:3,hint:'last'},
- {name:'Choix classique : trois propositions',count:3},
- {name:'Groupe d’œufs révélé',count:3,hint:'egg'},
- {name:'Habitat révélé',count:3,hint:'habitat'},
- {name:'Type révélé',count:3,hint:'type'},
- {name:'Génération révélée',count:3,hint:'gen'},
- {name:'Taille révélée',count:3,hint:'height'},
- {name:'BST révélé',count:3,hint:'bst'},
- {name:'Talent révélé',count:3,hint:'ability'},
- {name:'Taux de capture révélé',count:3,hint:'capture'},
- {name:'Amitié de base révélée',count:3,hint:'friendship'},
- {name:'Rendement EV révélé',count:3,hint:'ev'},
- {name:'Statistique dominante révélée',count:3,hint:'best'},
- {name:'Statistique la plus faible révélée',count:3,hint:'worst'},
- {name:'Statut légendaire ou fabuleux révélé',count:3,hint:'legendary'},
- {name:'Répartition des sexes révélée',count:3,hint:'gender'},
- {name:'Nombre de types révélé',count:3,hint:'typecount'}
+ {
+  "name": "La personne qui lance le dé choisit de voir 1 des 3 starters",
+  "count": 3,
+  "hint": "reveal-one"
+ },
+ {
+  "name": "La personne qui lance le dé peut voir les 3 starters",
+  "count": 3,
+  "hint": "reveal-all"
+ },
+ {
+  "name": "La personne qui lance le dé peut connaître la taille de 2 starters",
+  "count": 3,
+  "hint": "height-two"
+ },
+ {
+  "name": "La personne qui lance le dé peut demander les talents de 2 starters",
+  "count": 3,
+  "hint": "ability-two"
+ },
+ {
+  "name": "La personne qui lance le dé choisit librement 1 des 3 starters",
+  "count": 3,
+  "hint": "classic"
+ },
+ {
+  "name": "La personne qui lance le dé peut savoir les stades d’évolution des 3 starters",
+  "count": 3,
+  "hint": "stage"
+ },
+ {
+  "name": "La personne qui lance le dé peut savoir le numéro de Pokédex d’un des 3 starters",
+  "count": 3,
+  "hint": "dex-one"
+ },
+ {
+  "name": "La personne qui lance le dé peut savoir le(s) type(s) des 3 starters",
+  "count": 3,
+  "hint": "type"
+ },
+ {
+  "name": "La personne qui lance le dé peut connaître la génération des 3 starters",
+  "count": 3,
+  "hint": "gen"
+ },
+ {
+  "name": "La personne qui lance le dé peut connaître la taille des 3 starters",
+  "count": 3,
+  "hint": "height"
+ },
+ {
+  "name": "La personne qui lance le dé peut savoir la base stat total des 3 starters",
+  "count": 3,
+  "hint": "bst"
+ },
+ {
+  "name": "La personne qui randomise choisit le starter",
+  "count": 3,
+  "hint": "generator"
+ },
+ {
+  "name": "La personne qui lance le dé peut demander le poids des 3 starters",
+  "count": 3,
+  "hint": "weight"
+ },
+ {
+  "name": "La personne qui lance le dé peut choisir un starter et l’échanger contre un Pokémon déjà choisi par l’adversaire",
+  "count": 3,
+  "hint": "swap"
+ },
+ {
+  "name": "La personne qui lance le dé peut voir les pieds de 2 starters",
+  "count": 3,
+  "hint": "feet-two"
+ },
+ {
+  "name": "La personne qui lance le dé peut connaître la couleur Pokédex des 3 starters",
+  "count": 3,
+  "hint": "color"
+ },
+ {
+  "name": "La personne qui lance le dé peut connaître la première lettre des 3 starters",
+  "count": 3,
+  "hint": "first"
+ },
+ {
+  "name": "La personne qui lance le dé peut connaître la dernière lettre des 3 starters",
+  "count": 3,
+  "hint": "last"
+ },
+ {
+  "name": "La personne qui lance le dé peut connaître le taux de capture des 3 starters",
+  "count": 3,
+  "hint": "capture"
+ },
+ {
+  "name": "La personne qui lance le dé peut connaître la statistique dominante des 3 starters",
+  "count": 3,
+  "hint": "best"
+ }
 ];
-function luckRoll(){const face=Math.floor(Math.random()*LUCK_FACES.length);luckDie={face:face+1,...LUCK_FACES[face]};return luckDie}
-function luckClue(p){
+function luckRoll(){const face=Math.floor(Math.random()*LUCK_FACES.length);luckDie={face:face+1,...LUCK_FACES[face],revealed:[]};return luckDie}
+function luckStage(p){if(p.evolvesFrom)return 'Pokémon ayant déjà évolué';return p.isBaby?'Bébé Pokémon':'Pokémon de base ou sans évolution'}
+function luckClue(p,i){
  const h=luckDie?.hint;if(!h)return '🎲 Pokémon mystère';
- if(h==='type')return '🏷️ Type : '+p.types.map(frt).join(' / ');
+ const limited={'height-two':2,'ability-two':2,'dex-one':1,'feet-two':2};
+ if(h in limited&&!luckDie?.revealed?.includes(i))return '🔒 Indice disponible sur demande';
+ if(h==='reveal-one'||h==='reveal-all'||h==='generator'||h==='swap'||h==='classic')return '🎲 Pokémon mystère';
+ if(h==='feet-two')return '🦶 Extrait des pieds révélé ci-dessus';
+ if(h==='type')return '🏷️ Type(s) : '+p.types.map(frt).join(' / ');
  if(h==='gen')return '🗺️ '+(p.gen||'Génération inconnue');
- if(h==='height')return '📏 '+p.height+' m';
+ if(h==='height'||h==='height-two')return '📏 '+p.height+' m';
  if(h==='bst')return '📊 BST : '+p.total;
- if(h==='color')return '🎨 Couleur Pokédex : '+(p.color||'Inconnue');
+ if(h==='stage')return '🌱 '+luckStage(p);
+ if(h==='dex-one')return '🔢 Pokédex national : n°'+p.id;
  if(h==='weight')return '⚖️ Poids : '+p.weight+' kg';
+ if(h==='color')return '🎨 Couleur Pokédex : '+(p.color||'Inconnue');
  if(h==='first')return '🔤 Première lettre : '+p.name.charAt(0);
  if(h==='last')return '🔤 Dernière lettre : '+p.name.slice(-1);
- if(h==='egg')return '🥚 Groupe(s) d’œufs : '+(p.eggGroups||[]).join(', ');
- if(h==='habitat')return '🌍 Habitat : '+(p.habitat||'Non répertorié');
- if(h==='ability')return '✨ Talent : '+((p.abilities||[])[0]?.name||(p.abilities||[])[0]?.en||'Non répertorié');
  if(h==='capture')return '🎯 Taux de capture : '+(p.captureRate??'Inconnu');
- if(h==='friendship')return '😊 Amitié de base : '+(p.baseHappiness??'Inconnue');
- if(h==='ev')return '📈 EV : '+(p.evYield||[]).map(x=>x.stat+' +'+x.amount).join(', ');
- if(h==='best'||h==='worst'){const entries=Object.entries(p.stats||{}).filter(x=>typeof x[1]==='number').sort((a,b)=>h==='best'?b[1]-a[1]:a[1]-b[1]);return '📊 '+(h==='best'?'Meilleure':'Plus faible')+' stat : '+(entries[0]?.[0]||'Inconnue')+' ('+(entries[0]?.[1]??'?')+')'}
- if(h==='legendary')return '⭐ '+(p.isMythical?'Fabuleux':p.isLegendary?'Légendaire':'Ni légendaire ni fabuleux');
- if(h==='gender')return '⚥ Taux femelle : '+(p.genderRate===-1?'Sans sexe':(p.genderRate/8*100)+' %');
- if(h==='typecount')return '🏷️ '+p.types.length+' type(s)';
+ if(h==='best'){const v=Object.entries(p.stats||{}).sort((a,b)=>b[1]-a[1])[0];return '📊 Stat dominante : '+(v?.[0]||'Inconnue')+' ('+(v?.[1]??'?')+')'}
+ if(h==='ability-two')return '✨ Talents : '+(p.abilities||[]).map(a=>a.name||a.en||'Inconnu').join(', ');
  return '🎲 Pokémon mystère';
+}
+function luckCanChoose(){return !mpSession||mpSession.id===mpSeats[player]}
+function luckReveal(i){
+ if(gameMode.value!=='luckdice'||!luckDie||!luckCanChoose()||batchLocked)return;
+ const h=luckDie.hint,limit={'reveal-one':1,'height-two':2,'ability-two':2,'dex-one':1,'feet-two':2}[h];if(!limit)return;
+ if(luckDie.revealed.includes(i)||luckDie.revealed.length>=limit)return;
+ luckDie.revealed.push(i);
+ current.forEach((x,j)=>{x.clue='🎲 D20 : '+luckDie.face+'/20 — '+mpEsc(luckDie.name)+'<hr>'+luckClue(x.p,j)});
+ render();mpSyncState();
+}
+function luckSpecialHtml(x,i){
+ if(!luckDie)return '';
+ const h=luckDie.hint,chosen=luckDie.revealed||[],limit={'reveal-one':1,'height-two':2,'ability-two':2,'dex-one':1,'feet-two':2}[h],allowed=luckCanChoose();
+ let out='';
+ if(limit&&allowed&&!chosen.includes(i)&&chosen.length<limit)out+='<button type="button" onclick="luckReveal('+i+')">🎲 Révéler cet indice</button>';
+ if((h==='reveal-all'||h==='reveal-one'&&chosen.includes(i))&&allowed)out+='<div class="offerTag" style="display:block"><img src="'+(x.p.img||'')+'" style="max-width:130px"><strong>'+mpEsc(x.p.name)+'</strong></div>';
+ if(h==='feet-two'&&chosen.includes(i)&&allowed)out+='<div style="height:90px;overflow:hidden"><img src="'+(x.p.img||'')+'" style="width:140px;transform:translateY(-65%);clip-path:inset(65% 0 0 0)" alt="Extrait du bas du Pokémon"></div>';
+ return out;
 }
 let starterPokemon=null;let dealStarted=false;let dealStage=0,dealRemaining=[],dealUsed=new Set(),dealClueFixed="height";let batchLocked=false;let auctionState={active:false,pokemon:null,bids:{1:0,2:0},passed:{1:false,2:false},budget:{1:100,2:100},malus:null};
 function range(){return generation.value==='all'?[1,1025]:GEN[generation.value]}
@@ -1989,7 +2087,7 @@ async function rollCards(){
      const cg=9;const cry=p.cries?.latest||p.cries?.legacy;
      c=cry?`🔊 <audio controls preload="none" src="${cry}"></audio><br><small data-media-answer>Source : cri le plus récent disponible</small>`:'🔊 Cri indisponible';
    }
-   if(gameMode.value==='luckdice')c='🎲 D20 : '+luckDie.face+'/20 — '+luckDie.name+'<hr>'+luckClue(p);current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,dexChoices:gameMode.value==='dexdesc'?(p._dexChoices||[]):null,dexSelected:gameMode.value==='dexdesc'?(p._dexSelected??null):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null,shinyAnswer:gameMode.value==='shinypalette'});
+   if(gameMode.value==='luckdice')c='🎲 D20 : '+luckDie.face+'/20 — '+mpEsc(luckDie.name)+'<hr>'+luckClue(p,i);current.push({p,clue:c,isLie:false,dexSource:(gameMode.value==='dexdesc'||gameMode.value==='olddesc')?(p._dexSource||'Pokédex'):null,dexChoices:gameMode.value==='dexdesc'?(p._dexChoices||[]):null,dexSelected:gameMode.value==='dexdesc'?(p._dexSelected??null):null,evoFinal:gameMode.value==='evolution'?!!p._evoFinal:false,pb:gameMode.value==='pokeballtraits'?(p._pb||pokeballTraits(p)):null,musicAnswer:gameMode.value==='zonemusic'?(p._musicAnswer||null):null,shinyAnswer:gameMode.value==='shinypalette'});
  }
  if(gameMode.value==='ranking'){
    current.forEach((x,i)=>{
@@ -2380,7 +2478,7 @@ function render(){
   cards.querySelectorAll('[data-pc-id]').forEach(el=>getP(Number(el.dataset.pcId)).then(p=>{if(el.isConnected)el.innerHTML='<img src="'+(p.sprite||p.img||'')+'" alt=""><span class="slotName">'+mpEsc(p.name)+'</span>'}).catch(()=>{if(el.isConnected)el.textContent='Indisponible'}));return;
  }
  const hidden=!surpriseActive&&revealMode.value==='hidden',deal=gameMode.value==='learnleave';
- cards.innerHTML=current.map((x,i)=>'<div class="card '+(hidden?'hiddenPoke':'')+'" id="c'+i+'"><img src="'+(x.p.img||'')+'"><div class="name">'+(x.displayName||(mpSession&&mpSession.id===mpSeats[player]?concealedFormName(x.p):x.p.name))+'</div><div>'+x.p.types.map(t=>'<span class="badge">'+frt(t)+'</span>').join('')+'</div><div class="gameClue">'+(x.clue||'')+(gameMode.value==='dexdesc'&&x.dexSource?'<span class="dexSource">'+mpEsc(x.dexSource)+'</span>':'')+'</div>'+(gameMode.value==='dexdesc'?dexSelectHtml(x,i):'')+(x.shinyAnswer?'<div class="offerTag shinyAnswer" style="display:none"><img src="'+x.p.shiny+'" style="max-width:150px;display:block;margin:8px auto"><b>✨ '+x.p.name+' chromatique</b></div>':'')+(x.musicAnswer?'<div class="offerTag musicAnswer" style="display:none">🎵 '+x.musicAnswer+'</div>':'')+(x.isLie?'<div class="offerTag lieflag" style="display:none">⚠️ '+(x.lieText||'LEURRE')+'</div>':'')+(deal?'<button onclick="pick('+i+')">✅ PRENDRE</button><button class="danger" onclick="discardDeal('+i+')">🗑️ SUPPRIMER</button>':'<button onclick="pick('+i+')">CHOISIR</button>')+'</div>').join('');
+ cards.innerHTML=current.map((x,i)=>'<div class="card '+(hidden?'hiddenPoke':'')+'" id="c'+i+'"><img src="'+(x.p.img||'')+'"><div class="name">'+(x.displayName||(mpSession&&mpSession.id===mpSeats[player]?concealedFormName(x.p):x.p.name))+'</div><div>'+x.p.types.map(t=>'<span class="badge">'+frt(t)+'</span>').join('')+'</div><div class="gameClue">'+(x.clue||'')+(gameMode.value==='luckdice'?luckSpecialHtml(x,i):'')+(gameMode.value==='dexdesc'&&x.dexSource?'<span class="dexSource">'+mpEsc(x.dexSource)+'</span>':'')+'</div>'+(gameMode.value==='dexdesc'?dexSelectHtml(x,i):'')+(x.shinyAnswer?'<div class="offerTag shinyAnswer" style="display:none"><img src="'+x.p.shiny+'" style="max-width:150px;display:block;margin:8px auto"><b>✨ '+x.p.name+' chromatique</b></div>':'')+(x.musicAnswer?'<div class="offerTag musicAnswer" style="display:none">🎵 '+x.musicAnswer+'</div>':'')+(x.isLie?'<div class="offerTag lieflag" style="display:none">⚠️ '+(x.lieText||'LEURRE')+'</div>':'')+(deal?'<button onclick="pick('+i+')">✅ PRENDRE</button><button class="danger" onclick="discardDeal('+i+')">🗑️ SUPPRIMER</button>':'<button onclick="pick('+i+')">CHOISIR</button>')+'</div>').join('');
  if(surpriseActive)cards.insertAdjacentHTML('afterbegin','<div style="grid-column:1/-1;text-align:center"><strong>🔑 Corrigé du générateur</strong> — réponses visibles uniquement sur l’appareil qui effectue le tirage.</div>');
  cards.insertAdjacentHTML('beforeend','<div style="grid-column:1/-1;text-align:center"><button type="button" onclick="hidePrivateProposals()">🔒 Masquer mes propositions</button></div>');
 }
@@ -2481,7 +2579,7 @@ function pick(i){
  if(mpSession&&!mpLobbyStarted)return;
  // En réseau, l'adversaire génère les propositions mais c'est bien le joueur actif qui choisit.
  if(mpSession&&mpSession.id!==mpSeats[player])return;
- if(batchLocked||!current[i]||!current[i].p)return;if(gameMode.value==='luckdice'&&luckDie?.forced!=null&&i!==luckDie.forced)return alert('🎲 Le dé impose le Pokémon n°'+(luckDie.forced+1)+'.');
+ if(batchLocked||!current[i]||!current[i].p)return;if(gameMode.value==='luckdice'&&luckDie?.hint==='generator'&&mpSession&&mpSession.id!==mpSeats[player===1?2:1])return alert('🎲 Cette face donne le choix à la personne qui randomise.');
  if(gameMode.value==='learnleave'&&dealStage!==4)return;
  batchLocked=true;
  if(mpSession){mpLastReveal={id:mpSession.id+':'+Date.now()+':'+i,origin:mpSession.id,pokemonId:current[i].p.id};mpSeenRevealId=mpLastReveal.id}
