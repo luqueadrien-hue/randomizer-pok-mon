@@ -207,6 +207,7 @@ img,video,canvas,svg{max-width:100%}
 <option value="impossibledilemma">😈 Dilemmes impossibles</option>
 <option value="blinddraft">🕶️ Draft à l’aveugle — 6 manches par joueur</option>
 <option value="auction">💰 Enchères Pokémon</option>
+<option value="noel">🎄 NOËL — Cadoizo et capacités</option>
 <option value="hangman">🎭 Pendu Pokémon</option>
 <option value="surprise">🎲 Randomizer multi-jeux : jeu aléatoire</option>
 </select>
@@ -282,6 +283,7 @@ img,video,canvas,svg{max-width:100%}
   </div>
   <div id="dealInfo" class="turn" style="margin-top:10px"></div>
 </div>
+<div id="noelPanel" class="panel" style="display:none;margin-top:18px"><h2>🎄 NOËL — Cadoizo</h2><p>Deux Pokémon peuvent apprendre leur capacité affichée. La troisième proposition est Cadoizo : son indice est un mensonge. Les capacités peuvent être identiques.</p><div id="noelInfo"></div><div id="noelChoices"></div><div id="noelReserve"></div><button type="button" id="noelGenerate" onclick="noelGenerate()">Générer les 3 propositions</button></div>
 <div id="auctionPanel" class="panel" style="display:none;margin-top:18px">
   <h2 style="text-align:center;margin-top:0">💰 Enchères Pokémon</h2>
   <div class="controls">
@@ -500,12 +502,14 @@ function mpReceive(r){
  document.getElementById('team1').parentElement.querySelector('h2').textContent='JOUEUR 1 — '+p1;
  document.getElementById('team2').parentElement.querySelector('h2').textContent='JOUEUR 2 — '+p2;
  if(r.state&&r.state.mode!=='hangman'&&r.state.mode!=='auction'&&r.state.mode!=='blinddraft'&&r.state.mode!=='impossibledilemma')mpHydrateState(r.state);
+ if(r.state?.mode==='noel'){gameMode.value='noel';document.getElementById('noelPanel').style.display='block';}
  if(r.state?.mode==='auction'){gameMode.value='auction';auctionPanel.style.display='block';}
  if(r.state?.mode==='hangman'){gameMode.value='hangman';player=r.state.player||player;}
  if(r.state?.mode==='blinddraft')gameMode.value='blinddraft';if(r.impossibleDilemma){gameMode.value='impossibledilemma';impossibleReceive(r.impossibleDilemma);}
  if(r.hangman)hangmanReceive(r.hangman);
  if(r.blindDraft)blindDraftReceive(r.blindDraft);
  if(r.auctionRound)auctionReceive(r.auctionRound);
+ if(r.noelRound)noelReceive(r.noelRound);
  if(r.questionDuel)qdReceive(r.questionDuel);
 }
 
@@ -2752,6 +2756,75 @@ roll.addEventListener('click',()=>rollCards().catch(e=>{console.error(e);alert(e
 reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer,.bodyAnswer').forEach(x=>x.style.display='block')});
 hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer,.bodyAnswer').forEach(x=>x.style.display='none')});
 reset.addEventListener('click',()=>{dealStage=0;dealStarted=false;dealRemaining=[];dealUsed=new Set();starterOffer.innerHTML='';dealButtons();player=1;teams={1:[],2:[]};sixRoundCounts={1:0,2:0};sixRoundOwners={1:[],2:[]};monoReset();current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
+
+let noelRound={phase:'idle',round:0,reserves:{1:[],2:[]},awards:{1:[],2:[]}};
+const noelMoveCache=new Map();
+async function noelMoveName(slug){
+ if(!noelMoveCache.has(slug))noelMoveCache.set(slug,fetch('https://pokeapi.co/api/v2/move/'+slug).then(r=>r.json()).then(d=>d.names.find(x=>x.language.name==='fr')?.name||slug).catch(()=>slug));
+ return noelMoveCache.get(slug);
+}
+function noelCan(n){return !mpSession||mpSession.id===mpSeats[n]}
+async function noelSave(v){
+ if(mpSession)await mpRoom(mpSession.room).child('noelRound').set(v);
+ noelReceive(v);
+}
+function noelReceive(v){
+ if(!v)return;noelRound=v;noelRender();
+}
+function noelRender(){
+ const panel=document.getElementById('noelPanel');if(!panel)return;
+ const a=noelRound,info=document.getElementById('noelInfo'),choices=document.getElementById('noelChoices'),reserve=document.getElementById('noelReserve');
+ const chooser=a.chooser||1,generator=3-chooser,isGenerator=noelCan(generator),isChooser=noelCan(chooser);
+ const reveal=a.phase==='revealed'||a.phase==='reserve'||a.phase==='done';
+ document.getElementById('noelGenerate').disabled=a.phase==='guess'||a.phase==='reserve'||(!!mpSession&&!noelCan(a.nextGenerator||1));
+ info.textContent='Manche '+(a.round||0)+' — J'+generator+' randomise, J'+chooser+' devine. '+(a.phase==='reserve'?'Cadoizo trouvé : sélectionne un Pokémon de la réserve adverse.':a.phase==='done'?'Manche terminée.':'');
+ choices.innerHTML=(a.options||[]).map((o,i)=>{
+  const show=reveal||isGenerator;
+  return '<div class="mini" style="display:inline-block;padding:12px;margin:6px;vertical-align:top;min-width:150px"><strong>Proposition '+(i+1)+'</strong><p>Capacité : '+mpEsc(o.moveFr||o.move)+'</p>'+(show?'<img style="height:85px;display:block;margin:auto" src="'+(o.img||'')+'"><b>'+mpEsc(o.name)+'</b>':'<p>❔ Pokémon caché</p>')+(a.phase==='guess'&&isChooser?'<p><button onclick="noelPick('+i+')">Choisir</button></p>':'')+'</div>';
+ }).join('');
+ const stock=(a.reserves?.[3-chooser]||[]);
+ reserve.innerHTML=a.phase==='reserve'&&isChooser?'<h3>Réserve de J'+(3-chooser)+'</h3>'+(stock.length?stock.map((p,i)=>'<button style="margin:5px" onclick="noelClaim('+i+')">'+mpEsc(p.name)+'</button>').join(''):'<p>Réserve vide : aucun Pokémon récupérable.</p><button onclick="noelClaim(-1)">Terminer sans récompense</button>'):'';
+ if(a.phase==='done')info.textContent+=' Équipes : J1 '+(a.awards?.[1]||[]).map(p=>p.name).join(', ')+' / J2 '+(a.awards?.[2]||[]).map(p=>p.name).join(', ');
+}
+async function noelGenerate(){
+ const old=noelRound;if(old.phase==='guess'||old.phase==='reserve')return;
+ const generator=old.nextGenerator||1,chooser=3-generator;
+ if(!noelCan(generator))return alert('Seul le joueur qui randomise peut lancer la manche.');
+ const used=new Set();let pair=null,common=[];
+ for(let i=0;i<50&&!pair;i++){
+  const p=await draw(used),q=await draw(used);
+  const pm=new Set((p.moves||[]).map(x=>x.name)),qm=new Set((q.moves||[]).map(x=>x.name));
+  const shared=[...pm].filter(x=>qm.has(x)&&x!=='present');
+  if(shared.length){pair=[p,q];common=shared}
+ }
+ if(!pair)throw Error('Impossible de trouver deux Pokémon ayant une capacité commune. Réessaie.');
+ const move=common[Math.floor(Math.random()*common.length)],moveFr=await noelMoveName(move);
+ const c=await getP(225),options=[...pair.map(p=>({id:p.id,name:p.name,img:p.img,move,moveFr})),{id:225,name:'Cadoizo',img:c.img,move,moveFr}];
+ // Un mensonge vérifiable : Cadoizo ne doit pas pouvoir apprendre la capacité indiquée.
+ if((c.moves||[]).some(m=>m.name===move)){
+  const alternative=common.find(x=>!(c.moves||[]).some(m=>m.name===x));
+  if(!alternative)throw Error('Capacité commune également apprenable par Cadoizo. Relance la manche.');
+  const fr=await noelMoveName(alternative);
+  options.forEach(o=>{o.move=alternative;o.moveFr=fr});
+ }
+ options.sort(()=>Math.random()-.5);
+ await noelSave({phase:'guess',round:(old.round||0)+1,chooser,generator,nextGenerator:chooser,options,reserves:old.reserves||{1:[],2:[]},awards:old.awards||{1:[],2:[]}});
+}
+async function noelPick(i){
+ const a=noelRound;if(a.phase!=='guess'||!noelCan(a.chooser)||!a.options?.[i])return;
+ const chosen=a.options[i],other=a.options.filter((o,j)=>j!==i&&o.id!==225);
+ const reserves=JSON.parse(JSON.stringify(a.reserves||{1:[],2:[]}));
+ reserves[a.chooser]=[...(reserves[a.chooser]||[]),...other.map(o=>({id:o.id,name:o.name,img:o.img,round:a.round}))];
+ const awards=JSON.parse(JSON.stringify(a.awards||{1:[],2:[]}));
+ if(chosen.id===225)await noelSave({...a,reserves,awards,phase:'reserve',selected:i});
+ else{awards[a.chooser]=[...(awards[a.chooser]||[]),{id:chosen.id,name:chosen.name,img:chosen.img}];await noelSave({...a,reserves,awards,phase:'done',selected:i})}
+}
+async function noelClaim(i){
+ const a=noelRound;if(a.phase!=='reserve'||!noelCan(a.chooser))return;
+ const reserves=JSON.parse(JSON.stringify(a.reserves)),awards=JSON.parse(JSON.stringify(a.awards));
+ if(i>=0){const p=reserves[3-a.chooser]?.splice(i,1)[0];if(!p)return;awards[a.chooser]=[...(awards[a.chooser]||[]),p]}
+ await noelSave({...a,reserves,awards,phase:'done'});
+}
 let auctionPurchases={1:[],2:[]};
 let auctionRound={pokemon:null,highest:0,leader:0,turn:1,locked:false,balances:null,completed:0,loading:false};
 function auctionCanAct(n){return !mpSession||mpSession.id===mpSeats[n]}
@@ -2924,7 +2997,7 @@ document.getElementById('auctionCustomBudget').addEventListener('input',auctionU
 auctionUpdatePrices();auctionRender();
 function syncCompetitiveGeneration(){const mode=gameMode.value;document.getElementById('competitiveGenerationWrap').style.display=(mode==='smogontier'||mode==='vgc')?'':'none'}
 syncCompetitiveGeneration();
-gameMode.addEventListener('change',()=>{syncCompetitiveGeneration();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';document.getElementById('trainerOptions').style.display=gameMode.value==='trainerteam'?'block':'none';document.getElementById('moduloPanel').style.display=gameMode.value==='modulodex'?'block':'none';if(gameMode.value==='modulodex')moduloRender();if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
+gameMode.addEventListener('change',()=>{syncCompetitiveGeneration();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('noelPanel').style.display=gameMode.value==='noel'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';document.getElementById('trainerOptions').style.display=gameMode.value==='trainerteam'?'block':'none';document.getElementById('moduloPanel').style.display=gameMode.value==='modulodex'?'block':'none';if(gameMode.value==='modulodex')moduloRender();if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
 ['teamSize','choiceCount','legend','generation','competitiveGeneration','typeMode','revealMode','lieMode','boxSize'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
 
 const CALC_NATURE_MAP={Assuré:['defense','attack'],Bizarre:[null,null],Brave:['attack','speed'],Calme:['special-defense','attack'],Discret:['special-attack','speed'],Docile:[null,null],Doux:['special-attack','defense'],Foufou:['special-attack','special-defense'],Gentil:['special-defense','defense'],Hardi:[null,null],Jovial:['speed','special-attack'],Lâche:['defense','special-defense'],Malin:['defense','special-attack'],Malpoli:['special-defense','speed'],Mauvais:['attack','special-defense'],Modeste:['special-attack','attack'],Naïf:['speed','special-defense'],Pressé:['speed','defense'],Prudent:['special-defense','special-attack'],Pudique:[null,null],Relax:['defense','speed'],Rigide:['attack','special-attack'],Sérieux:[null,null],Solo:['attack','defense'],Timide:['speed','attack']};
