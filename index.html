@@ -2769,7 +2769,7 @@ function tcgAttacksRender(){
  if(!info)return;
  const generator=a.generator||1,allowed=!mpSession||mpSession.id===mpSeats[generator],revealed=a.phase==='revealed';
  info.textContent=a.phase==='idle'?'Prêt à commencer.':'Manche '+a.round+' — Joueur '+generator+' randomise, joueur '+(3-generator)+' devine.';
- clue.innerHTML=(a.attacks||[]).length?'<h3>Attaques de la carte TCG</h3><ul>'+(a.attacks||[]).map(x=>'<li>'+mpEsc(x)+'</li>').join('')+'</ul><p>Extension : '+mpEsc(a.setName||'')+' — Carte n° '+mpEsc(a.number||'')+'</p>':'';
+ clue.innerHTML=(a.attacks||[]).length?'<h3>Attaque de la carte TCG</h3><ul>'+(a.attacks||[]).map(x=>'<li>'+mpEsc(x)+'</li>').join('')+'</ul><p>Extension : '+mpEsc(a.setName||'')+' — Carte n° '+mpEsc(a.number||'')+'</p>':'';
  answer.innerHTML=(revealed||allowed)&&a.name?'<div class="mini"><img src="'+(a.image||'')+'" style="height:160px"><h3>'+mpEsc(a.name)+'</h3><p>Carte : '+mpEsc(a.cardName||'')+'</p></div>':a.name?'<p>❔ Pokémon caché — essaie de deviner !</p>':'';
  document.getElementById('tcgAttacksGenerate').disabled=a.phase==='guess'||(!!mpSession&&mpSession.id!==mpSeats[a.nextGenerator||1]);
  document.getElementById('tcgAttacksReveal').disabled=a.phase!=='guess'||!allowed;
@@ -2793,7 +2793,7 @@ async function tcgAttacksGenerate(){
   }
   if(!card)throw Error('Aucune carte avec attaques trouvée pour les Pokémon tirés. Réessaie.');
   const c=card.full;
-  await tcgAttacksSave({phase:'guess',round:(old.round||0)+1,generator,nextGenerator:3-generator,name:card.p.name,cardName:c.name,image:c.image?c.image+'/high.webp':card.p.img,attacks:c.attacks.map(x=>x.name),setName:c.set?.name||c.set?.id||'',number:c.localId||'',cardId:c.id});
+  await tcgAttacksSave({phase:'guess',round:(old.round||0)+1,generator,nextGenerator:3-generator,name:card.p.name,cardName:c.name,image:c.image?c.image+'/high.webp':card.p.img,attacks:[c.attacks[Math.floor(Math.random()*c.attacks.length)].name],setName:c.set?.name||c.set?.id||'',number:c.localId||'',cardId:c.id});
  }catch(e){alert('Cartes TCG : '+e.message)}finally{tcgAttacksRender()}
 }
 async function tcgAttacksReveal(){
