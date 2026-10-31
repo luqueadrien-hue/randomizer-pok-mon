@@ -2762,6 +2762,7 @@ function auctionFinalize(a,winner){
  a.balances[winner]-=a.highest;
  a.awards=a.awards||{1:[],2:[]};
  a.awards[winner]=[...(a.awards[winner]||[]),a.pokemonId||a.pokemon.id];
+ a.lastReveal={pokemonId:a.pokemonId||a.pokemon?.id,winner,price:a.highest,round:a.completed+1};
  a.completed++;a.pokemonId=null;a.pokemon=null;a.highest=0;a.leader=0;a.locked=true;
  return true;
 }
@@ -2774,7 +2775,7 @@ function auctionAutoResolve(a){
 function auctionRender(){
  const a=auctionRound,step=auctionEffectiveStep(a);
  const info=document.getElementById('auctionInfo'),poke=document.getElementById('auctionPokemon');
- if(a.pokemon)poke.innerHTML='<img src="'+(a.pokemon.img||'')+'" style="height:120px;max-width:100%;object-fit:contain"><h3>'+mpEsc(a.pokemon.name)+'</h3>';else poke.textContent='Lance une enchère pour révéler un Pokémon.';
+ if(a.pokemon){const secret=mpSession&&mpSession.id!==a.generatorId;poke.innerHTML=secret?'<div style="font-size:64px">❔</div><h3>Pokémon mystère</h3><p>Révélation après attribution</p>':'<img src="'+(a.pokemon.img||'')+'" style="height:120px;max-width:100%;object-fit:contain"><h3>'+mpEsc(a.pokemon.name)+'</h3>';}else if(a.lastReveal){poke.innerHTML='<h3>Enchère remportée par le joueur '+a.lastReveal.winner+'</h3><div id="auctionLastReveal">Pokémon attribué — chargement…</div>';getP(a.lastReveal.pokemonId).then(p=>{const el=document.getElementById('auctionLastReveal');if(el)el.innerHTML='<img src="'+(p.img||'')+'" style="height:120px"><h3>'+mpEsc(p.name)+'</h3><p>Prix : '+a.lastReveal.price+' C</p>'}).catch(console.warn);}else poke.textContent='Prêt pour une nouvelle enchère.';
  const balances=a.balances||{1:auctionSelectedBudget(),2:auctionSelectedBudget()};
  info.textContent=a.completed>=12?'12 enchères terminées — six Pokémon par joueur.':a.pokemon?'Meilleure offre : '+a.highest+' C par '+(a.leader?'Joueur '+a.leader:'personne')+' — au joueur '+a.turn+' de jouer.':'Prêt pour une nouvelle enchère ('+a.completed+'/12).';
  for(let n=1;n<=2;n++){
@@ -2820,11 +2821,11 @@ async function auctionStart(){
    const tx=await ref.transaction(v=>{
     if(v?.pokemonId||v?.completed>=12)return;
     const balances=v?.balances||{1:budget,2:budget},completed=v?.completed||0,awards=v?.awards||{1:[],2:[]};
-    return {pokemonId:p.id,highest:0,leader:0,turn:auctionNextPlayer({completed,awards}),locked:false,balances,completed,budget:v?.budget||budget,step:v?.step||step,awards,updated:Date.now()};
+    return {pokemonId:p.id,generatorId:mpSession.id,lastReveal:v?.lastReveal||null,highest:0,leader:0,turn:auctionNextPlayer({completed,awards}),locked:false,balances,completed,budget:v?.budget||budget,step:v?.step||step,awards,updated:Date.now()};
    });
    if(!tx.committed)alert('Une enchère est déjà en cours.');
    else await auctionReceive(tx.snapshot.val());
-  }else{a.pokemon=p;a.highest=0;a.leader=0;a.turn=auctionNextPlayer({...a,awards:{1:teams[1].map(x=>x.id),2:teams[2].map(x=>x.id)}});a.locked=false}
+  }else{a.pokemon=p;a.generatorId=null;a.highest=0;a.leader=0;a.turn=auctionNextPlayer({...a,awards:{1:teams[1].map(x=>x.id),2:teams[2].map(x=>x.id)}});a.locked=false}
  }catch(e){alert('Impossible de générer le Pokémon : '+e.message)}
  finally{a.loading=false;auctionRender()}
 }
@@ -2856,7 +2857,7 @@ async function auctionAction(n,action){
  }
  if(action==='pass'){
   if(!a.leader||a.leader===n||a.highest>a.balances[a.leader])return;
-  const winner=a.leader;a.balances[winner]-=a.highest;teams[winner].push(a.pokemon);a.completed++;
+  const winner=a.leader;a.balances[winner]-=a.highest;teams[winner].push(a.pokemon);a.lastReveal={pokemonId:a.pokemon.id,winner,price:a.highest,round:a.completed+1};a.completed++;
   a.pokemon=null;a.highest=0;a.leader=0;a.locked=true;drawTeams();auctionRender();return;
  }
  if(action.startsWith('bid')&&a.highest!==0)return;
@@ -2864,7 +2865,7 @@ async function auctionAction(n,action){
  a.highest=price;a.leader=n;a.turn=3-n;a.step=step;
  const other=3-n;
  if(teams[other].length>=6||a.balances[other]<price+step){
-  a.balances[n]-=price;teams[n].push(a.pokemon);a.completed++;a.pokemon=null;a.highest=0;a.leader=0;a.locked=true;drawTeams();
+  a.balances[n]-=price;teams[n].push(a.pokemon);a.lastReveal={pokemonId:a.pokemon.id,winner:n,price,round:a.completed+1};a.completed++;a.pokemon=null;a.highest=0;a.leader=0;a.locked=true;drawTeams();
  }
  auctionRender();
 }
