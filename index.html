@@ -208,6 +208,7 @@ img,video,canvas,svg{max-width:100%}
 <option value="blinddraft">🕶️ Draft à l’aveugle — 6 manches par joueur</option>
 <option value="auction">💰 Enchères Pokémon</option>
 <option value="noel">🎄 NOËL — Cadoizo et capacités</option>
+<option value="tcgattacks">🃏 Attaques TCG — Deviner par les cartes</option>
 <option value="hangman">🎭 Pendu Pokémon</option>
 <option value="surprise">🎲 Randomizer multi-jeux : jeu aléatoire</option>
 </select>
@@ -283,6 +284,7 @@ img,video,canvas,svg{max-width:100%}
   </div>
   <div id="dealInfo" class="turn" style="margin-top:10px"></div>
 </div>
+<div id="tcgAttacksPanel" class="panel" style="display:none;margin-top:18px"><h2>🃏 Attaques TCG</h2><p>Devine le Pokémon grâce aux attaques imprimées sur une de ses cartes officielles. La carte et ses attaques proviennent du JCC Pokémon.</p><div id="tcgAttacksInfo"></div><div id="tcgAttacksClue"></div><div id="tcgAttacksAnswer"></div><button type="button" id="tcgAttacksGenerate" onclick="tcgAttacksGenerate()">Nouvelle carte mystère</button> <button type="button" id="tcgAttacksReveal" onclick="tcgAttacksReveal()">Révéler le Pokémon</button></div>
 <div id="noelPanel" class="panel" style="display:none;margin-top:18px"><h2>🎄 NOËL — Cadoizo</h2><p>Deux Pokémon peuvent apprendre leur capacité affichée. La troisième proposition est Cadoizo : son indice est un mensonge. Les capacités peuvent être identiques.</p><div id="noelInfo"></div><div id="noelChoices"></div><div id="noelReserve"></div><button type="button" id="noelGenerate" onclick="noelGenerate()">Générer les 3 propositions</button></div>
 <div id="auctionPanel" class="panel" style="display:none;margin-top:18px">
   <h2 style="text-align:center;margin-top:0">💰 Enchères Pokémon</h2>
@@ -502,6 +504,7 @@ function mpReceive(r){
  document.getElementById('team1').parentElement.querySelector('h2').textContent='JOUEUR 1 — '+p1;
  document.getElementById('team2').parentElement.querySelector('h2').textContent='JOUEUR 2 — '+p2;
  if(r.state&&r.state.mode!=='hangman'&&r.state.mode!=='auction'&&r.state.mode!=='blinddraft'&&r.state.mode!=='impossibledilemma')mpHydrateState(r.state);
+ if(r.state?.mode==='tcgattacks'){gameMode.value='tcgattacks';document.getElementById('tcgAttacksPanel').style.display='block';}
  if(r.state?.mode==='noel'){gameMode.value='noel';document.getElementById('noelPanel').style.display='block';}
  if(r.state?.mode==='auction'){gameMode.value='auction';auctionPanel.style.display='block';}
  if(r.state?.mode==='hangman'){gameMode.value='hangman';player=r.state.player||player;}
@@ -510,6 +513,7 @@ function mpReceive(r){
  if(r.blindDraft)blindDraftReceive(r.blindDraft);
  if(r.auctionRound)auctionReceive(r.auctionRound);
  if(r.noelRound)noelReceive(r.noelRound);
+ if(r.tcgAttacksRound)tcgAttacksReceive(r.tcgAttacksRound);
  if(r.questionDuel)qdReceive(r.questionDuel);
 }
 
@@ -2757,6 +2761,45 @@ reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(
 hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer,.bodyAnswer').forEach(x=>x.style.display='none')});
 reset.addEventListener('click',()=>{dealStage=0;dealStarted=false;dealRemaining=[];dealUsed=new Set();starterOffer.innerHTML='';dealButtons();player=1;teams={1:[],2:[]};sixRoundCounts={1:0,2:0};sixRoundOwners={1:[],2:[]};monoReset();current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
 
+
+let tcgAttacksRound={phase:'idle',round:0,nextGenerator:1};
+function tcgAttacksReceive(v){if(!v)return;tcgAttacksRound=v;tcgAttacksRender()}
+function tcgAttacksRender(){
+ const a=tcgAttacksRound,info=document.getElementById('tcgAttacksInfo'),clue=document.getElementById('tcgAttacksClue'),answer=document.getElementById('tcgAttacksAnswer');
+ if(!info)return;
+ const generator=a.generator||1,allowed=!mpSession||mpSession.id===mpSeats[generator],revealed=a.phase==='revealed';
+ info.textContent=a.phase==='idle'?'Prêt à commencer.':'Manche '+a.round+' — Joueur '+generator+' randomise, joueur '+(3-generator)+' devine.';
+ clue.innerHTML=(a.attacks||[]).length?'<h3>Attaques de la carte TCG</h3><ul>'+(a.attacks||[]).map(x=>'<li>'+mpEsc(x)+'</li>').join('')+'</ul><p>Extension : '+mpEsc(a.setName||'')+' — Carte n° '+mpEsc(a.number||'')+'</p>':'';
+ answer.innerHTML=(revealed||allowed)&&a.name?'<div class="mini"><img src="'+(a.image||'')+'" style="height:160px"><h3>'+mpEsc(a.name)+'</h3><p>Carte : '+mpEsc(a.cardName||'')+'</p></div>':a.name?'<p>❔ Pokémon caché — essaie de deviner !</p>':'';
+ document.getElementById('tcgAttacksGenerate').disabled=a.phase==='guess'||(!!mpSession&&mpSession.id!==mpSeats[a.nextGenerator||1]);
+ document.getElementById('tcgAttacksReveal').disabled=a.phase!=='guess'||!allowed;
+}
+async function tcgAttacksSave(v){if(mpSession)await mpRoom(mpSession.room).child('tcgAttacksRound').set(v);tcgAttacksReceive(v)}
+async function tcgAttacksGenerate(){
+ const old=tcgAttacksRound,generator=old.nextGenerator||1;
+ if(old.phase==='guess'||(mpSession&&mpSession.id!==mpSeats[generator]))return;
+ const button=document.getElementById('tcgAttacksGenerate');button.disabled=true;
+ try{
+  // Source JCC Pokémon : API publique TCGdex, cartes et attaques réellement imprimées.
+  let card=null;
+  for(let attempt=0;attempt<18&&!card;attempt++){
+   const p=await draw(new Set()),name=encodeURIComponent(p.name);
+   const results=await fetch('https://api.tcgdex.net/v2/fr/cards?name='+name).then(r=>r.ok?r.json():[]).catch(()=>[]);
+   const candidates=(Array.isArray(results)?results:[]).filter(x=>x.id);
+   for(const candidate of candidates.sort(()=>Math.random()-.5).slice(0,6)){
+    const full=await fetch('https://api.tcgdex.net/v2/fr/cards/'+encodeURIComponent(candidate.id)).then(r=>r.ok?r.json():null).catch(()=>null);
+    if(full?.attacks?.length&&full?.name&&full.name.toLocaleLowerCase('fr')===p.name.toLocaleLowerCase('fr')){card={p,full};break}
+   }
+  }
+  if(!card)throw Error('Aucune carte avec attaques trouvée pour les Pokémon tirés. Réessaie.');
+  const c=card.full;
+  await tcgAttacksSave({phase:'guess',round:(old.round||0)+1,generator,nextGenerator:3-generator,name:card.p.name,cardName:c.name,image:c.image?c.image+'/high.webp':card.p.img,attacks:c.attacks.map(x=>x.name),setName:c.set?.name||c.set?.id||'',number:c.localId||'',cardId:c.id});
+ }catch(e){alert('Cartes TCG : '+e.message)}finally{tcgAttacksRender()}
+}
+async function tcgAttacksReveal(){
+ const a=tcgAttacksRound;if(a.phase!=='guess'||(mpSession&&mpSession.id!==mpSeats[a.generator]))return;
+ await tcgAttacksSave({...a,phase:'revealed'});
+}
 let noelRound={phase:'idle',round:0,reserves:{1:[],2:[]},awards:{1:[],2:[]}};
 const noelMoveCache=new Map();
 async function noelMoveName(slug){
@@ -2997,7 +3040,7 @@ document.getElementById('auctionCustomBudget').addEventListener('input',auctionU
 auctionUpdatePrices();auctionRender();
 function syncCompetitiveGeneration(){const mode=gameMode.value;document.getElementById('competitiveGenerationWrap').style.display=(mode==='smogontier'||mode==='vgc')?'':'none'}
 syncCompetitiveGeneration();
-gameMode.addEventListener('change',()=>{syncCompetitiveGeneration();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('noelPanel').style.display=gameMode.value==='noel'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';document.getElementById('trainerOptions').style.display=gameMode.value==='trainerteam'?'block':'none';document.getElementById('moduloPanel').style.display=gameMode.value==='modulodex'?'block':'none';if(gameMode.value==='modulodex')moduloRender();if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
+gameMode.addEventListener('change',()=>{syncCompetitiveGeneration();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('noelPanel').style.display=gameMode.value==='noel'?'block':'none';document.getElementById('tcgAttacksPanel').style.display=gameMode.value==='tcgattacks'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';document.getElementById('trainerOptions').style.display=gameMode.value==='trainerteam'?'block':'none';document.getElementById('moduloPanel').style.display=gameMode.value==='modulodex'?'block':'none';if(gameMode.value==='modulodex')moduloRender();if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
 ['teamSize','choiceCount','legend','generation','competitiveGeneration','typeMode','revealMode','lieMode','boxSize'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
 
 const CALC_NATURE_MAP={Assuré:['defense','attack'],Bizarre:[null,null],Brave:['attack','speed'],Calme:['special-defense','attack'],Discret:['special-attack','speed'],Docile:[null,null],Doux:['special-attack','defense'],Foufou:['special-attack','special-defense'],Gentil:['special-defense','defense'],Hardi:[null,null],Jovial:['speed','special-attack'],Lâche:['defense','special-defense'],Malin:['defense','special-attack'],Malpoli:['special-defense','speed'],Mauvais:['attack','special-defense'],Modeste:['special-attack','attack'],Naïf:['speed','special-defense'],Pressé:['speed','defense'],Prudent:['special-defense','special-attack'],Pudique:[null,null],Relax:['defense','speed'],Rigide:['attack','special-attack'],Sérieux:[null,null],Solo:['attack','defense'],Timide:['speed','attack']};
