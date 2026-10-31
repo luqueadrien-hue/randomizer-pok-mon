@@ -2762,7 +2762,7 @@ hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=
 reset.addEventListener('click',()=>{dealStage=0;dealStarted=false;dealRemaining=[];dealUsed=new Set();starterOffer.innerHTML='';dealButtons();player=1;teams={1:[],2:[]};sixRoundCounts={1:0,2:0};sixRoundOwners={1:[],2:[]};monoReset();current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
 
 
-let tcgAttacksRound={phase:'idle',round:0,nextGenerator:1};
+let tcgAttacksRound={phase:'idle',round:0,nextGenerator:1,history:{}};
 function tcgAttacksReceive(v){if(!v)return;tcgAttacksRound=v;tcgAttacksRender()}
 function tcgAttacksRender(){
  const a=tcgAttacksRound,info=document.getElementById('tcgAttacksInfo'),clue=document.getElementById('tcgAttacksClue'),answer=document.getElementById('tcgAttacksAnswer');
@@ -2781,19 +2781,25 @@ async function tcgAttacksGenerate(){
  const button=document.getElementById('tcgAttacksGenerate');button.disabled=true;
  try{
   // Source JCC Pokémon : API publique TCGdex, cartes et attaques réellement imprimées.
-  let card=null;
+  let card=null,chosenAttack=null;
+  const history=old.history||{};
   for(let attempt=0;attempt<18&&!card;attempt++){
    const p=await draw(new Set()),name=encodeURIComponent(p.name);
    const results=await fetch('https://api.tcgdex.net/v2/fr/cards?name='+name).then(r=>r.ok?r.json():[]).catch(()=>[]);
    const candidates=(Array.isArray(results)?results:[]).filter(x=>x.id);
    for(const candidate of candidates.sort(()=>Math.random()-.5).slice(0,6)){
     const full=await fetch('https://api.tcgdex.net/v2/fr/cards/'+encodeURIComponent(candidate.id)).then(r=>r.ok?r.json():null).catch(()=>null);
-    if(full?.attacks?.length&&full?.name&&full.name.toLocaleLowerCase('fr')===p.name.toLocaleLowerCase('fr')){card={p,full};break}
+    if(full?.attacks?.length&&full?.name&&full.name.toLocaleLowerCase('fr')===p.name.toLocaleLowerCase('fr')){
+     const available=full.attacks.filter(x=>x.name&&!((history[p.id]||[]).includes(x.name)));
+     if(!available.length)continue;
+     card={p,full};chosenAttack=available[Math.floor(Math.random()*available.length)].name;break;
+    }
    }
   }
   if(!card)throw Error('Aucune carte avec attaques trouvée pour les Pokémon tirés. Réessaie.');
   const c=card.full;
-  await tcgAttacksSave({phase:'guess',round:(old.round||0)+1,generator,nextGenerator:3-generator,name:card.p.name,cardName:c.name,image:c.image?c.image+'/high.webp':card.p.img,attacks:[c.attacks[Math.floor(Math.random()*c.attacks.length)].name],setName:c.set?.name||c.set?.id||'',number:c.localId||'',cardId:c.id});
+  const updatedHistory={...history,[card.p.id]:[...(history[card.p.id]||[]),chosenAttack]};
+  await tcgAttacksSave({phase:'guess',round:(old.round||0)+1,generator,nextGenerator:3-generator,history:updatedHistory,name:card.p.name,cardName:c.name,image:c.image?c.image+'/high.webp':card.p.img,attacks:[chosenAttack],setName:c.set?.name||c.set?.id||'',number:c.localId||'',cardId:c.id});
  }catch(e){alert('Cartes TCG : '+e.message)}finally{tcgAttacksRender()}
 }
 async function tcgAttacksReveal(){
