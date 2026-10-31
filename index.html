@@ -310,7 +310,7 @@ img,video,canvas,svg{max-width:100%}
    <div class="card"><h3>Joueur 1</h3><div id="auctionBalance1"></div><div class="actions"><button id="bidP1">💰 Mise minimale</button><label>Mise personnalisée (pas de 5 C)<input id="auctionBidValue1" type="number" min="5" step="5" value="50"></label><button id="bidCustomP1">💰 Miser ce montant</button><button id="raiseP1">📈 Relance automatique</button><label>Relance personnalisée (montant total, pas de 5 C)<input id="auctionRaiseValue1" type="number" min="5" step="5" value="100"></label><button id="raiseCustomP1">📈 Relancer à ce montant</button><button id="passP1">🤝 Laisser le Pokémon</button></div></div>
    <div class="card"><h3>Joueur 2</h3><div id="auctionBalance2"></div><div class="actions"><button id="bidP2">💰 Mise minimale</button><label>Mise personnalisée (pas de 5 C)<input id="auctionBidValue2" type="number" min="5" step="5" value="50"></label><button id="bidCustomP2">💰 Miser ce montant</button><button id="raiseP2">📈 Relance automatique</button><label>Relance personnalisée (montant total, pas de 5 C)<input id="auctionRaiseValue2" type="number" min="5" step="5" value="100"></label><button id="raiseCustomP2">📈 Relancer à ce montant</button><button id="passP2">🤝 Laisser le Pokémon</button></div></div>
   </div>
-  <div id="auctionInfo" class="turn"></div><div id="auctionShop" style="margin-top:16px"><h3>🛒 Boutique après constitution des équipes</h3><p>Six malus différents maximum par joueur, un usage par malus et un malus maximum par Pokémon. Les achats se font avec les crédits restant après les enchères.</p><div id="auctionShopPrices"></div></div>
+  <div id="auctionInfo" class="turn"></div><div id="auctionShop" style="margin-top:16px"><h3>🛒 Boutique après constitution des équipes</h3><p>Six malus différents maximum par joueur, un usage par malus et un malus maximum par Pokémon. Les achats se font avec les crédits restant après les enchères.</p><div id="auctionShopPrices"></div><div id="auctionShopActions" style="margin-top:12px"></div><div id="auctionShopLog" style="margin-top:12px"></div></div>
 </div>
 
 <div id="gmPanel" class="panel" style="margin-top:18px;display:none;border-color:#c59a3a">
@@ -2752,6 +2752,7 @@ roll.addEventListener('click',()=>rollCards().catch(e=>{console.error(e);alert(e
 reveal.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer,.bodyAnswer').forEach(x=>x.style.display='block')});
 hide.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.add('hiddenPoke'));document.querySelectorAll('.lieflag,.musicAnswer,.shinyAnswer,.bodyAnswer').forEach(x=>x.style.display='none')});
 reset.addEventListener('click',()=>{dealStage=0;dealStarted=false;dealRemaining=[];dealUsed=new Set();starterOffer.innerHTML='';dealButtons();player=1;teams={1:[],2:[]};sixRoundCounts={1:0,2:0};sixRoundOwners={1:[],2:[]};monoReset();current=[];mpPrivateBatchOwner=null;batchLocked=false;cards.innerHTML='';drawTeams();turn.textContent='Tour du JOUEUR 1';roll.disabled=false;mpSyncState()});
+let auctionPurchases={1:[],2:[]};
 let auctionRound={pokemon:null,highest:0,leader:0,turn:1,locked:false,balances:null,completed:0,loading:false};
 function auctionCanAct(n){return !mpSession||mpSession.id===mpSeats[n]}
 function auctionCounts(a){const awards=a.awards||(mpSession?{1:[],2:[]}:{1:teams[1],2:teams[2]});return {1:(awards[1]||[]).length,2:(awards[2]||[]).length}}
@@ -2773,6 +2774,7 @@ function auctionAutoResolve(a){
  return false;
 }
 function auctionRender(){
+ auctionRenderShop();
  const a=auctionRound,step=auctionEffectiveStep(a);
  const info=document.getElementById('auctionInfo'),poke=document.getElementById('auctionPokemon');
  if(a.pokemon){const secret=mpSession&&mpSession.id!==a.generatorId;poke.innerHTML=secret?'<div style="font-size:64px">❔</div><h3>Pokémon mystère</h3><p>Révélation après attribution</p>':'<img src="'+(a.pokemon.img||'')+'" style="height:120px;max-width:100%;object-fit:contain"><h3>'+mpEsc(a.pokemon.name)+'</h3>';}else if(a.lastReveal){poke.innerHTML='<h3>Enchère remportée par le joueur '+a.lastReveal.winner+'</h3><div id="auctionLastReveal">Pokémon attribué — chargement…</div>';getP(a.lastReveal.pokemonId).then(p=>{const el=document.getElementById('auctionLastReveal');if(el)el.innerHTML='<img src="'+(p.img||'')+'" style="height:120px"><h3>'+mpEsc(p.name)+'</h3><p>Prix : '+a.lastReveal.price+' ₽</p>'}).catch(console.warn);}else poke.textContent='Prêt pour une nouvelle enchère.';
@@ -2795,6 +2797,7 @@ async function auctionReceive(v){
  if(v.pokemonId){
   try{const p=await getP(v.pokemonId);if(auctionRound.completed===v.completed&&auctionRound.pokemonId===v.pokemonId)auctionRound.pokemon=p}catch(e){console.warn('Pokémon enchères',e)}
  }
+ auctionPurchases=v.purchases||{1:[],2:[]};
  if(v.budget){
   const tier=document.getElementById('auctionBudget');
   if([...tier.options].some(o=>o.value===String(v.budget)))tier.value=String(v.budget);
@@ -2821,7 +2824,7 @@ async function auctionStart(){
    const tx=await ref.transaction(v=>{
     if(v?.pokemonId||v?.completed>=12)return;
     const balances=v?.balances||{1:budget,2:budget},completed=v?.completed||0,awards=v?.awards||{1:[],2:[]};
-    return {pokemonId:p.id,generatorId:mpSession.id,lastReveal:v?.lastReveal||null,highest:0,leader:0,turn:auctionNextPlayer({completed,awards}),locked:false,balances,completed,budget:v?.budget||budget,step:v?.step||step,awards,updated:Date.now()};
+    return {pokemonId:p.id,generatorId:mpSession.id,purchases:v?.purchases||{1:[],2:[]},lastReveal:v?.lastReveal||null,highest:0,leader:0,turn:auctionNextPlayer({completed,awards}),locked:false,balances,completed,budget:v?.budget||budget,step:v?.step||step,awards,updated:Date.now()};
    });
    if(!tx.committed)alert('Une enchère est déjà en cours.');
    else await auctionReceive(tx.snapshot.val());
@@ -2879,6 +2882,34 @@ for(const n of [1,2]){
  document.getElementById('passP'+n).addEventListener('click',()=>auctionAction(n,'pass'));
 }
 const AUCTION_SHOP_ITEMS=[['Sans objet',15],['Attaque interdite',20],['Nature imposée',20],['Talent imposé',25],['Attaque obligatoire',25],['Objet imposé',25],['Évolution bloquée',30],['Téracristallisation imposée',30],['Sans Téracristallisation',35],['Handicap d’équipe (2 Pokémon sans objet)',40],['Joker de remplacement (choix parmi 3)',40],['Pokémon limité à 3 attaques',25]];
+
+function auctionRenderShop(){
+ const panel=document.getElementById('auctionShopActions'),log=document.getElementById('auctionShopLog');
+ if(!panel||!log)return;
+ const a=auctionRound,ready=a.completed>=12&&!a.pokemon;
+ const balances=a.balances||{1:auctionSelectedBudget(),2:auctionSelectedBudget()};
+ const buys=a.purchases||auctionPurchases||{1:[],2:[]};
+ const opts=AUCTION_SHOP_ITEMS.map(([name],i)=>'<option value="'+i+'">'+mpEsc(name)+'</option>').join('');
+ const mons=[1,2].map(n=>'<optgroup label="Joueur '+n+'">'+(a.awards?.[n]||teams[n].map(p=>p.id)).map((id,i)=>'<option value="'+n+':'+id+'">Joueur '+n+' — Pokémon '+(i+1)+' (n°'+id+')</option>').join('')+'</optgroup>').join('');
+ panel.innerHTML='<p>'+(!ready?'La boutique sera disponible après les 12 enchères.':'Boutique ouverte : sélectionne un malus, un Pokémon et confirme l’achat.')+'</p><label>Acheteur <select id="auctionBuyer"><option value="1">Joueur 1</option><option value="2">Joueur 2</option></select></label> <label>Malus <select id="auctionItem">'+opts+'</select></label> <label>Pokémon cible <select id="auctionTarget">'+mons+'</select></label> <button id="auctionBuy" type="button" '+(!ready?'disabled':'')+'>Acheter et appliquer</button>';
+ document.getElementById('auctionBuy').onclick=()=>auctionBuy().catch(e=>alert(e.message));
+ log.innerHTML='<h4>Malus appliqués</h4>'+[1,2].flatMap(n=>(buys[n]||[]).map(x=>'<div>Joueur '+n+' : '+mpEsc(x.name)+' → Pokémon n°'+x.pokemonId+' ('+x.cost+' ₽)</div>')).join('') ;
+}
+async function auctionBuy(){
+ const a=auctionRound,buyer=Number(document.getElementById('auctionBuyer').value),index=Number(document.getElementById('auctionItem').value);
+ const target=document.getElementById('auctionTarget').value.split(':').map(Number),[name,base]=AUCTION_SHOP_ITEMS[index]||[];
+ if(!name||!target[1]||a.completed<12||a.pokemon)return;
+ if(mpSession&&mpSession.id!==mpSeats[buyer])throw Error('Seul le joueur acheteur peut confirmer son achat.');
+ const cost=Math.max(1,Math.round(base*(a.budget||auctionSelectedBudget())/100));
+ const apply=v=>{
+  const purchases=v.purchases||{1:[],2:[]},own=purchases[buyer]||[],all=[...(purchases[1]||[]),...(purchases[2]||[])];
+  if(v.completed<12||v.pokemonId||own.length>=6||own.some(x=>x.name===name)||all.some(x=>x.pokemonId===target[1])||(v.balances?.[buyer]||0)<cost)return;
+  if(!(v.awards?.[target[0]]||[]).includes(target[1]))return;
+  v.balances[buyer]-=cost;purchases[buyer]=[...own,{name,pokemonId:target[1],owner:target[0],cost,restriction:name==='Pokémon limité à 3 attaques'?'max-three-moves':name}];v.purchases=purchases;v.updated=Date.now();return v;
+ };
+ if(mpSession){const tx=await mpRoom(mpSession.room).child('auctionRound').transaction(apply);if(!tx.committed)throw Error('Achat refusé : solde, cible ou limite non valide.');await auctionReceive(tx.snapshot.val())}
+ else{a.awards=a.awards||{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)};if(!apply(a))throw Error('Achat refusé.');auctionPurchases=a.purchases;auctionRender()}
+}
 function auctionMinimumStep(budget){return budget===250?10:budget>=1000?50:Math.max(5,Math.ceil(budget*.05/5)*5)}
 function auctionSelectedBudget(){const tier=document.getElementById('auctionBudget');const custom=document.getElementById('auctionCustomBudget');return tier.value==='custom'?Math.max(10,Math.min(1000000,Number(custom.value)||1000)):Number(tier.value)}
 function auctionUpdatePrices(){
