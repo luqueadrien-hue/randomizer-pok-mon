@@ -2175,7 +2175,7 @@ async function rollCards(){
  for(let i=0;i<n;i++){
    let p;if(gameMode.value==='trainerteam'){const pool=Object.keys(TRAINER_HINTS).map(Number).filter(id=>trainerCandidates(id).length&&!used.has(id));const validPool=[];for(const id of pool){try{const q=await getP(id);if(valid(q))validPool.push(q)}catch(e){}}for(const key of Object.keys(TRAINER_REGIONAL_HINTS)){if(used.has('form:'+key)||!trainerFilteredOwners(TRAINER_REGIONAL_HINTS[key].owners).length)continue;try{const q=await trainerRegionalPokemon(key);if(valid(q))validPool.push(q)}catch(e){console.warn('Forme régionale indisponible',key,e)}}if(!validPool.length)throw Error('Aucun Pokémon de dresseur disponible pour ces filtres.');p=validPool[Math.floor(Math.random()*validPool.length)];used.add(p.formKey?'form:'+p.formKey:p.id)}else if(gameMode.value==='footprint'){
    let found=false;
-   for(let attempts=0;attempts<80&&!found&&Date.now()<footprintDeadline&&footprintCandidates.length;attempts++){
+   for(let attempts=0;!found&&Date.now()<footprintDeadline&&footprintCandidates.length;attempts++){
     const id=footprintCandidates.pop();
     // Une seule empreinte d'origine par trio, y compris pour les formes régionales.
     if(used.has(id))continue;
@@ -2196,8 +2196,9 @@ async function rollCards(){
    }
    if(!found){
     current=[];used.clear();batchLocked=false;window.footprintRevealed=false;window.footprintScore=0;
+    mpPrivateBatchOwner=null;
     cards.innerHTML='<div class="card" style="grid-column:1/-1"><h3>🐾 Tirage interrompu</h3><p>Le chargement des empreintes a dépassé le délai de sécurité de 18 secondes, ou les filtres ne permettent pas de constituer un trio. Vérifie la connexion ou assouplis les filtres, puis relance le tirage.</p></div>';
-    if(mpSession)mpSyncState();
+    if(mpSession)await mpSyncState();
     return;
    }
   }else p=diceMode?await monoDraw(player,monoDiceType,used):await draw(used);
