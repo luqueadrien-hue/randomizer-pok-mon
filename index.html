@@ -2175,7 +2175,7 @@ async function rollCards(){
    for(let attempts=0;attempts<80&&!found;attempts++){
     const id=1+Math.floor(Math.random()*649);
     // Une seule empreinte d'origine par trio, y compris pour les formes régionales.
-    if(used.has(id)||footprintTemporarilyUnavailable(id))continue;
+    if(used.has(id))continue;
     used.add(id);
     try{
      const base=await getP(id);
@@ -2642,20 +2642,16 @@ function footprintSourceId(p){return Number(p.id)}
 function footprintEligible(p){return p&&p.id>=1&&p.id<=649&&p.sv&&valid(p)}
 function footprintHasSvMoves(p){return (p.moves||[]).some(m=>(m.version_group_details||[]).some(v=>v.version_group?.name==='scarlet-violet'))}
 const footprintImageCache=new Map();
-const footprintUnavailable=new Map();
-const FOOTPRINT_RETRY_DELAY=60000;
-function footprintTemporarilyUnavailable(id){const until=footprintUnavailable.get(id);if(!until)return false;if(Date.now()<until)return true;footprintUnavailable.delete(id);return false}
 function footprintImageUrl(id){return 'https://veekun.com/dex/media/pokemon/footprints/'+id+'.png'}
+// Les succès sont mémorisés. Un échec n'est jamais bloquant pour les prochains tirages.
 function footprintImageAvailable(id){
- if(footprintTemporarilyUnavailable(id))return Promise.resolve(false);
  if(footprintImageCache.has(id))return footprintImageCache.get(id);
  const task=new Promise(resolve=>{
-  const img=new Image();let done=false;
-  const finish=ok=>{if(done)return;done=true;clearTimeout(timeout);resolve(ok)};
-  const timeout=setTimeout(()=>finish(false),1800);
+  const img=new Image();let finished=false;
+  const finish=ok=>{if(finished)return;finished=true;clearTimeout(timeout);img.onload=null;img.onerror=null;resolve(ok)};
+  const timeout=setTimeout(()=>finish(false),4000);
   img.onload=()=>{
    if(img.naturalWidth<=1||img.naturalHeight<=1)return finish(false);
-   // Une image entièrement transparente ou monochrome n'est pas une empreinte exploitable.
    try{
     const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
     const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);
@@ -2668,17 +2664,13 @@ function footprintImageAvailable(id){
      if(first<0)first=shade;else if(shade!==first)variation=true;
     }
     finish(ink>=4&&(variation||ink<pixels.length/4));
-   }catch(e){
-    // Une image distante peut bloquer l'analyse des pixels (CORS). On conserve
-    // le contrôle de chargement sans prétendre avoir validé son contenu.
-    finish(img.naturalWidth>1&&img.naturalHeight>1);
-   }
+   }catch(e){finish(img.naturalWidth>1&&img.naturalHeight>1)}
   };
   img.onerror=()=>finish(false);
   img.src=footprintImageUrl(id);
  });
  footprintImageCache.set(id,task);
- task.then(ok=>{if(!ok){footprintImageCache.delete(id);footprintUnavailable.set(id,Date.now()+FOOTPRINT_RETRY_DELAY)}});
+ task.then(ok=>{if(!ok&&footprintImageCache.get(id)===task)footprintImageCache.delete(id)});
  return task;
 }
 // Validation de la manche : les identifiants d'empreintes restent uniques,
