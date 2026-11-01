@@ -2167,7 +2167,8 @@ async function rollCards(){
  }
  dealPanel.style.display='none';
  let n=parseInt(choiceCount.value)||3;n=Math.max(2,Math.min(12,n));if(gameMode.value==='footprint')n=3;if(gameMode.value==='luckdice'){luckRoll();n=3;}if(typeMode.value==='random-d10')n=3;if(['hangman','anagramtrio'].includes(gameMode.value))n=3;else choiceCount.value=n;hangmanState=null;
- const used=new Set();const footprintDeadline=gameMode.value==='footprint'?Date.now()+18000:Infinity;current=[];if(gameMode.value==='footprint'){window.footprintRevealed=false;window.footprintScore=0;}batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML=pokeWaitingHTML('Trois Pokémon mystères en préparation…');if(mpSession){current=[];mpLastReveal=null;await mpSyncState()}
+ const used=new Set();let footprintDeadline=Infinity;current=[];if(gameMode.value==='footprint'){window.footprintRevealed=false;window.footprintScore=0;}batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML=pokeWaitingHTML('Trois Pokémon mystères en préparation…');if(mpSession){current=[];mpLastReveal=null;await mpSyncState()}
+ if(gameMode.value==='footprint')footprintDeadline=Date.now()+18000;
  const diceMode=typeMode.value==='random-d10';
  if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');if(!monoDiceType)monoRoll(player);turn.textContent='🎲 D18 : face '+monoDiceResult+'/18 → '+frt(monoDiceType)+' | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
  for(let i=0;i<n;i++){
@@ -2181,12 +2182,12 @@ async function rollCards(){
     try{
      const base=await footprintBounded(()=>getP(id),Math.max(1,Math.min(1800,footprintDeadline-Date.now())));
      const options=[];
-     if(footprintEligible(base)&&await validEvolutionStage(base))options.push(base);
+     if(footprintEligible(base)&&await footprintBounded(()=>validEvolutionStage(base),Math.max(1,Math.min(1200,footprintDeadline-Date.now()))))options.push(base);
      for(const def of FOOTPRINT_REGIONAL_FORMS.filter(f=>f.base===id)){
       if(Date.now()>=footprintDeadline)break;
       try{
        const alt=await footprintBounded(()=>getSpecialForm(def),Math.max(1,Math.min(1400,footprintDeadline-Date.now())));
-       if(footprintEligible(alt)&&await validEvolutionStage(alt))options.push(alt);
+       if(footprintEligible(alt)&&await footprintBounded(()=>validEvolutionStage(alt),Math.max(1,Math.min(1200,footprintDeadline-Date.now()))))options.push(alt);
       }catch(e){console.warn('Forme régionale ignorée',def.api,e)}
      }
      if(options.length&&Date.now()<footprintDeadline&&await footprintBounded(()=>footprintImageAvailable(id),Math.max(1,footprintDeadline-Date.now()))){p=options[Math.floor(Math.random()*options.length)];found=true}
@@ -2651,7 +2652,7 @@ function footprintHasSvMoves(p){return (p.moves||[]).some(m=>(m.version_group_de
 const footprintImageCache=new Map();
 function footprintImageUrl(id){return 'https://veekun.com/dex/media/pokemon/footprints/'+id+'.png'}
 // Empêche une requête externe lente de bloquer tout le tirage.
-function footprintBounded(task,ms){return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(new Error('Délai réseau dépassé')),ms);Promise.resolve().then(task).then(value=>{clearTimeout(timeout);resolve(value)},error=>{clearTimeout(timeout);reject(error)})})}
+function footprintBounded(task,ms){return new Promise((resolve,reject)=>{let settled=false;const timeout=setTimeout(()=>{if(settled)return;settled=true;reject(new Error('Délai réseau dépassé'))},ms);Promise.resolve().then(task).then(value=>{if(settled)return;settled=true;clearTimeout(timeout);resolve(value)},error=>{if(settled)return;settled=true;clearTimeout(timeout);reject(error)})})}
 // Les succès sont mémorisés. Un échec n'est jamais bloquant pour les prochains tirages.
 function footprintImageAvailable(id){
  if(footprintImageCache.has(id))return footprintImageCache.get(id);
