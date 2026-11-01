@@ -3814,6 +3814,7 @@ function trainerMarketRender(){
 }
 async function trainerMarketStart(){
  if(gameMode.value!=='trainerrankgrid')return;
+ if(!mpSession||!MPAUTH?.currentUser||MPAUTH.currentUser.uid!==mpSession.id)throw Error('Session Firebase expirée : reconnecte-toi au salon.');
  if(!mpSession||!mpLobbyStarted||!mpSeats[1]||!mpSeats[2])throw Error('Il faut un salon réseau démarré avec deux joueurs attribués.');
  const room=await mpRoom(mpSession.room).once('value');
  if(room.val()?.ownerUid!==mpSession.id)throw Error('Seul l’hôte peut créer le marché.');
@@ -3843,6 +3844,7 @@ async function trainerMarketStart(){
 }
 async function trainerMarketBuy(key){
  if(!mpSession||!mpLobbyStarted)return;
+ if(!MPAUTH?.currentUser||MPAUTH.currentUser.uid!==mpSession.id)throw Error('Session Firebase expirée : reconnecte-toi au salon.');
  const seat=mpSession.id===mpSeats[1]?1:mpSession.id===mpSeats[2]?2:0;if(!seat)return;
  const ref=mpRoom(mpSession.room).child('trainerMarket');
  const tx=await ref.transaction(state=>{
