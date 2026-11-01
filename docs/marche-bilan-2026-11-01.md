@@ -1,5 +1,7 @@
 # Marché des Dresseurs — bilan technique du 1er novembre 2026
 
+> **Ce document décrit l'état initial à 19 h (250 occurrences).** La version enrichie de 21 h, avec **559 occurrences et 10 tests V8 réussis**, est disponible dans [le bilan 21 h](marche-bilan-2026-11-01-21h.md).
+
 ## Périmètre effectivement codé
 
 - Mode non numéroté `trainerrankgrid` visible dans `index.html` et affichage d'une grille commune dans le salon réseau existant.
