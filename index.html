@@ -2170,7 +2170,7 @@ async function rollCards(){
  const diceMode=typeMode.value==='random-d10';
  if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');if(!monoDiceType)monoRoll(player);turn.textContent='🎲 D18 : face '+monoDiceResult+'/18 → '+frt(monoDiceType)+' | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
  for(let i=0;i<n;i++){
-   let p;if(gameMode.value==='trainerteam'){const pool=Object.keys(TRAINER_HINTS).map(Number).filter(id=>trainerCandidates(id).length&&!used.has(id));const validPool=[];for(const id of pool){try{const q=await getP(id);if(valid(q))validPool.push(q)}catch(e){}}for(const key of Object.keys(TRAINER_REGIONAL_HINTS)){if(used.has('form:'+key)||!trainerFilteredOwners(TRAINER_REGIONAL_HINTS[key].owners).length)continue;try{const q=await trainerRegionalPokemon(key);if(valid(q))validPool.push(q)}catch(e){console.warn('Forme régionale indisponible',key,e)}}if(!validPool.length)throw Error('Aucun Pokémon de dresseur disponible pour ces filtres.');p=validPool[Math.floor(Math.random()*validPool.length)];used.add(p.formKey?'form:'+p.formKey:p.id)}else if(gameMode.value==='footprint'){let found=false;for(let attempts=0;attempts<200&&!found;attempts++){const id=1+Math.floor(Math.random()*649);if(used.has(id))continue;used.add(id);try{const candidate=await getP(id);if(valid(candidate)&&await validEvolutionStage(candidate)){p=candidate;found=true}}catch(e){}}if(!found)throw Error('Aucune empreinte compatible avec les filtres sélectionnés.')}else p=diceMode?await monoDraw(player,monoDiceType,used):await draw(used);
+   let p;if(gameMode.value==='trainerteam'){const pool=Object.keys(TRAINER_HINTS).map(Number).filter(id=>trainerCandidates(id).length&&!used.has(id));const validPool=[];for(const id of pool){try{const q=await getP(id);if(valid(q))validPool.push(q)}catch(e){}}for(const key of Object.keys(TRAINER_REGIONAL_HINTS)){if(used.has('form:'+key)||!trainerFilteredOwners(TRAINER_REGIONAL_HINTS[key].owners).length)continue;try{const q=await trainerRegionalPokemon(key);if(valid(q))validPool.push(q)}catch(e){console.warn('Forme régionale indisponible',key,e)}}if(!validPool.length)throw Error('Aucun Pokémon de dresseur disponible pour ces filtres.');p=validPool[Math.floor(Math.random()*validPool.length)];used.add(p.formKey?'form:'+p.formKey:p.id)}else if(gameMode.value==='footprint'){let found=false;for(let attempts=0;attempts<200&&!found;attempts++){const id=1+Math.floor(Math.random()*649);if(used.has(id))continue;used.add(id);try{const candidate=await getP(id);if(candidate.sv&&valid(candidate)&&await validEvolutionStage(candidate)&&await footprintImageAvailable(id)){p=candidate;found=true}}catch(e){}}if(!found)throw Error('Aucune empreinte chargée et compatible avec Écarlate/Violet pour les filtres sélectionnés.')}else p=diceMode?await monoDraw(player,monoDiceType,used):await draw(used);
    let c=clue(p,gameMode.value);
    if(isBodyMode(gameMode.value)){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);if(!window.__bodyCropFailures)window.__bodyCropFailures=0;if(++window.__bodyCropFailures>20)throw Error('Illustrations insuffisantes pour créer des extraits. Réessaie avec d’autres filtres.');continue}window.__bodyCropFailures=0;p._bodyCrop=crop;c='🔍 Partie du corps à identifier (découpe automatique, à confirmer par l’organisateur)';}
    if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
@@ -2608,6 +2608,20 @@ function renderHangman(){
  cards.innerHTML=html;
 }
 
+const footprintImageCache=new Map();
+function footprintImageUrl(id){return 'https://veekun.com/dex/media/pokemon/footprints/'+id+'.png'}
+function footprintImageAvailable(id){
+ if(footprintImageCache.has(id))return footprintImageCache.get(id);
+ const task=new Promise(resolve=>{
+  const img=new Image();let done=false;
+  const finish=ok=>{if(done)return;done=true;clearTimeout(timeout);resolve(ok)};
+  const timeout=setTimeout(()=>finish(false),6500);
+  img.onload=()=>finish(img.naturalWidth>1&&img.naturalHeight>1);
+  img.onerror=()=>finish(false);
+  img.src=footprintImageUrl(id);
+ });
+ footprintImageCache.set(id,task);return task;
+}
 function footprintCheck(){
  if(gameMode.value!=='footprint'||current.length!==3)return;
  const answers=[0,1,2].map(i=>document.getElementById('footGuess'+i)?.value);
@@ -2639,7 +2653,7 @@ function render(){
   const canGuess=!mpSession||(!isGenerator&&mpSession.id===mpSeats[player]);
   const revealed=!!window.footprintRevealed;
   cards.innerHTML='<div style="grid-column:1/-1"><h3>🐾 Associe les trois empreintes</h3><p>Une seule bonne association suffit pour choisir librement un Pokémon. Avec zéro bonne réponse, le randomiseur choisit pour toi.</p></div>'+available.map((x,i)=>{
-   const url='https://veekun.com/dex/media/pokemon/footprints/'+x.p.id+'.png';
+   const url=footprintImageUrl(x.p.id);
    const options='<option value="">Choisir un Pokémon…</option>'+available.map((y,j)=>'<option value="'+j+'">'+mpEsc(y.p.name)+'</option>').join('');
    return '<div class="card" id="c'+i+'"><div style="height:170px;display:flex;align-items:center;justify-content:center"><img src="'+url+'" alt="Empreinte numéro '+(i+1)+'" style="width:120px;height:120px;object-fit:contain;image-rendering:pixelated" onerror="this.style.display=\'none\';this.parentElement.textContent=\'Empreinte indisponible\'"></div><b>Empreinte '+(i+1)+'</b>'+(canGuess&&!revealed?'<select id="footGuess'+i+'" aria-label="Association empreinte '+(i+1)+'">'+options+'</select>':'')+(revealed?'<div class="bodyAnswer"><img src="'+(x.p.img||'')+'"><div class="name">'+mpEsc(x.p.name)+'</div></div>':'')+'</div>';
   }).join('')+(canGuess&&!revealed?'<div style="grid-column:1/-1;text-align:center"><button type="button" onclick="footprintCheck()">✅ Valider les trois associations</button></div>':'')+(revealed?'<div style="grid-column:1/-1;text-align:center"><p id="footResult">'+(window.footprintScore||0)+'/3 association(s) correcte(s). '+((window.footprintScore||0)>0?'Le devineur choisit un Pokémon.':'Le randomiseur impose un Pokémon.')+'</p>'+available.map((x,i)=>'<button type="button" onclick="footprintAward('+i+')">'+mpEsc(x.p.name)+'</button> ').join('')+'</div>':'');
