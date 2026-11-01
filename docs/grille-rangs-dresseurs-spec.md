@@ -32,3 +32,12 @@ Les catégories spécifiques (chefs d'installations de combat, personnages majeu
 
 ## Statut
 Mode non numéroté spécifié, **non opérationnel** tant que corpus, interface, achats atomiques et tests à deux joueurs ne sont pas réalisés.
+
+## Portée intergénérationnelle obligatoire (clarification utilisateur du 01/11/2026)
+- **Source des dresseurs : toutes les générations I à IX et leurs remakes, ainsi que les DLC et les jeux principaux ultérieurs pertinents.** Ne pas limiter les équipes historiques aux dresseurs de Paldea ou au jeu cible.
+- **Filtre de destination indépendant :** sélectionner un jeu Switch cible et ses DLC (Écarlate/Violet, Épée/Bouclier, DEPS, etc.) ; n'afficher dans chaque rang que les Pokémon/formes réellement jouables dans ce jeu, y compris via transferts HOME autorisés. Un Pokémon issu de Kanto peut figurer dans le marché d'Écarlate/Violet s'il est compatible.
+- Pour chaque apparition, conserver `pokemonId`, `formId`, `trainerId`, `trainerNameFR`, `trainerRankAtBattle`, `sourceGame`, `sourceGeneration`, `battleVariant`, `sourceUrl`. La catégorie est déterminée par le **rôle du dresseur dans ce combat précis** (sbire, admin, chef, champion d'Arène, rival, professeur combattant, Conseil 4, Maître), et non par la puissance du Pokémon.
+- Une espèce/forme peut être présente dans plusieurs catégories et chez plusieurs dresseurs. L'achat exclusif doit s'appliquer à son **identité espèce + forme**, quel que soit son rang ou son propriétaire d'origine ; les formes régionales restent distinctes.
+- Les équipes du Conseil 4 de Kanto, de la Team Rocket et de toutes les autres régions sont à intégrer sur cette base ; les DLC sont inclus dans le filtre de destination et dans les sources d'équipes.
+- **Ne pas déclarer le corpus complet** avant un audit de couverture génération par génération, dresseur par dresseur, forme par forme et jeu cible par jeu cible.
+- Sources de référence : https://www.serebii.net/pokearth/kanto/1st/indigoplateau.shtml (exemple équipes Kanto) ; https://home.pokemon.com/fr-fr/move/ et https://support.pokemon.com/hc/fr/articles/360039592832-Comme-savoir-vers-quels-jeux-je-peux-transf%C3%A9rer-mes-Pok%C3%A9mon-depuis-Pok%C3%A9mon-HOME (compatibilité).
