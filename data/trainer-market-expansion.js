@@ -2413,5 +2413,320 @@ window.TRAINER_MARKET_EXPANSION=[
   "Carchacrok",
   "Percupio (boss final)",
   "PLA_VOLO"
+ ],
+ [
+  3,
+  126,
+  "Magmar",
+  "Auguste (Johto)",
+  "HGSS_KANTO"
+ ],
+ [
+  3,
+  219,
+  "Volcaropod",
+  "Auguste (Johto)",
+  "HGSS_KANTO"
+ ],
+ [
+  3,
+  78,
+  "Galopa",
+  "Auguste (Johto)",
+  "HGSS_KANTO"
+ ],
+ [
+  3,
+  324,
+  "Chartor",
+  "Auguste (revanche)",
+  "HGSS_REMATCH"
+ ],
+ [
+  3,
+  323,
+  "Camérupt",
+  "Auguste (revanche)",
+  "HGSS_REMATCH"
+ ],
+ [
+  3,
+  78,
+  "Galopa",
+  "Auguste (revanche)",
+  "HGSS_REMATCH"
+ ],
+ [
+  3,
+  219,
+  "Volcaropod",
+  "Auguste (revanche)",
+  "HGSS_REMATCH"
+ ],
+ [
+  3,
+  229,
+  "Démolosse",
+  "Auguste (revanche)",
+  "HGSS_REMATCH"
+ ],
+ [
+  3,
+  467,
+  "Maganon",
+  "Auguste (revanche)",
+  "HGSS_REMATCH"
+ ],
+ [
+  3,
+  103,
+  "Noadkoko",
+  "Blue (Champion d’Arène)",
+  "HGSS_KANTO"
+ ],
+ [
+  3,
+  68,
+  "Mackogneur",
+  "Blue (Champion d’Arène)",
+  "HGSS_KANTO"
+ ],
+ [
+  3,
+  59,
+  "Arcanin",
+  "Blue (Champion d’Arène)",
+  "HGSS_KANTO"
+ ],
+ [
+  3,
+  112,
+  "Rhinoféros",
+  "Blue (Champion d’Arène)",
+  "HGSS_KANTO"
+ ],
+ [
+  3,
+  130,
+  "Léviator",
+  "Blue (Champion d’Arène)",
+  "HGSS_KANTO"
+ ],
+ [
+  3,
+  18,
+  "Roucarnage",
+  "Blue (Champion d’Arène)",
+  "HGSS_KANTO"
+ ],
+ [
+  3,
+  103,
+  "Noadkoko",
+  "Blue (Champion d’Arène, revanche)",
+  "HGSS_REMATCH"
+ ],
+ [
+  3,
+  68,
+  "Mackogneur",
+  "Blue (Champion d’Arène, revanche)",
+  "HGSS_REMATCH"
+ ],
+ [
+  3,
+  59,
+  "Arcanin",
+  "Blue (Champion d’Arène, revanche)",
+  "HGSS_REMATCH"
+ ],
+ [
+  3,
+  464,
+  "Rhinastoc",
+  "Blue (Champion d’Arène, revanche)",
+  "HGSS_REMATCH"
+ ],
+ [
+  3,
+  248,
+  "Tyranocif",
+  "Blue (Champion d’Arène, revanche)",
+  "HGSS_REMATCH"
+ ],
+ [
+  3,
+  18,
+  "Roucarnage",
+  "Blue (Champion d’Arène, revanche)",
+  "HGSS_REMATCH"
+ ],
+ [
+  7,
+  437,
+  "Archéodong",
+  "Clément (revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  124,
+  "Lippoutou",
+  "Clément (revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  326,
+  "Groret",
+  "Clément (revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  80,
+  "Flagadoss",
+  "Clément (revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  282,
+  "Gardevoir",
+  "Clément (revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  178,
+  "Xatu",
+  "Clément (revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  435,
+  "Moufflair",
+  "Koga (Conseil 4, revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  454,
+  "Coatox",
+  "Koga (Conseil 4, revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  317,
+  "Avaltout",
+  "Koga (Conseil 4, revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  49,
+  "Aéromite",
+  "Koga (Conseil 4, revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  89,
+  "Grotadmorv",
+  "Koga (Conseil 4, revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  169,
+  "Nostenfer",
+  "Koga (Conseil 4, revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  237,
+  "Kapoera",
+  "Aldo (Conseil 4, revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  106,
+  "Kicklee",
+  "Aldo (Conseil 4, revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  297,
+  "Hariyama",
+  "Aldo (Conseil 4, revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  68,
+  "Mackogneur",
+  "Aldo (Conseil 4, revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  448,
+  "Lucario",
+  "Aldo (Conseil 4, revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  107,
+  "Tygnon",
+  "Aldo (Conseil 4, revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  461,
+  "Dimoret",
+  "Marion (revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  442,
+  "Spiritomb",
+  "Marion (revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  430,
+  "Corboss",
+  "Marion (revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  197,
+  "Noctali",
+  "Marion (revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  229,
+  "Démolosse",
+  "Marion (revanche)",
+  "HGSS_E4_REMATCH"
+ ],
+ [
+  7,
+  359,
+  "Absol",
+  "Marion (revanche)",
+  "HGSS_E4_REMATCH"
  ]
 ];
