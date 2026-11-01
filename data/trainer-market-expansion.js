@@ -1961,5 +1961,407 @@ window.TRAINER_MARKET_EXPANSION=[
   "Kassis (Maître Myrtille)",
   "SV_BB",
   ""
+ ],
+ [
+  1,
+  220,
+  "Marcacrin",
+  "Maternelle Natalie (Illumis)",
+  "XY_LUMIOSE"
+ ],
+ [
+  1,
+  438,
+  "Manzaï",
+  "Maternelle Natalie (Illumis)",
+  "XY_LUMIOSE"
+ ],
+ [
+  1,
+  174,
+  "Toudoudou",
+  "Maternelle Lily (Illumis)",
+  "XY_LUMIOSE"
+ ],
+ [
+  2,
+  41,
+  "Nosferapti",
+  "Sbire Team Aqua",
+  "RS_AQUA"
+ ],
+ [
+  2,
+  261,
+  "Medhyèna",
+  "Sbire Team Aqua",
+  "RS_AQUA"
+ ],
+ [
+  2,
+  318,
+  "Carvanha",
+  "Sbire Team Aqua",
+  "RS_AQUA"
+ ],
+ [
+  2,
+  320,
+  "Wailmer",
+  "Sbire Team Aqua (Émeraude)",
+  "RS_AQUA"
+ ],
+ [
+  2,
+  322,
+  "Chamallot",
+  "Sbire Team Magma",
+  "ORAS_MAGMA"
+ ],
+ [
+  2,
+  41,
+  "Nosferapti",
+  "Sbire Team Magma",
+  "ORAS_MAGMA"
+ ],
+ [
+  2,
+  261,
+  "Medhyèna",
+  "Sbire Team Magma",
+  "ORAS_MAGMA"
+ ],
+ [
+  2,
+  265,
+  "Chenipotte",
+  "Sbire Team Galaxie",
+  "BDSP_GALACTIC"
+ ],
+ [
+  2,
+  268,
+  "Blindalys",
+  "Sbire Team Galaxie",
+  "BDSP_GALACTIC"
+ ],
+ [
+  2,
+  431,
+  "Chaglam",
+  "Sbire Team Galaxie",
+  "BDSP_GALACTIC"
+ ],
+ [
+  2,
+  41,
+  "Nosferapti",
+  "Sbire Team Galaxie",
+  "BDSP_GALACTIC"
+ ],
+ [
+  2,
+  434,
+  "Moufouette",
+  "Sbire Team Galaxie",
+  "BDSP_GALACTIC"
+ ],
+ [
+  2,
+  453,
+  "Cradopaud",
+  "Sbire Team Galaxie",
+  "BDSP_GALACTIC"
+ ],
+ [
+  2,
+  42,
+  "Nosferalto",
+  "Sbire Team Galaxie",
+  "BDSP_GALACTIC"
+ ],
+ [
+  2,
+  436,
+  "Archéomire",
+  "Sbire Team Galaxie",
+  "BDSP_GALACTIC"
+ ],
+ [
+  2,
+  19,
+  "Rattata d’Alola",
+  "Sbire Team Skull",
+  "SM_SKULL",
+  "rattata-alola"
+ ],
+ [
+  2,
+  20,
+  "Rattatac d’Alola",
+  "Sbire Team Skull",
+  "SM_SKULL",
+  "raticate-alola"
+ ],
+ [
+  2,
+  41,
+  "Nosferapti",
+  "Sbire Team Skull",
+  "SM_SKULL"
+ ],
+ [
+  2,
+  42,
+  "Nosferalto",
+  "Sbire Team Skull",
+  "SM_SKULL"
+ ],
+ [
+  2,
+  92,
+  "Fantominus",
+  "Sbire Team Skull",
+  "SM_SKULL"
+ ],
+ [
+  2,
+  93,
+  "Spectrum",
+  "Sbire Team Skull",
+  "SM_SKULL"
+ ],
+ [
+  2,
+  88,
+  "Tadmorv d’Alola",
+  "Sbire Team Skull",
+  "SM_SKULL",
+  "grimer-alola"
+ ],
+ [
+  2,
+  96,
+  "Soporifik",
+  "Sbire Team Skull",
+  "SM_SKULL"
+ ],
+ [
+  2,
+  167,
+  "Mimigal",
+  "Sbire Team Skull",
+  "SM_SKULL"
+ ],
+ [
+  2,
+  734,
+  "Manglouton",
+  "Sbire Team Skull",
+  "SM_SKULL"
+ ],
+ [
+  2,
+  747,
+  "Vorastérie",
+  "Sbire Team Skull",
+  "SM_SKULL"
+ ],
+ [
+  2,
+  753,
+  "Mimantis",
+  "Sbire Team Skull",
+  "SM_SKULL"
+ ],
+ [
+  2,
+  757,
+  "Tritox",
+  "Sbire Team Skull",
+  "SM_SKULL"
+ ],
+ [
+  2,
+  767,
+  "Sovkipou",
+  "Sbire Team Skull",
+  "SM_SKULL"
+ ],
+ [
+  4,
+  1,
+  "Bulbizarre",
+  "Blue (premier combat)",
+  "RB_RIVAL"
+ ],
+ [
+  4,
+  4,
+  "Salamèche",
+  "Blue (premier combat)",
+  "RB_RIVAL"
+ ],
+ [
+  4,
+  7,
+  "Carapuce",
+  "Blue (premier combat)",
+  "RB_RIVAL"
+ ],
+ [
+  5,
+  1,
+  "Bulbizarre",
+  "Professeur Platane (laboratoire)",
+  "XY_LUMIOSE"
+ ],
+ [
+  5,
+  4,
+  "Salamèche",
+  "Professeur Platane (laboratoire)",
+  "XY_LUMIOSE"
+ ],
+ [
+  5,
+  7,
+  "Carapuce",
+  "Professeur Platane (laboratoire)",
+  "XY_LUMIOSE"
+ ],
+ [
+  5,
+  3,
+  "Florizarre",
+  "Professeur Platane (revanche)",
+  "XY_SYCAMORE"
+ ],
+ [
+  5,
+  6,
+  "Dracaufeu",
+  "Professeur Platane (revanche)",
+  "XY_SYCAMORE"
+ ],
+ [
+  5,
+  9,
+  "Tortank",
+  "Professeur Platane (revanche)",
+  "XY_SYCAMORE"
+ ],
+ [
+  6,
+  42,
+  "Nosferalto",
+  "Apocyne (Admin Team Skull)",
+  "SM_SKULL"
+ ],
+ [
+  6,
+  757,
+  "Tritox",
+  "Apocyne (Admin Team Skull)",
+  "SM_SKULL"
+ ],
+ [
+  6,
+  758,
+  "Malamandre",
+  "Apocyne (Admin Team Skull)",
+  "SM_SKULL"
+ ],
+ [
+  6,
+  768,
+  "Sarmuraï",
+  "Guzma (chef Team Skull)",
+  "SM_SKULL"
+ ],
+ [
+  6,
+  168,
+  "Migalos",
+  "Guzma (chef Team Skull)",
+  "SM_SKULL"
+ ],
+ [
+  6,
+  284,
+  "Maskadra",
+  "Guzma (chef Team Skull)",
+  "SM_SKULL"
+ ],
+ [
+  6,
+  127,
+  "Scarabrute",
+  "Guzma (chef Team Skull)",
+  "SM_SKULL"
+ ],
+ [
+  6,
+  212,
+  "Cizayox",
+  "Guzma (chef Team Skull)",
+  "SM_SKULL"
+ ],
+ [
+  6,
+  323,
+  "Camérupt",
+  "Courtney (Admin Team Magma)",
+  "ORAS_MAGMA"
+ ],
+ [
+  6,
+  319,
+  "Sharpedo",
+  "Matt (Admin Team Aqua)",
+  "RS_AQUA"
+ ],
+ [
+  6,
+  261,
+  "Medhyèna",
+  "Shelly (Admin Team Aqua)",
+  "RS_AQUA"
+ ],
+ [
+  6,
+  318,
+  "Carvanha",
+  "Shelly (Admin Team Aqua)",
+  "RS_AQUA"
+ ],
+ [
+  6,
+  41,
+  "Nosferapti",
+  "Mars (Commandante Galaxie)",
+  "BDSP_GALACTIC"
+ ],
+ [
+  6,
+  432,
+  "Chaffreux",
+  "Mars (Commandante Galaxie)",
+  "BDSP_GALACTIC"
+ ],
+ [
+  6,
+  41,
+  "Nosferapti",
+  "Jupiter (Commandante Galaxie)",
+  "BDSP_GALACTIC"
+ ],
+ [
+  6,
+  435,
+  "Moufflair",
+  "Jupiter (Commandante Galaxie)",
+  "BDSP_GALACTIC"
  ]
 ];
