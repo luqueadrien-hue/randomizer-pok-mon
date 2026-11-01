@@ -219,6 +219,7 @@ img,video,canvas,svg{max-width:100%}
 <h2>🏆 Marché des Dresseurs — 8 rangs</h2>
 <p>Grille commune en réseau. Les achats sont exclusifs, limités à six Pokémon par joueur. <strong>Bêta :</strong> le catalogue historique est encore incomplet : seuls les Pokémon confirmés du catalogue initial sont achetables.</p>
 <div class="controls"><label>Jeu de destination <select id="trainerMarketGame"><option value="sv">Écarlate / Violet + DLC</option><option value="swsh">Épée / Bouclier + DLC</option><option value="bdsp">Diamant Étincelant / Perle Scintillante</option><option value="pla">Légendes Pokémon : Arceus</option></select></label><label><input type="checkbox" id="trainerMarketHome" checked> Transferts HOME confirmés (liste partielle)</label><label>Budget par joueur <select id="trainerMarketBudget"><option value="1500">1 500 ₽</option><option value="3000" selected>3 000 ₽</option><option value="4500">4 500 ₽</option><option value="6500">6 500 ₽</option><option value="0">Illimité</option></select></label><button type="button" id="trainerMarketStart" onclick="trainerMarketStart().catch(e=>{document.getElementById('trainerMarketStatus').textContent='❌ '+e.message;alert(e.message);console.error(e)})">Créer / réinitialiser le marché</button></div>
+<label>Rechercher dans les huit rangs <input id="trainerMarketSearch" type="search" placeholder="Pokémon, dresseur ou jeu source…" oninput="trainerMarketRender()"></label>
 <div id="trainerMarketStatus" class="turn"></div>
 <div id="trainerMarketGrid"></div>
 </div>
@@ -3735,7 +3736,7 @@ const TRAINER_MARKET_DLC_ATTESTED={
  swsh:new Set(TRAINER_MARKET_ALL_SEED.filter(x=>x[4]==='SWSH').map(x=>x[1]))
 };
 // Sous-ensemble contrôlé du Pokédex Hisui pour dégradation gracieuse si l'API est indisponible.
-const TRAINER_MARKET_HISUI_ATTESTED=new Set([722,723,724,155,156,157,501,502,503,399,400,396,397,398,403,404,405,265,266,267,268,269,77,78,133,134,135,136,196,197,470,471,700,41,42,169,425,426,401,402,418,419,412,413,414,74,75,76,234,899,446,143,46,47,172,25,26,63,64,65,390,391,392,427,428,420,421,54,55,415,416,123,900,212,214,439,122]);
+const TRAINER_MARKET_HISUI_ATTESTED=new Set([58,59,628,722,723,724,155,156,157,501,502,503,399,400,396,397,398,403,404,405,265,266,267,268,269,77,78,133,134,135,136,196,197,470,471,700,41,42,169,425,426,401,402,418,419,412,413,414,74,75,76,234,899,446,143,46,47,172,25,26,63,64,65,390,391,392,427,428,420,421,54,55,415,416,123,900,212,214,439,122]);
 // Formes de base non disponibles dans Hisui malgré la présence de l'espèce sous forme régionale.
 const TRAINER_MARKET_PLA_BASE_EXCLUDED=new Set([58,59,100,101,157,503,549,570,571,628,705,706,713,724]);
 // Sélection conservatrice des Pokémon compatibles par transfert, non exhaustive.
@@ -3793,16 +3794,18 @@ function trainerMarketRender(){
   const budget=n=>state.budget===0?'Illimité':Math.max(0,state.budget-(state.spent?.[n]||0)).toLocaleString('fr-FR')+' ₽';
   status.textContent=(gameLabels[state.game]||state.game||'Jeu inconnu')+' · '+(state.catalog||[]).length+' entrées compatibles · J1 : '+budget(1)+' ('+(state.teams?.[1]||[]).length+'/6) · J2 : '+budget(2)+' ('+(state.teams?.[2]||[]).length+'/6) · '+(state.source||'')+' · Corpus historique encore incomplet.';
  }
+ const search=(document.getElementById('trainerMarketSearch')?.value||'').trim().toLocaleLowerCase('fr');
  const soldKeys=new Set(Object.keys(state?.sold||{}).filter(k=>state.sold[k]));
  const soldPokemon=new Set((state?.catalog||[]).filter(p=>soldKeys.has(p.key)).map(p=>p.pokemonKey));
  grid.innerHTML=TRAINER_MARKET_RANKS.map((rank,i)=>{
-  const entries=(state?.catalog||[]).filter(p=>p.rank===i+1);
-  return '<details class="panel" style="margin:8px 0;padding:12px" '+(entries.length?'open':'')+'><summary><strong>'+rank[2]+' Rang '+(i+1)+' — '+mpEsc(rank[0])+' · '+rank[1]+' ₽ ('+entries.length+')</strong></summary><div class="controls">'+(entries.length?entries.map(p=>{
+  const total=(state?.catalog||[]).filter(p=>p.rank===i+1);
+  const entries=total.filter(p=>!search||[p.name,p.trainer,p.sourceGame].some(v=>String(v||'').toLocaleLowerCase('fr').includes(search)));
+  return '<details class="panel" style="margin:8px 0;padding:12px" '+(search&&entries.length?'open':'')+'><summary><strong>'+rank[2]+' Rang '+(i+1)+' — '+mpEsc(rank[0])+' · '+rank[1]+' ₽ ('+entries.length+(search?'/'+total.length:'')+')</strong></summary><div class="controls">'+(entries.length?entries.map(p=>{
    const sold=soldPokemon.has(p.pokemonKey);
    const seat=mpSession?.id===mpSeats[1]?1:mpSession?.id===mpSeats[2]?2:0;
    const spent=state?.spent?.[seat]||0,owned=state?.teams?.[seat]||[];
    const canBuy=!!seat&&mpLobbyStarted&&!sold&&owned.length<6&&(state.budget===0||spent+rank[1]<=state.budget);
-   return '<button type="button" data-market-buy="'+mpEsc(p.key)+'" '+(!canBuy?'disabled':'')+' title="'+mpEsc(p.trainer+' · '+p.sourceGame+' · '+p.availability)+'">'+mpEsc(p.name)+' · '+mpEsc(p.trainer)+' ('+mpEsc(p.sourceGame)+') — '+(sold?'Vendu':!seat?'Spectateur':'Acheter')+'</button>';
+   return '<button type="button" data-market-buy="'+mpEsc(p.key)+'" '+(!canBuy?'disabled':'')+' title="'+mpEsc(p.trainer+' · '+p.sourceGame+' · '+p.availability)+'">'+mpEsc(p.name)+' · '+mpEsc(p.trainer)+' ('+mpEsc(p.sourceGame)+') — '+(sold?'Vendu':!seat?'Spectateur':'Acheter')+'</button><a href="'+mpEsc(p.sourceUrl||'#')+'" target="_blank" rel="noopener noreferrer" title="Équipe de '+mpEsc(p.trainer)+'">Source</a>';
   }).join(''):'<small>Aucun Pokémon attesté et compatible dans cette catégorie pour le catalogue partiel.</small>')+'</div></details>';
  }).reverse().join('');
  const teams=state?.teams||{};
