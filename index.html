@@ -475,7 +475,7 @@ async function mpHydrateState(st){
  try{
   if(st.mode&&gameMode.value!=='triochoice'&&st.mode!=='triochoice'){if(gameMode.value!==st.mode)surpriseActive=false;gameMode.value=(st.mode==='olddesc'?'dexdesc':st.mode==='bstonly'?'stats':st.mode);}
   luckDie=st.mode==='luckdice'?(st.luckDie||null):null;if(Array.isArray(st.luckUsedFaces))luckUsedFaces=st.luckUsedFaces;const z=st.settings||{};for(const [k,v] of Object.entries(z)){const el=document.getElementById(k);if(el&&v!=null)el.value=v}
-  if(typeof updateModePanels==='function')updateModePanels();if(typeof syncCompetitiveGeneration==='function')syncCompetitiveGeneration();
+  if(typeof updateModePanels==='function')updateModePanels();if(typeof syncCompetitiveGeneration==='function')syncCompetitiveGeneration();if(typeof trainerMarketRender==='function')trainerMarketRender();
   const mine=!!mpSession&&!!st.proposalOwnerId&&st.proposalOwnerId===mpSession.id;
   mpPrivateBatchOwner=st.proposalOwnerId||null;if(st.mode==='footprint'){window.footprintRevealed=!!st.footprintResult?.revealed;window.footprintScore=Number(st.footprintResult?.score)||0;}
   if(st.mode==='randombox'){pcBoxSlots=st.pcBoxSlots||null;pcBoxPhase=st.pcBoxPhase||'pick';pcBoxBans=st.pcBoxBans||{1:[],2:[]};current=[];}else if(!mine)current=[];
@@ -514,7 +514,7 @@ function mpReceive(r){
  try{if(typeof moduloReceive==='function')moduloReceive(r.modulo||null)}catch(e){console.warn('Module modulo isolé :',e)}
  const ps=r.players||{},entries=Object.entries(ps).filter(([id,p])=>p&&p.online!==false);
  const tablesPanel=document.getElementById('mpTablesPanel');if(tablesPanel){const root=mpTableRoot(mpSession?.room||'');if(r.tableCount>1){tablesPanel.innerHTML='<strong>🏆 Tournoi : '+r.tableCount+' tables indépendantes — '+(r.tableCount*2)+' places</strong><div class="actions">'+Array.from({length:r.tableCount},(_,i)=>'<button type="button" data-table="'+(i+1)+'">Table '+(i+1)+' · 2 joueurs</button>').join('')+'</div><small>Chaque table possède son propre tirage, ses équipes et ses manches. Clique sur une table pour y jouer.</small>';tablesPanel.querySelectorAll('[data-table]').forEach(b=>b.onclick=()=>mpGoTable(Number(b.dataset.table)).catch(e=>mpSetStatus('❌ '+mpEsc(e.message))))}else if(r.parentRoom){tablesPanel.innerHTML='<strong>🎮 Table '+r.tableNumber+' — partie indépendante</strong> <button id="mpBackLobby" type="button">↩ Retour au salon principal</button>';document.getElementById('mpBackLobby').onclick=()=>mpReturnLobby().catch(e=>mpSetStatus('❌ '+mpEsc(e.message)))}else tablesPanel.innerHTML='';}
- mpSeats=r.seats||{};mpGenerators={1:mpSeats[2]||'',2:mpSeats[1]||''};mpLobbyStarted=!!r.started;
+ mpSeats=r.seats||{};mpGenerators={1:mpSeats[2]||'',2:mpSeats[1]||''};mpLobbyStarted=!!r.started;trainerMarketRender();
  mpPlayers.innerHTML=entries.map(([id,p])=>'<span class="mpbadge">'+(p.role==='host'?'👑 ':'')+mpEsc(p.name)+(p.online===false?' ⚫':' 🟢')+'</span>').join('');
  const isHost=!!mpSession&&r.ownerUid===mpSession.id;
  const assigned=Object.values(mpSeats);
@@ -3616,14 +3616,26 @@ function trainerMarketRender(){
  panel.style.display=gameMode.value==='trainerrankgrid'?'block':'none';
  if(gameMode.value!=='trainerrankgrid')return;
  const state=trainerMarketState,grid=document.getElementById('trainerMarketGrid'),status=document.getElementById('trainerMarketStatus');
- if(!state){status.textContent='En attente de création du marché par l’hôte du salon. Catalogue initial limité à quelques équipes confirmées de Paldea.';}
- else {const budget=n=>state.budget===0?'Illimité':Math.max(0,state.budget-(state.spent?.[n]||0)).toLocaleString('fr-FR')+' ₽';
- status.textContent='Joueur 1 : '+budget(1)+' ('+(state.teams?.[1]||[]).length+'/6) · Joueur 2 : '+budget(2)+' ('+(state.teams?.[2]||[]).length+'/6)';
+ const gameLabels={sv:'Écarlate / Violet',swsh:'Épée / Bouclier',bdsp:'DEPS',pla:'Légendes Arceus'};
+ const startButton=document.getElementById('trainerMarketStart');
+ if(startButton)startButton.style.display=mpSession?.id&&mpSession?.role==='host'?'':'none';
+ if(!state){status.textContent='En attente de création par l’hôte. Corpus historique Kanto et Paldea partiel, filtré par jeu de destination.';}
+ else {
+  const budget=n=>state.budget===0?'Illimité':Math.max(0,state.budget-(state.spent?.[n]||0)).toLocaleString('fr-FR')+' ₽';
+  status.textContent=(gameLabels[state.game]||state.game||'Jeu inconnu')+' · '+(state.catalog||[]).length+' entrées compatibles · J1 : '+budget(1)+' ('+(state.teams?.[1]||[]).length+'/6) · J2 : '+budget(2)+' ('+(state.teams?.[2]||[]).length+'/6) · Corpus historique encore incomplet.';
  }
+ const soldKeys=new Set(Object.keys(state?.sold||{}).filter(k=>state.sold[k]));
+ const soldPokemon=new Set((state?.catalog||[]).filter(p=>soldKeys.has(p.key)).map(p=>p.pokemonKey));
  grid.innerHTML=TRAINER_MARKET_RANKS.map((rank,i)=>{
- const entries=(state?.catalog||[]).filter(p=>p.rank===i+1);
- return '<div class="panel" style="margin:8px 0;padding:12px"><strong>'+rank[2]+' Rang '+(i+1)+' — '+mpEsc(rank[0])+' · '+rank[1]+' ₽</strong><div class="controls">'+(entries.length?entries.map(p=>{const sold=state.sold?.[p.key]||Object.keys(state.sold||{}).some(k=>state.sold[k]&&state.catalog.find(x=>x.key===k)?.pokemonKey===p.pokemonKey);return '<button type="button" '+(sold?'disabled':'')+' onclick="trainerMarketBuy(\''+mpEsc(p.key)+'\')">'+mpEsc(p.name)+' — '+(sold?'Vendu':'Acheter')+'</button>'}).join(''):'<small>Aucun Pokémon vérifié dans cette catégorie pour le moment</small>')+'</div></div>';
+  const entries=(state?.catalog||[]).filter(p=>p.rank===i+1);
+  return '<details class="panel" style="margin:8px 0;padding:12px" '+(entries.length?'open':'')+'><summary><strong>'+rank[2]+' Rang '+(i+1)+' — '+mpEsc(rank[0])+' · '+rank[1]+' ₽ ('+entries.length+')</strong></summary><div class="controls">'+(entries.length?entries.map(p=>{
+   const sold=soldPokemon.has(p.pokemonKey);
+   return '<button type="button" data-market-buy="'+mpEsc(p.key)+'" '+(sold?'disabled':'')+' title="'+mpEsc(p.trainer+' · '+p.sourceGame+' · '+p.availability)+'">'+mpEsc(p.name)+' · '+mpEsc(p.trainer)+' ('+mpEsc(p.sourceGame)+') — '+(sold?'Vendu':'Acheter')+'</button>';
+  }).join(''):'<small>Aucun Pokémon attesté et compatible dans cette catégorie pour le catalogue partiel.</small>')+'</div></details>';
  }).reverse().join('');
+ const teams=state?.teams||{};
+ grid.innerHTML+='<div class="panel"><h3>Équipes achetées</h3>'+[1,2].map(n=>'<p><strong>Joueur '+n+'</strong> : '+((teams[n]||[]).map(p=>mpEsc(p.name)+' ('+p.price+' ₽)').join(', ')||'Aucun achat')+'</p>').join('')+'</div>';
+ grid.querySelectorAll('[data-market-buy]').forEach(b=>b.addEventListener('click',()=>trainerMarketBuy(b.dataset.marketBuy).catch(e=>alert('Achat impossible : '+e.message))));
 }
 async function trainerMarketStart(){
  if(gameMode.value!=='trainerrankgrid')return;
