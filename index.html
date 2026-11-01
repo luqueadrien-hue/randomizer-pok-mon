@@ -3429,26 +3429,34 @@ async function moduloChoose(id){if(!moduloIs(moduloRemote?.chooser||2)||!moduloR
 const TRAINER_MARKET_RANKS=[
  ['Dresseurs ordinaires',200,'🧢'],['Sbires antagonistes',350,'🚩'],['Champions d’Arène',500,'🏅'],['Rivaux',650,'⚡'],['Professeurs combattants',700,'🎓'],['Admins et chefs antagonistes',800,'🛡️'],['Conseil 4',1000,'💎'],['Maîtres de Ligue et équivalents',1300,'👑']
 ];
+// Sélection de départ non exhaustive : équipes de Paldea, sources Serebii et Pokémon Database.
+// Ne pas inclure de Pokémon dont l'attribution à un dresseur n'est pas confirmée.
+const TRAINER_MARKET_SEED=[
+ [3,919,'Lilliterelle','Éra'],[3,917,'Tissenboule','Éra'],[3,216,'Teddiursa','Éra'],
+ [7,340,'Barbicha','Cayenn'],[7,323,'Camérupt','Cayenn'],[7,232,'Donphan','Cayenn'],[7,51,'Triopikeur','Cayenn'],[7,980,'Terraiste','Cayenn'],
+ [8,956,'Cléopsytra','Alisma'],[8,673,'Chevroum','Alisma'],[8,975,'Balbalèze','Alisma'],[8,983,'Scalpereur','Alisma'],[8,970,'Floréclat','Alisma']
+];
 let trainerMarketState=null;
 function trainerMarketRender(){
  const panel=document.getElementById('trainerMarketPanel');if(!panel)return;
  panel.style.display=gameMode.value==='trainerrankgrid'?'block':'none';
  if(gameMode.value!=='trainerrankgrid')return;
  const state=trainerMarketState,grid=document.getElementById('trainerMarketGrid'),status=document.getElementById('trainerMarketStatus');
- if(!state){status.textContent='En attente de création du marché par l’hôte du salon.';}
+ if(!state){status.textContent='En attente de création du marché par l’hôte du salon. Catalogue initial limité à quelques équipes confirmées de Paldea.';}
  else {const budget=n=>state.budget===0?'Illimité':Math.max(0,state.budget-(state.spent?.[n]||0)).toLocaleString('fr-FR')+' ₽';
  status.textContent='Joueur 1 : '+budget(1)+' ('+(state.teams?.[1]||[]).length+'/6) · Joueur 2 : '+budget(2)+' ('+(state.teams?.[2]||[]).length+'/6)';
  }
  grid.innerHTML=TRAINER_MARKET_RANKS.map((rank,i)=>{
  const entries=(state?.catalog||[]).filter(p=>p.rank===i+1);
- return '<div class="panel" style="margin:8px 0;padding:12px"><strong>'+rank[2]+' Rang '+(i+1)+' — '+mpEsc(rank[0])+' · '+rank[1]+' ₽</strong><div class="controls">'+(entries.length?entries.map(p=>{const sold=state.sold?.[p.key];return '<button type="button" '+(sold?'disabled':'')+' onclick="trainerMarketBuy(\''+mpEsc(p.key)+'\')">'+mpEsc(p.name)+' — '+(sold?'Vendu':'Acheter')+'</button>'}).join(''):'<small>Catalogue historique à vérifier et importer</small>')+'</div></div>';
+ return '<div class="panel" style="margin:8px 0;padding:12px"><strong>'+rank[2]+' Rang '+(i+1)+' — '+mpEsc(rank[0])+' · '+rank[1]+' ₽</strong><div class="controls">'+(entries.length?entries.map(p=>{const sold=state.sold?.[p.key];return '<button type="button" '+(sold?'disabled':'')+' onclick="trainerMarketBuy(\''+mpEsc(p.key)+'\')">'+mpEsc(p.name)+' — '+(sold?'Vendu':'Acheter')+'</button>'}).join(''):'<small>Aucun Pokémon vérifié dans cette catégorie pour le moment</small>')+'</div></div>';
  }).reverse().join('');
 }
 async function trainerMarketStart(){
  if(!mpSession||!mpLobbyStarted||!mpSeats[1]||!mpSeats[2])return alert('Lance un salon réseau avec deux joueurs attribués.');
  const room=await mpRoom(mpSession.room).once('value');if(room.val()?.ownerUid!==mpSession.id)return alert('Seul l’hôte peut créer le marché.');
  const budget=Number(document.getElementById('trainerMarketBudget').value);
- const state={budget,spent:{1:0,2:0},teams:{1:[],2:[]},sold:{},catalog:[],updated:Date.now()};
+ const catalog=TRAINER_MARKET_SEED.map(([rank,id,name,trainer])=>({rank,key:'p'+id,pokemonKey:String(id),id,name,trainer}));
+ const state={budget,spent:{1:0,2:0},teams:{1:[],2:[]},sold:{},catalog,source:'Sélection initiale vérifiée — Écarlate/Violet uniquement',updated:Date.now()};
  await mpRoom(mpSession.room).child('trainerMarket').set(state);trainerMarketState=state;trainerMarketRender();
 }
 async function trainerMarketBuy(key){
