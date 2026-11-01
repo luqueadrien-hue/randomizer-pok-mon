@@ -389,7 +389,7 @@ const mpJoin=document.getElementById('mpJoin');
 const mpLeave=document.getElementById('mpLeave');
 const mpCopy=document.getElementById('mpCopy');
 const mpPlayers=document.getElementById('mpPlayers');
-let mpSession=null,mpApplying=false,mpPendingState=null,mpListener=null,mpPrivateBatchOwner=null,mpLobbyStarted=false,mpSeats={},mpGenerators={};
+let mpSession=null,mpApplying=false,mpPendingState=null,mpSyncRequested=false,mpListener=null,mpPrivateBatchOwner=null,mpLobbyStarted=false,mpSeats={},mpGenerators={};
 function mpEsc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function mpRoom(c){mpRequireDB();return MPDB.ref('rooms/'+c)}
 function mpTableCode(root,n){return root+'+T'+n}
@@ -423,16 +423,18 @@ async function mpJoinRoom(){
 }
 async function mpEnter(s){
  await mpAuthReady;
+ const previousRoom=mpSession?.room;
+ if(mpListener&&previousRoom)mpRoom(previousRoom).off('value',mpListener);
+ mpListener=null;mpPendingState=null;mpSyncRequested=false;
  mpSession=s;localStorage.setItem('pkmn-mp-session',JSON.stringify(s));mpCode.value=s.room;
  const online=mpRoom(s.room).child('players/'+s.id+'/online');await online.onDisconnect().set(false);await online.set(true);
- if(mpListener)mpRoom(s.room).off('value',mpListener);
  mpListener=mpRoom(s.room).on('value',snap=>{try{mpReceive(snap.val())}catch(e){console.error('Affichage des participants',e);mpSetStatus('❌ Erreur d’affichage du salon : '+mpEsc(e.message))}},e=>mpSetStatus('❌ Lecture du salon refusée : '+mpEsc(e.code||e.message)));
  mpSetStatus('🟢 Salon en ligne <b>'+mpEsc(s.room)+'</b> — '+(s.role==='host'?'Hôte':'Joueur')+' · Partage le lien pour inviter un ami.');
 }
 async function mpLeaveRoom(){
  if(mpSession){try{await mpRoom(mpSession.room).child('players/'+mpSession.id).remove()}catch(e){console.warn('Déconnexion du joueur',e)}}
  if(mpSession&&mpListener)mpRoom(mpSession.room).off('value',mpListener);
- mpSession=null;mpListener=null;localStorage.removeItem('pkmn-mp-session');mpPlayers.innerHTML='';mpSetStatus('Hors salon — crée ou rejoins un salon pour utiliser le Randomizer.');
+ mpSession=null;mpListener=null;mpPendingState=null;mpSyncRequested=false;localStorage.removeItem('pkmn-mp-session');mpPlayers.innerHTML='';mpSetStatus('Hors salon — crée ou rejoins un salon pour utiliser le Randomizer.');
 }
 function concealedFormName(p){return p?.formKey&&['deoxys-normal','deoxys-attack','deoxys-defense','deoxys-speed','dialga-origin','palkia-origin','giratina-altered','giratina-origin'].includes(p.formKey)?({386:'Deoxys',483:'Dialga',484:'Palkia',487:'Giratina'}[p.id]||p.name):p?.name}
 function formRevealText(p){return p?.formKey&&concealedFormName(p)!==p.name?'Forme révélée : '+p.name:''}
@@ -442,7 +444,9 @@ async function mpSnapshot(){
  return {player,revealEvent:mpLastReveal,mode:gameMode.value,luckDie:gameMode.value==='luckdice'?luckDie:null,luckUsedFaces:gameMode.value==='luckdice'?luckUsedFaces:null,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,footprintResult:gameMode.value==='footprint'?{revealed:!!window.footprintRevealed,score:Number(window.footprintScore)||0}:null,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,evolutionStage:document.getElementById("evolutionStage")?.value||"all",typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value,competitiveGeneration:competitiveGeneration.value},current:current.map(x=>({pokemonId:gameMode.value==='luckdice'&&!batchLocked?null:(x.p?.id||null),formKey:gameMode.value==='footprint'?(x.p?.formKey||null):null,clue:gameMode.value==='luckdice'&&!batchLocked?'🎲 D60 : '+(luckDie?.face||'?')+'/60 — '+mpEsc(luckDie?.name||''):'',offerLabel:x.offerLabel||null,dexSource:x.dexSource||null,dexChoices:gameMode.value==='dexdesc'?(x.dexChoices||[]):null,dexSelected:gameMode.value==='dexdesc'?(x.dexSelected??null):null,bodyCrop:isBodyMode(gameMode.value)?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},footprintTeamForms:gameMode.value==='footprint'?{1:teams[1].map(p=>p.formKey||null),2:teams[2].map(p=>p.formKey||null)}:null,batchLocked,sixRoundCounts,sixRoundOwners,monoSeen:{1:[...monoSeen[1]],2:[...monoSeen[2]]},monoExcluded:{1:[...monoExcluded[1]],2:[...monoExcluded[2]]},monoDiceType,monoDiceFaces,monoDiceResult,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
 }
 async function mpSyncState(){
- if(!mpSession||mpApplying||gameMode.value==='triochoice')return;
+ if(!mpSession||gameMode.value==='triochoice')return;
+ // Une modification pendant la lecture Firebase sera envoyée dès la fin de l'hydratation.
+ if(mpApplying){mpSyncRequested=true;return}
  try{await mpRoom(mpSession.room).child('state').set(await mpSnapshot())}catch(e){console.warn('Sync Firebase',e)}
 }
 async function mpHydrateState(st){
@@ -482,6 +486,7 @@ async function mpHydrateState(st){
   mpApplying=false;
   const pending=mpPendingState;mpPendingState=null;
   if(pending&&pending.room===(mpSession?.room||null))mpHydrateState(pending.state);
+  else if(mpSyncRequested){mpSyncRequested=false;mpSyncState()}
  }
 }
 function mpReceive(r){
