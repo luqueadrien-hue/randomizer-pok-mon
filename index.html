@@ -2539,7 +2539,7 @@ function trioAccept(){
  if(mpSession)trioSyncPrivate();
 }
 let hangmanState=null,hangmanRemoteIds='',hangmanBusy=false;
-function hangmanNormalize(t){return String(t||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toUpperCase().replace(/Œ/g,'OE').replace(/Æ/g,'AE')}
+function hangmanNormalize(t){return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/Œ/g,'OE').replace(/Æ/g,'AE')}
 async function hangmanReceive(h){
  if(!mpSession||!h||!['hangman','anagramtrio'].includes(gameMode.value))return;
  const key=(h.ids||[]).join(',');
