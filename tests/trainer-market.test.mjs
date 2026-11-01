@@ -54,13 +54,13 @@ function fakeMarket(budget=3000,game='sv',ids=new Set(Array.from({length:1025},(
  });
  const deps={
   gameMode:{value:'trainerrankgrid'},mpSession:{id:'A',room:'TEST'},mpLobbyStarted:true,mpSeats:{1:'A',2:'B'},
-  mpRoom:room,document,trainerMarketEligible:async()=>({ids,dlcIds:new Set(),homeIds:new Set(),source:'Test',partial:false}),
+  mpRoom:room,document,MPAUTH:{currentUser:{uid:'A'}},trainerMarketEligible:async()=>({ids,dlcIds:new Set(),homeIds:new Set(),source:'Test',partial:false}),
   TRAINER_MARKET_ALL_SEED:allSeed,TRAINER_MARKET_SOURCES:sources,TRAINER_MARKET_FORM_GAMES:forms,
   TRAINER_MARKET_PLA_BASE_EXCLUDED:plaExcluded,trainerMarketRender:()=>{},confirm:()=>{resetCount++;return true;}
  };
  const start=new Function(...Object.keys(deps),'let trainerMarketState=null;return ('+startSource+')')(...Object.values(deps));
- const makeBuy=(id)=>new Function('mpSession','mpLobbyStarted','gameMode','mpSeats','mpRoom','TRAINER_MARKET_RANKS','alert','return ('+buySource+')')(
-  {id,room:'TEST'},true,{value:'trainerrankgrid'},{1:'A',2:'B'},room,ranks,x=>alerts.push(x)
+ const makeBuy=(id)=>new Function('mpSession','mpLobbyStarted','gameMode','mpSeats','mpRoom','TRAINER_MARKET_RANKS','MPAUTH','alert','return ('+buySource+')')(
+  {id,room:'TEST'},true,{value:'trainerrankgrid'},{1:'A',2:'B'},room,ranks,{currentUser:{uid:id}},x=>alerts.push(x)
  );
  return {start,buy1:makeBuy('A'),buy2:makeBuy('B'),state:()=>market,alerts,resetCount:()=>resetCount};
 }
@@ -151,4 +151,23 @@ test('réinitialisation ne conserve aucun achat',async()=>{
  assert.equal(m.state().teams[1].length,0);
  assert.equal(m.state().purchaseCount,0);
  assert.equal(m.resetCount(),1);
+});
+
+test('deux achats simultanés du même Pokémon : une seule transaction gagnante',async()=>{
+ const m=fakeMarket();await m.start();
+ const key=m.state().catalog.find(x=>x.rank===1).key;
+ await Promise.all([m.buy1(key),m.buy2(key)]);
+ assert.equal(m.state().teams[1].length+m.state().teams[2].length,1);
+ assert.equal(m.state().purchaseCount,1);
+});
+test('formes régionales distinctes dans le stock partagé',async()=>{
+ const m=fakeMarket();await m.start();
+ const base=m.state().catalog.find(x=>x.id===51&&!x.formKey);
+ const alola=m.state().catalog.find(x=>x.id===51&&x.formKey==='dugtrio-alola');
+ assert.ok(base&&alola);
+ await m.buy1(base.key);
+ await m.buy2(alola.key);
+ assert.equal(m.state().teams[1].length,1);
+ assert.equal(m.state().teams[2].length,1);
+ assert.notEqual(m.state().teams[1][0].pokemonKey,m.state().teams[2][0].pokemonKey);
 });
