@@ -3579,11 +3579,28 @@ const TRAINER_MARKET_SEED=[
  [8,6,"Dracaufeu","Blue (Maître)","RB"],
  [8,9,"Tortank","Blue (Maître)","RB"],
  [8,3,"Florizarre","Blue (Maître)","RB"],
- [8,59,"Arcanin","Blue (Maître)","RB"]
+ [8,59,"Arcanin","Blue (Maître)","RB"],
+ [1,10,"Chenipan","Scout (Route 3)","RB_ROUTE3"],
+ [1,13,"Aspicot","Scout (Route 3)","RB_ROUTE3"],
+ [1,14,"Coconfort","Scout (Route 3)","RB_ROUTE3"],
+ [1,11,"Chrysacier","Scout (Route 3)","RB_ROUTE3"],
+ [1,16,"Roucool","Fillette (Route 3)","RB_ROUTE3"],
+ [1,32,"Nidoran♂","Fillette (Route 3)","RB_ROUTE3"],
+ [1,39,"Rondoudou","Fillette (Route 3)","RB_ROUTE3"],
+ [1,19,"Rattata","Gamin (Route 3)","RB_ROUTE3"],
+ [1,23,"Abo","Gamin (Route 3)","RB_ROUTE3"],
+ [1,21,"Piafabec","Gamin (Route 3)","RB_ROUTE3"],
+ [1,19,"Rattata","Gamin Joey (Route 30)","GSC"],
+ [1,20,"Rattatac","Gamin Joey (revanche)","GSC"],
+ [1,16,"Roucool","Gamin Mikey (Route 30)","GSC"],
+ [1,19,"Rattata","Gamin Mikey (Route 30)","GSC"],
+ [1,10,"Chenipan","Scout Don (Route 30)","GSC"]
 ];
 
 const TRAINER_MARKET_SOURCES={
  RB:'https://pokemondb.net/red-blue/gymleaders-elitefour',
+ RB_ROUTE3:'https://www.pokemon-france.com/en/guides/blue-red/walkthrough-5/',
+ GSC:'https://bulbapedia.bulbagarden.net/wiki/Appendix:Gold_and_Silver_walkthrough/Section_2',
  rocket:'https://www.supercheats.com/pokemon-blue-digital/walkthrough/pokemon-blue-team-rocket-listings',
  SV:'https://pokemondb.net/scarlet-violet/gymleaders-elitefour'
 };
@@ -3650,7 +3667,7 @@ async function trainerMarketStart(){
  const catalog=TRAINER_MARKET_SEED.map(([rank,id,name,trainer,sourceGame='SV',formKey=''])=>{
   const sourceUrl=sourceGame==='RB'&&rank===2?TRAINER_MARKET_SOURCES.rocket:TRAINER_MARKET_SOURCES[sourceGame];
   const availability=eligible.ids.has(id)?'Pokédex / DLC':eligible.homeIds.has(id)?'HOME confirmé':'';
-  return {rank,key:'r'+rank+'p'+id+'t'+trainer+'g'+sourceGame,pokemonKey:String(id)+(formKey?':'+formKey:''),id,name,trainer,sourceGame,sourceGeneration:sourceGame==='RB'?1:9,sourceUrl,formKey,availability};
+  return {rank,key:'r'+rank+'p'+id+'t'+trainer+'g'+sourceGame,pokemonKey:String(id)+(formKey?':'+formKey:''),id,name,trainer,sourceGame,sourceGeneration:sourceGame==='GSC'?2:sourceGame==='SV'?9:1,sourceUrl,formKey,availability};
  }).filter(p=>p.availability);
  if(!catalog.length)throw Error('Aucun Pokémon vérifié comme compatible avec ce jeu.');
  const state={version:2,game,includeHome,budget,spent:{1:0,2:0},teams:{1:[],2:[]},sold:{},catalog,source:eligible.source,updated:Date.now()};
