@@ -439,7 +439,7 @@ function formRevealText(p){return p?.formKey&&concealedFormName(p)!==p.name?'For
 function mpLite(x){return {id:x.p.id,clue:x.clue||'',isLie:!!x.isLie,lieText:x.lieText||null,displayName:x.displayName||null,dexSource:x.dexSource||null,evoFinal:!!x.evoFinal,pb:x.pb||null,offerLabel:x.offerLabel||null,musicAnswer:x.musicAnswer||null}}
 let mpLastReveal=null,mpSeenRevealId=null;
 async function mpSnapshot(){
- return {player,revealEvent:mpLastReveal,mode:gameMode.value,luckDie:gameMode.value==='luckdice'?luckDie:null,luckUsedFaces:gameMode.value==='luckdice'?luckUsedFaces:null,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,evolutionStage:document.getElementById("evolutionStage")?.value||"all",typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value,competitiveGeneration:competitiveGeneration.value},current:current.map(x=>({pokemonId:gameMode.value==='luckdice'&&!batchLocked?null:(x.p?.id||null),clue:gameMode.value==='luckdice'&&!batchLocked?'🎲 D60 : '+(luckDie?.face||'?')+'/60 — '+mpEsc(luckDie?.name||''):'',offerLabel:x.offerLabel||null,dexSource:x.dexSource||null,dexChoices:gameMode.value==='dexdesc'?(x.dexChoices||[]):null,dexSelected:gameMode.value==='dexdesc'?(x.dexSelected??null):null,bodyCrop:isBodyMode(gameMode.value)?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,monoSeen:{1:[...monoSeen[1]],2:[...monoSeen[2]]},monoExcluded:{1:[...monoExcluded[1]],2:[...monoExcluded[2]]},monoDiceType,monoDiceFaces,monoDiceResult,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
+ return {player,revealEvent:mpLastReveal,mode:gameMode.value,luckDie:gameMode.value==='luckdice'?luckDie:null,luckUsedFaces:gameMode.value==='luckdice'?luckUsedFaces:null,pcBoxSlots:gameMode.value==='randombox'?pcBoxSlots:null,pcBoxPhase:gameMode.value==='randombox'?pcBoxPhase:null,pcBoxBans:gameMode.value==='randombox'?pcBoxBans:null,proposalOwnerId:mpPrivateBatchOwner,footprintResult:gameMode.value==='footprint'?{revealed:!!window.footprintRevealed,score:Number(window.footprintScore)||0}:null,settings:{teamSize:teamSize.value,choiceCount:choiceCount.value,legend:legend.value,generation:generation.value,evolutionStage:document.getElementById("evolutionStage")?.value||"all",typeMode:typeMode.value,revealMode:revealMode.value,lieMode:lieMode.value,boxSize:boxSize.value,competitiveGeneration:competitiveGeneration.value},current:current.map(x=>({pokemonId:gameMode.value==='luckdice'&&!batchLocked?null:(x.p?.id||null),clue:gameMode.value==='luckdice'&&!batchLocked?'🎲 D60 : '+(luckDie?.face||'?')+'/60 — '+mpEsc(luckDie?.name||''):'',offerLabel:x.offerLabel||null,dexSource:x.dexSource||null,dexChoices:gameMode.value==='dexdesc'?(x.dexChoices||[]):null,dexSelected:gameMode.value==='dexdesc'?(x.dexSelected??null):null,bodyCrop:isBodyMode(gameMode.value)?(x.p._bodyCrop?.image||null):null})),teams:{1:teams[1].map(p=>p.id),2:teams[2].map(p=>p.id)},batchLocked,sixRoundCounts,sixRoundOwners,monoSeen:{1:[...monoSeen[1]],2:[...monoSeen[2]]},monoExcluded:{1:[...monoExcluded[1]],2:[...monoExcluded[2]]},monoDiceType,monoDiceFaces,monoDiceResult,dealStage:gameMode.value==='learnleave'?dealStage:0,dealFirstClue:gameMode.value==='learnleave'&&dealStage===1?(starterOffer.querySelector('.clue')?.innerHTML||''):null,turn:turn.textContent,updated:Date.now()};
 }
 async function mpSyncState(){
  if(!mpSession||mpApplying||gameMode.value==='triochoice')return;
@@ -452,7 +452,7 @@ async function mpHydrateState(st){
   luckDie=st.mode==='luckdice'?(st.luckDie||null):null;if(Array.isArray(st.luckUsedFaces))luckUsedFaces=st.luckUsedFaces;const z=st.settings||{};for(const [k,v] of Object.entries(z)){const el=document.getElementById(k);if(el&&v!=null)el.value=v}
   if(typeof updateModePanels==='function')updateModePanels();if(typeof syncCompetitiveGeneration==='function')syncCompetitiveGeneration();
   const mine=!!mpSession&&!!st.proposalOwnerId&&st.proposalOwnerId===mpSession.id;
-  mpPrivateBatchOwner=st.proposalOwnerId||null;
+  mpPrivateBatchOwner=st.proposalOwnerId||null;if(st.mode==='footprint'){window.footprintRevealed=!!st.footprintResult?.revealed;window.footprintScore=Number(st.footprintResult?.score)||0;}
   if(st.mode==='randombox'){pcBoxSlots=st.pcBoxSlots||null;pcBoxPhase=st.pcBoxPhase||'pick';pcBoxBans=st.pcBoxBans||{1:[],2:[]};current=[];}else if(!mine)current=[];
   teams={1:await Promise.all(((st.teams&&st.teams[1])||[]).map(getP)),2:await Promise.all(((st.teams&&st.teams[2])||[]).map(getP))};player=st.player||1;batchLocked=!!st.batchLocked;sixRoundCounts=st.sixRoundCounts||sixRoundCounts;sixRoundOwners=st.sixRoundOwners||sixRoundOwners;if(st.monoSeen)for(const n of [1,2])monoSeen[n]=new Set(st.monoSeen[n]||[]);if(st.monoExcluded)for(const n of [1,2])monoExcluded[n]=new Set(st.monoExcluded[n]||[]);monoDiceType=st.monoDiceType||null;monoDiceFaces=st.monoDiceFaces||[];monoDiceResult=st.monoDiceResult||null;
   if(!mine&&st.mode!=='randombox'&&st.mode!=='learnleave'&&Array.isArray(st.current)){
@@ -2623,20 +2623,22 @@ function footprintImageAvailable(id){
  footprintImageCache.set(id,task);return task;
 }
 function footprintCheck(){
- if(gameMode.value!=='footprint'||current.length!==3)return;
+ if(gameMode.value!=='footprint'||current.length!==3||batchLocked||window.footprintRevealed)return;
+ if(mpSession&&mpSession.id!==mpSeats[player])return;
  const answers=[0,1,2].map(i=>document.getElementById('footGuess'+i)?.value);
  if(answers.some(v=>v==null||v==='')){alert('Associe les trois empreintes avant de valider.');return}
+ if(new Set(answers).size!==3){alert('Chaque nom ne peut être utilisé qu’une seule fois.');return}
  window.footprintScore=answers.filter((v,i)=>Number(v)===i).length;
- window.footprintRevealed=true;render();
+ window.footprintRevealed=true;render();mpSyncState();
 }
 function footprintAward(i){
- if(gameMode.value!=='footprint'||!window.footprintRevealed||!current[i]?.p)return;
- const score=window.footprintScore||0;
+ if(gameMode.value!=='footprint'||!window.footprintRevealed||!current[i]?.p||batchLocked)return;
+ const score=Number(window.footprintScore)||0;
  if(mpSession){
   const chooser=score>0?mpSeats[player]:mpSeats[player===1?2:1];
   if(mpSession.id!==chooser){alert('Ce choix appartient à l’autre joueur.');return}
  }
- if(typeof pick==='function')pick(i);
+ pick(i);
  window.footprintRevealed=false;window.footprintScore=0;
 }
 
@@ -2787,7 +2789,8 @@ function pokeReleaseAnimation(p){if(!p)return;document.getElementById('pokeRelea
 function pick(i){
  if(mpSession&&!mpLobbyStarted)return;
  // En réseau, l'adversaire génère les propositions mais c'est bien le joueur actif qui choisit.
- if(mpSession&&mpSession.id!==mpSeats[player])return;
+ if(mpSession&&mpSession.id!==(gameMode.value==='footprint'&&window.footprintRevealed&&(Number(window.footprintScore)||0)===0?mpSeats[player===1?2:1]:mpSeats[player]))return;
+ if(gameMode.value==='footprint'&&!window.footprintRevealed)return;
  if(batchLocked||!current[i]||!current[i].p)return;if(gameMode.value==='luckdice'&&luckDie?.hint==='generator'&&mpSession&&mpSession.id!==mpSeats[player===1?2:1])return alert('🎲 Cette face donne le choix à la personne qui randomise.');
  if(gameMode.value==='learnleave'&&dealStage!==4)return;
  batchLocked=true;
