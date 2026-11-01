@@ -23,5 +23,16 @@
 ## Décision connexe
 - Abandonner le chantier des **rébus illustrés** Écarlate/Violet + DLC ; conserver et améliorer uniquement les **rébus phonétiques**.
 
+
+## Tirage par jeu et renouvellement des parties
+- Au lancement, sélectionner un jeu de référence parmi les jeux Switch pris en charge : Écarlate/Violet (DLC inclus), Épée/Bouclier (DLC inclus), Diamant Étincelant/Perle Scintillante et, si un catalogue de dresseurs suffisant est établi, Légendes Pokémon : Arceus.
+- Tirer six dresseurs distincts dans le catalogue du jeu sélectionné. Leurs Pokémon n'ont **aucun lien obligatoire** avec leur équipe officielle, leur spécialité ou leurs types.
+- Générer trois Pokémon aléatoires par dresseur, soit 18 propositions communes aux deux joueurs. Les espèces et formes doivent être effectivement disponibles et utilisables dans le jeu de référence ; les sets, attaques, objets, talents et mécaniques doivent être valides dans ce jeu.
+- Conserver les propositions stables pendant la partie ; au démarrage d'une **nouvelle partie**, refaire les tirages des six dresseurs et des 18 Pokémon, même si les joueurs sont les mêmes.
+- Éviter si possible de reproduire la sélection précédente, sans garantir six nouveaux dresseurs lorsque le catalogue est limité ; enregistrer la dernière sélection par salon si nécessaire.
+- Le type Téracristal n'est personnalisable que pour Écarlate/Violet ; ne pas afficher une mécanique inexistante dans les autres jeux. La nature reste personnalisable si applicable.
+- Les sets sont générés puis figés par le système (et non choisis manuellement par les dresseurs). Quatre attaques, objet, talent, EV/IV prédéfinis sous réserve des contraintes du jeu choisi.
+- La prise en charge d'un jeu doit être désactivée tant que les dresseurs disponibles, les données Pokémon et les validations de sets n'y sont pas suffisants.
+
 ## État
 Spécification uniquement : ce fichier ne signifie pas que le nouveau mode est codé ou testé.
