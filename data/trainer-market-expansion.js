@@ -2320,21 +2320,21 @@ window.TRAINER_MARKET_EXPANSION=[
   319,
   "Sharpedo",
   "Matt (Admin Team Aqua)",
-  "RS_AQUA"
+  "ORAS_AQUA"
  ],
  [
   6,
   261,
   "Medhyèna",
   "Shelly (Admin Team Aqua)",
-  "RS_AQUA"
+  "ORAS_AQUA"
  ],
  [
   6,
   318,
   "Carvanha",
   "Shelly (Admin Team Aqua)",
-  "RS_AQUA"
+  "ORAS_AQUA"
  ],
  [
   6,
