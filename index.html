@@ -2649,7 +2649,7 @@ function footprintImageAvailable(id){
  const task=new Promise(resolve=>{
   const img=new Image();let done=false;
   const finish=ok=>{if(done)return;done=true;clearTimeout(timeout);resolve(ok)};
-  const timeout=setTimeout(()=>finish(false),6500);
+  const timeout=setTimeout(()=>finish(false),1800);
   img.onload=()=>{
    if(img.naturalWidth<=1||img.naturalHeight<=1)return finish(false);
    // Une image entièrement transparente ou monochrome n'est pas une empreinte exploitable.
@@ -2674,7 +2674,9 @@ function footprintImageAvailable(id){
   img.onerror=()=>finish(false);
   img.src=footprintImageUrl(id);
  });
- footprintImageCache.set(id,task);return task;
+ footprintImageCache.set(id,task);
+ task.then(ok=>{if(!ok)footprintImageCache.delete(id)});
+ return task;
 }
 // Validation de la manche : les identifiants d'empreintes restent uniques,
 // même lorsque plusieurs formes régionales sont proposées dans le catalogue.
@@ -2696,7 +2698,6 @@ function footprintAward(i){
   if(mpSession.id!==chooser){alert('Ce choix appartient à l’autre joueur.');return}
  }
  pick(i);
- window.footprintRevealed=false;window.footprintScore=0;
 }
 
 function render(){
@@ -2850,12 +2851,14 @@ function pick(i){
  // En réseau, l'adversaire génère les propositions mais c'est bien le joueur actif qui choisit.
  if(mpSession&&mpSession.id!==(gameMode.value==='footprint'&&window.footprintRevealed&&(Number(window.footprintScore)||0)===0?mpSeats[player===1?2:1]:mpSeats[player]))return;
  if(gameMode.value==='footprint'&&!window.footprintRevealed)return;
+ if(gameMode.value==='footprint'&&new Set(current.map(x=>footprintSourceId(x.p))).size!==3)return;
  if(batchLocked||!current[i]||!current[i].p)return;if(gameMode.value==='luckdice'&&luckDie?.hint==='generator'&&mpSession&&mpSession.id!==mpSeats[player===1?2:1])return alert('🎲 Cette face donne le choix à la personne qui randomise.');
  if(gameMode.value==='learnleave'&&dealStage!==4)return;
  batchLocked=true;
  if(mpSession){mpLastReveal={id:mpSession.id+':'+Date.now()+':'+i,origin:mpSession.id,pokemonId:current[i].p.id};mpSeenRevealId=mpLastReveal.id}
  pokeReleaseAnimation(current[i].p);
- const chooser=player,recipient=typeMode.value==='random-d10'?chooser:sixRoundRecipient(chooser);
+ const chooser=player,recipient=(gameMode.value==='footprint'||typeMode.value==='random-d10')?chooser:sixRoundRecipient(chooser);
+ if(gameMode.value==='footprint'){window.footprintRevealed=false;window.footprintScore=0;}
  teams[recipient].push(current[i].p);const revealedForm=formRevealText(current[i].p);if(revealedForm){gmInfo.textContent='🔓 '+revealedForm;gmPanel.style.display='block';}if(typeMode.value==='random-d10'){if(monoDiceType)monoSeen[chooser].add(monoDiceType);for(const x of current)monoExcluded[chooser].add(x.p.id);monoDiceType=null;}sixRoundOwners[recipient].push(chooser);sixRoundCounts[chooser]++;
  if(gameMode.value==='learnleave'){dealStage=0;dealStarted=false;dealRemaining=[];starterOffer.innerHTML='';dealInfo.textContent='Manche terminée. Lance une nouvelle manche.';dealButtons();}
  if(sixRoundFinished()){turn.textContent='12 MANCHES TERMINÉES — ÉQUIPES COMPLÈTES';roll.disabled=true;drawTeams();mpSyncState();return}
