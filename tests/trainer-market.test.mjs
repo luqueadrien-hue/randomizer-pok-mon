@@ -171,3 +171,14 @@ test('formes régionales distinctes dans le stock partagé',async()=>{
  assert.equal(m.state().teams[2].length,1);
  assert.notEqual(m.state().teams[1][0].pokemonKey,m.state().teams[2][0].pokemonKey);
 });
+
+test('Arcanin de Hisui disponible dans PLA sans autoriser Arcanin normal',async()=>{
+ const m=fakeMarket(3000,'pla',new Set([59]));
+ await m.start();
+ const entries=m.state().catalog.filter(x=>x.id===59);
+ assert.ok(entries.some(x=>x.formKey==='arcanine-hisui'));
+ assert.ok(!entries.some(x=>!x.formKey));
+ const eligible=eligibleFn(async()=>{throw Error('API simulée indisponible')});
+ const result=await eligible('pla',false);
+ assert.ok(result.ids.has(59));
+});
