@@ -3,14 +3,14 @@
 ## Principe
 - Mode réseau à deux joueurs, six manches chacun.
 - À chaque partie, tirer six dresseurs au hasard parmi un catalogue vérifié. Les mêmes six dresseurs sont visibles pour les deux joueurs.
-- Chaque dresseur propose trois Pokémon distincts, avec des sets préétablis inspirés de ce dresseur. Les espèces, attaques, objets et talents doivent être compatibles avec Pokémon Écarlate/Violet et DLC.
+- Chaque dresseur propose trois Pokémon distincts, avec des sets générés et valides pour le jeu sélectionné. Les espèces, attaques, objets et talents doivent être compatibles avec Pokémon Écarlate/Violet et DLC.
 - Chaque joueur choisit un dresseur encore inutilisé **par ce joueur**, puis un de ses trois Pokémon. Ce dresseur devient indisponible pour lui lors des manches suivantes.
 - Les dresseurs ne sont pas bloqués globalement : l'autre joueur peut choisir le même dresseur et le même Pokémon.
 - Après six manches, chaque joueur a six Pokémon issus des six dresseurs, sans répétition de dresseur pour un même joueur.
 
 ## Sets et personnalisation
-- Fixes : Pokémon, quatre attaques, objet tenu, talent, EV et IV, selon un set associé au dresseur.
-- Modifiables par le joueur : nature et type Téracristal uniquement.
+- Fixes : Pokémon proposé, objet tenu, talent, EV et IV, selon un set généré pour le dresseur. Les quatre attaques sont personnalisables par le joueur parmi les capacités légales du Pokémon dans le jeu sélectionné.
+- Modifiables par le joueur : les quatre attaques du set, la nature et, uniquement dans Écarlate/Violet, le type Téracristal.
 - Les sets doivent être complets, cohérents et validés pour Écarlate/Violet. Les exemples de dresseurs (Sacha, Ondine, Pierre, Major Bob, etc.) ne valent pas encore données validées.
 
 ## Réseau et états
@@ -31,7 +31,7 @@
 - Conserver les propositions stables pendant la partie ; au démarrage d'une **nouvelle partie**, refaire les tirages des six dresseurs et des 18 Pokémon, même si les joueurs sont les mêmes.
 - Éviter si possible de reproduire la sélection précédente, sans garantir six nouveaux dresseurs lorsque le catalogue est limité ; enregistrer la dernière sélection par salon si nécessaire.
 - Le type Téracristal n'est personnalisable que pour Écarlate/Violet ; ne pas afficher une mécanique inexistante dans les autres jeux. La nature reste personnalisable si applicable.
-- Les sets sont générés puis figés par le système (et non choisis manuellement par les dresseurs). Quatre attaques, objet, talent, EV/IV prédéfinis sous réserve des contraintes du jeu choisi.
+- Les sets sont générés puis figés par le système (et non choisis manuellement par les dresseurs). Quatre attaques initialement proposées mais modifiables par le joueur parmi les attaques légales du Pokémon ; objet, talent et EV/IV prédéfinis sous réserve des contraintes du jeu choisi.
 - La prise en charge d'un jeu doit être désactivée tant que les dresseurs disponibles, les données Pokémon et les validations de sets n'y sont pas suffisants.
 
 ## État
