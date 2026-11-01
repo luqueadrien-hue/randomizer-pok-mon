@@ -1,4 +1,4 @@
-# Mode non numéroté : Marché des Dresseurs — grille commune
+# Mode non numéroté : Marché des Dresseurs — grille commune à huit rangs
 
 ## Rangs proposés (de bas en haut)
 | Rang | Catégorie | Prix fixe par Pokémon |
@@ -7,9 +7,12 @@
 | 2 | Sbires des organisations antagonistes | 350 ₽ |
 | 3 | Champions d'Arène et équivalents | 500 ₽ |
 | 4 | Rivaux officiels | 650 ₽ |
-| 5 | Admins et chefs des organisations antagonistes | 800 ₽ |
-| 6 | Conseil 4 et équivalents | 1 000 ₽ |
-| 7 | Maîtres de Ligue, boss ultimes et équivalents | 1 300 ₽ |
+| 5 | Professeurs Pokémon combattants | 700 ₽ |
+| 6 | Admins et chefs des organisations antagonistes | 800 ₽ |
+| 7 | Conseil 4 et équivalents | 1 000 ₽ |
+| 8 | Maîtres de Ligue, boss ultimes et équivalents | 1 300 ₽ |
+
+La catégorie des professeurs ne comprend que les professeurs effectivement affrontés dans un combat officiel ; pour Sada et Turum, distinguer leurs homologues IA. Emblème proposé : toque universitaire et Poké Ball sur fond turquoise.
 
 Les catégories spécifiques (chefs d'installations de combat, personnages majeurs des DLC, dresseurs spéciaux) doivent être rattachées au rang analogue approprié, après vérification de leur rôle dans chaque jeu. Aucun rang ne doit être attribué arbitrairement.
 
