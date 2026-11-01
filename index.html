@@ -2175,11 +2175,10 @@ async function rollCards(){
    for(let attempts=0;attempts<80&&!found;attempts++){
     const id=1+Math.floor(Math.random()*649);
     // Une seule empreinte d'origine par trio, y compris pour les formes régionales.
-    if(used.has(id)||footprintUnavailable.has(id))continue;
+    if(used.has(id)||footprintTemporarilyUnavailable(id))continue;
     used.add(id);
     try{
      const base=await getP(id);
-     if(!await footprintImageAvailable(id))continue;
      const options=[];
      if(footprintEligible(base)&&await validEvolutionStage(base))options.push(base);
      for(const def of FOOTPRINT_REGIONAL_FORMS.filter(f=>f.base===id)){
@@ -2188,7 +2187,7 @@ async function rollCards(){
        if(footprintHasSvMoves(alt)&&footprintEligible(alt)&&await validEvolutionStage(alt))options.push(alt);
       }catch(e){console.warn('Forme régionale ignorée',def.api,e)}
      }
-     if(options.length){p=options[Math.floor(Math.random()*options.length)];found=true}
+     if(options.length&&await footprintImageAvailable(id)){p=options[Math.floor(Math.random()*options.length)];found=true}
     }catch(e){console.warn('Empreinte ignorée',id,e)}
    }
    if(!found)throw Error('Impossible de constituer trois empreintes distinctes avec les filtres actuels. Vérifie la connexion aux images ou assouplis les filtres.');
@@ -2643,10 +2642,12 @@ function footprintSourceId(p){return Number(p.id)}
 function footprintEligible(p){return p&&p.id>=1&&p.id<=649&&p.sv&&valid(p)}
 function footprintHasSvMoves(p){return (p.moves||[]).some(m=>(m.version_group_details||[]).some(v=>v.version_group?.name==='scarlet-violet'))}
 const footprintImageCache=new Map();
-const footprintUnavailable=new Set();
+const footprintUnavailable=new Map();
+const FOOTPRINT_RETRY_DELAY=60000;
+function footprintTemporarilyUnavailable(id){const until=footprintUnavailable.get(id);if(!until)return false;if(Date.now()<until)return true;footprintUnavailable.delete(id);return false}
 function footprintImageUrl(id){return 'https://veekun.com/dex/media/pokemon/footprints/'+id+'.png'}
 function footprintImageAvailable(id){
- if(footprintUnavailable.has(id))return Promise.resolve(false);
+ if(footprintTemporarilyUnavailable(id))return Promise.resolve(false);
  if(footprintImageCache.has(id))return footprintImageCache.get(id);
  const task=new Promise(resolve=>{
   const img=new Image();let done=false;
@@ -2677,7 +2678,7 @@ function footprintImageAvailable(id){
   img.src=footprintImageUrl(id);
  });
  footprintImageCache.set(id,task);
- task.then(ok=>{if(!ok){footprintImageCache.delete(id);footprintUnavailable.add(id)}});
+ task.then(ok=>{if(!ok){footprintImageCache.delete(id);footprintUnavailable.set(id,Date.now()+FOOTPRINT_RETRY_DELAY)}});
  return task;
 }
 // Validation de la manche : les identifiants d'empreintes restent uniques,
@@ -2685,7 +2686,7 @@ function footprintImageAvailable(id){
 function footprintCheck(){
  if(gameMode.value!=='footprint'||current.length!==3||batchLocked||window.footprintRevealed)return;
  if(mpSession&&mpSession.id!==mpSeats[player])return;
- if(new Set(current.map(x=>footprintSourceId(x.p))).size!==3)return alert('Empreintes en double : relance le tirage.');
+ if(current.some(x=>!x?.p)||new Set(current.map(x=>footprintSourceId(x.p))).size!==3)return alert('Empreintes invalides ou en double : relance le tirage.');
  const answers=[0,1,2].map(i=>document.getElementById('footGuess'+i)?.value);
  if(answers.some(v=>v==null||v==='')){alert('Associe les trois empreintes avant de valider.');return}
  if(new Set(answers).size!==3){alert('Chaque nom ne peut être utilisé qu’une seule fois.');return}
