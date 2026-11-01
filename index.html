@@ -119,6 +119,7 @@ img,video,canvas,svg{max-width:100%}
 /* Attente et libération des Pokémon : trois Poké Balls côté joueur qui devine. */
 .pokeWaiting{grid-column:1/-1;text-align:center;padding:20px}.pokeBallRow{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin:14px auto}.pokeBall{position:relative;display:inline-block;width:74px;height:74px;border:4px solid #17212b;border-radius:50%;background:linear-gradient(to bottom,#ec464a 0 46%,#17212b 46% 54%,#f9fafb 54%);box-shadow:0 7px 15px #0005;animation:pokeSway 1.7s ease-in-out infinite}.pokeBall:nth-child(2){animation-delay:.25s}.pokeBall:nth-child(3){animation-delay:.5s}.pokeBall:after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border:5px solid #17212b;border-radius:50%;background:white}.pokeRevealLayer{position:fixed;inset:0;z-index:10000;background:#081d33ed;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;text-align:center;color:white}.pokeRevealLayer .pokeBall{width:112px;height:112px;animation:pokeRelease .8s ease-in forwards}.pokeRevealLayer img{max-width:min(65vw,300px);max-height:45vh;object-fit:contain;animation:pokeAppear .7s ease-out both}.pokeRevealLayer button{margin-top:12px}@keyframes pokeSway{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(9deg)}}@keyframes pokeRelease{0%{transform:scale(1) rotate(0)}55%{transform:scale(1.25) rotate(-22deg);filter:brightness(1)}100%{transform:scale(1.7);opacity:0;filter:brightness(5)}}@keyframes pokeAppear{from{opacity:0;transform:scale(.15);filter:brightness(4)}to{opacity:1;transform:scale(1);filter:brightness(1)}}@media(prefers-reduced-motion:reduce){.pokeBall,.pokeRevealLayer img{animation:none!important}}
 </style>
+<script src="data/trainer-market-expansion.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -3675,6 +3676,7 @@ const TRAINER_MARKET_SEED=[
  [1,403,"Lixy","Ouvrier Alberto (Zone Sud 1)","SV_SOUTH1"]
 ];
 
+const TRAINER_MARKET_ALL_SEED=TRAINER_MARKET_SEED.concat(window.TRAINER_MARKET_EXPANSION||[]);
 const TRAINER_MARKET_SOURCES={
  RB:'https://pokemondb.net/red-blue/gymleaders-elitefour',
  RB_ROUTE3:'https://www.pokemon-france.com/en/guides/blue-red/walkthrough-5/',
@@ -3687,36 +3689,81 @@ const TRAINER_MARKET_SOURCES={
  SWSH:'https://www.serebii.net/swordshield/championcup.shtml',
  SV_SOUTH1:'https://www.serebii.net/pokearth/paldea/southprovinceareaone.shtml',
  rocket:'https://www.supercheats.com/pokemon-blue-digital/walkthrough/pokemon-blue-team-rocket-listings',
- SV:'https://pokemondb.net/scarlet-violet/gymleaders-elitefour'
+ SV:'https://pokemondb.net/scarlet-violet/gymleaders-elitefour',
+ HGSS_GYM:'https://pokemondb.net/heartgold-soulsilver/gymleaders-elitefour',
+ HGSS_REMATCH:'https://pokemondb.net/heartgold-soulsilver/gymleaders-elitefour',
+ HGSS_KANTO:'https://pokemondb.net/heartgold-soulsilver/gymleaders-elitefour',
+ HGSS_E4:'https://pokemondb.net/heartgold-soulsilver/gymleaders-elitefour',
+ HGSS_CHAMP:'https://pokemondb.net/heartgold-soulsilver/gymleaders-elitefour',
+ HGSS_RED:'https://pokemondb.net/heartgold-soulsilver/gymleaders-elitefour',
+ HGSS_ROCKET:'https://www.serebii.net/heartgoldsoulsilver/teamrocket.shtml',
+ HGSS_RIVAL:'https://www.serebii.net/heartgoldsoulsilver/rival.shtml',
+ SV_BB:'https://www.serebii.net/scarletviolet/blueberryelitefour.shtml',
+ SV_BB_TRIAL:'https://www.pokepedia.fr/Poste_Polaire',
+ SV_KITAKAMI:'https://www.serebii.net/scarletviolet/kitakamimaskfestival.shtml',
+ SM_KUKUI:'https://www.serebii.net/sunmoon/elitefour.shtml'
 };
 const TRAINER_MARKET_FORM_GAMES={
  'oricorio-baile':new Set(['sv']),
  'oricorio-pom-pom':new Set(['sv']),
  'ninetales-alola':new Set(['sv','swsh']),
- 'lycanroc-midday':new Set(['sv','swsh'])
+ 'lycanroc-midday':new Set(['sv','swsh']),
+ 'dugtrio-alola':new Set(['sv','swsh']),
+ 'sandslash-alola':new Set(['sv','swsh']),
+ 'rotom-heat':new Set(['sv','swsh','bdsp','pla'])
 };
-const TRAINER_MARKET_DEXES={sv:['paldea','kitakami','blueberry'],swsh:['galar','isle-of-armor','crown-tundra'],pla:['hisui']};
-// Espèces attestées par les listes HOME de Serebii, sélection conservatrice, non exhaustive.
-// Les formes régionales doivent faire l'objet d'une validation supplémentaire.
+// Pokédex de base obligatoires. Les Pokédex DLC ne sont pas tous exposés par PokéAPI.
+const TRAINER_MARKET_DEXES={sv:['paldea'],swsh:['galar'],pla:['hisui']};
+const TRAINER_MARKET_OPTIONAL_DEXES={sv:['kitakami','blueberry'],swsh:['isle-of-armor','crown-tundra']};
+// Une équipe réellement combattue dans le jeu cible atteste de la présence de cette espèce,
+// mais ne prouve pas à elle seule la transférabilité de toutes ses formes.
+const TRAINER_MARKET_DLC_ATTESTED={
+ sv:new Set(TRAINER_MARKET_ALL_SEED.filter(x=>['SV_BB','SV_BB_TRIAL','SV_KITAKAMI'].includes(x[4])).map(x=>x[1])),
+ swsh:new Set(TRAINER_MARKET_ALL_SEED.filter(x=>x[4]==='SWSH').map(x=>x[1]))
+};
+// Sous-ensemble contrôlé du Pokédex Hisui pour dégradation gracieuse si l'API est indisponible.
+const TRAINER_MARKET_HISUI_ATTESTED=new Set([722,723,724,155,156,157,501,502,503,399,400,396,397,398,403,404,405,265,266,267,268,269,77,78,133,134,135,136,196,197,470,471,700,41,42,169,425,426,401,402,418,419,412,413,414,74,75,76,234,899,446,143,46,47,172,25,26,63,64,65,390,391,392,427,428,420,421,54,55,415,416,123,900,212,214,439,122]);
+// Formes de base non disponibles dans Hisui malgré la présence de l'espèce sous forme régionale.
+const TRAINER_MARKET_PLA_BASE_EXCLUDED=new Set([58,59,100,101,157,503,549,570,571,628,705,706,713,724]);
+// Sélection conservatrice des Pokémon compatibles par transfert, non exhaustive.
 const TRAINER_MARKET_HOME_VERIFIED={
  sv:new Set([150,151,377,378,379,385,386,480,481,482,483,484,485,486,487,488,489,490,491,492,493,641,642,645,647,719,720,721,789,790,801,888,889,890,893,894,895,898,905]),
  swsh:new Set([151,251,385])
 };
 async function trainerMarketEligible(game,includeHome){
- if(game==='bdsp')return {ids:new Set(Array.from({length:493},(_,i)=>i+1)),homeIds:new Set(),source:'Pokédex national 1–493 (formes à contrôler)'};
+ if(game==='bdsp')return {ids:new Set(Array.from({length:493},(_,i)=>i+1)),homeIds:new Set(),dlcIds:new Set(),source:'Pokédex national DEPS 1–493 (formes contrôlées séparément)',partial:false};
  const dexNames=TRAINER_MARKET_DEXES[game];
  if(!dexNames)throw Error('Jeu de destination inconnu');
- const ids=new Set();
+ const ids=new Set(),missing=[];
  for(const dexName of dexNames){
-  const dex=await apiJson('https://pokeapi.co/api/v2/pokedex/'+dexName);
-  if(!Array.isArray(dex.pokemon_entries)||!dex.pokemon_entries.length)throw Error('Pokédex manquant ou vide : '+dexName);
-  dex.pokemon_entries.forEach(x=>{
-   const id=Number((x.pokemon_species?.url||'').split('/').filter(Boolean).pop());
-   if(Number.isInteger(id)&&id>0)ids.add(id);
-  });
+  try{
+   const dex=await apiJson('https://pokeapi.co/api/v2/pokedex/'+dexName);
+   if(!Array.isArray(dex.pokemon_entries)||!dex.pokemon_entries.length)throw Error('Réponse vide');
+   dex.pokemon_entries.forEach(x=>{
+    const id=Number((x.pokemon_species?.url||'').split('/').filter(Boolean).pop());
+    if(Number.isInteger(id)&&id>0)ids.add(id);
+   });
+  }catch(e){
+   if(game==='pla'&&dexName==='hisui'){missing.push('hisui (repli limité)');TRAINER_MARKET_HISUI_ATTESTED.forEach(id=>ids.add(id));}
+   else throw Error('Pokédex de base indisponible : '+dexName+' ('+e.message+')');
+  }
  }
+ const dlcIds=new Set(),optional=TRAINER_MARKET_OPTIONAL_DEXES[game]||[];
+ for(const dexName of optional){
+  try{
+   const dex=await apiJson('https://pokeapi.co/api/v2/pokedex/'+dexName);
+   if(!Array.isArray(dex.pokemon_entries)||!dex.pokemon_entries.length)throw Error('Réponse vide');
+   dex.pokemon_entries.forEach(x=>{
+    const id=Number((x.pokemon_species?.url||'').split('/').filter(Boolean).pop());
+    if(Number.isInteger(id)&&id>0)dlcIds.add(id);
+   });
+  }catch(e){missing.push(dexName);}
+ }
+ // Les données attestées de nos équipes du DLC complètent seulement les manques identifiés.
+ (TRAINER_MARKET_DLC_ATTESTED[game]||new Set()).forEach(id=>dlcIds.add(id));
  const homeIds=includeHome?(TRAINER_MARKET_HOME_VERIFIED[game]||new Set()):new Set();
- return {ids,homeIds,source:'Pokédex '+dexNames.join(', ')+(includeHome?' + HOME vérifié partiellement':'')};
+ if(!ids.size)throw Error('Pokédex manquant ou vide : '+game);
+ return {ids,dlcIds,homeIds,partial:missing.length>0,source:'Pokédex '+dexNames.join(', ')+(optional.length?' + DLC'+(missing.length?' partiels':''):'')+(includeHome?' + HOME partiel':'')+(missing.length?' (API non disponible : '+missing.join(', ')+')':'')};
 }
 let trainerMarketState=null;
 function trainerMarketRender(){
@@ -3731,7 +3778,7 @@ function trainerMarketRender(){
  if(!state){status.textContent='En attente de création par l’hôte. Corpus historique Kanto à Paldea partiel, filtré par jeu de destination.';}
  else {
   const budget=n=>state.budget===0?'Illimité':Math.max(0,state.budget-(state.spent?.[n]||0)).toLocaleString('fr-FR')+' ₽';
-  status.textContent=(gameLabels[state.game]||state.game||'Jeu inconnu')+' · '+(state.catalog||[]).length+' entrées compatibles · J1 : '+budget(1)+' ('+(state.teams?.[1]||[]).length+'/6) · J2 : '+budget(2)+' ('+(state.teams?.[2]||[]).length+'/6) · Corpus historique encore incomplet.';
+  status.textContent=(gameLabels[state.game]||state.game||'Jeu inconnu')+' · '+(state.catalog||[]).length+' entrées compatibles · J1 : '+budget(1)+' ('+(state.teams?.[1]||[]).length+'/6) · J2 : '+budget(2)+' ('+(state.teams?.[2]||[]).length+'/6) · '+(state.source||'')+' · Corpus historique encore incomplet.';
  }
  const soldKeys=new Set(Object.keys(state?.sold||{}).filter(k=>state.sold[k]));
  const soldPokemon=new Set((state?.catalog||[]).filter(p=>soldKeys.has(p.key)).map(p=>p.pokemonKey));
@@ -3739,7 +3786,10 @@ function trainerMarketRender(){
   const entries=(state?.catalog||[]).filter(p=>p.rank===i+1);
   return '<details class="panel" style="margin:8px 0;padding:12px" '+(entries.length?'open':'')+'><summary><strong>'+rank[2]+' Rang '+(i+1)+' — '+mpEsc(rank[0])+' · '+rank[1]+' ₽ ('+entries.length+')</strong></summary><div class="controls">'+(entries.length?entries.map(p=>{
    const sold=soldPokemon.has(p.pokemonKey);
-   return '<button type="button" data-market-buy="'+mpEsc(p.key)+'" '+(sold?'disabled':'')+' title="'+mpEsc(p.trainer+' · '+p.sourceGame+' · '+p.availability)+'">'+mpEsc(p.name)+' · '+mpEsc(p.trainer)+' ('+mpEsc(p.sourceGame)+') — '+(sold?'Vendu':'Acheter')+'</button>';
+   const seat=mpSession?.id===mpSeats[1]?1:mpSession?.id===mpSeats[2]?2:0;
+   const spent=state?.spent?.[seat]||0,owned=state?.teams?.[seat]||[];
+   const canBuy=!!seat&&mpLobbyStarted&&!sold&&owned.length<6&&(state.budget===0||spent+rank[1]<=state.budget);
+   return '<button type="button" data-market-buy="'+mpEsc(p.key)+'" '+(!canBuy?'disabled':'')+' title="'+mpEsc(p.trainer+' · '+p.sourceGame+' · '+p.availability)+'">'+mpEsc(p.name)+' · '+mpEsc(p.trainer)+' ('+mpEsc(p.sourceGame)+') — '+(sold?'Vendu':!seat?'Spectateur':'Acheter')+'</button>';
   }).join(''):'<small>Aucun Pokémon attesté et compatible dans cette catégorie pour le catalogue partiel.</small>')+'</div></details>';
  }).reverse().join('');
  const teams=state?.teams||{};
@@ -3756,14 +3806,23 @@ async function trainerMarketStart(){
  const includeHome=document.getElementById('trainerMarketHome').checked;
  document.getElementById('trainerMarketStatus').textContent='Chargement des Pokédex du jeu et de ses DLC…';
  const eligible=await trainerMarketEligible(game,includeHome);
- const catalog=TRAINER_MARKET_SEED.map(([rank,id,name,trainer,sourceGame='SV',formKey=''])=>{
+ const catalog=TRAINER_MARKET_ALL_SEED.map(([rank,id,name,trainer,sourceGame='SV',formKey=''])=>{
   const sourceUrl=sourceGame==='RB'&&rank===2?TRAINER_MARKET_SOURCES.rocket:sourceGame==='SWSH'&&rank===3?'https://pokemondb.net/sword-shield/gymleaders':TRAINER_MARKET_SOURCES[sourceGame];
-  const availability=eligible.ids.has(id)?'Pokédex / DLC':eligible.homeIds.has(id)?'HOME confirmé':'';
-  return {rank,key:'r'+rank+'p'+id+'t'+trainer+'g'+sourceGame,pokemonKey:String(id)+(formKey?':'+formKey:''),id,name,trainer,sourceGame,sourceGeneration:({RB:1,RB_ROUTE3:1,GSC:2,RS:3,DP:4,BW:5,XY:6,SM:7,SWSH:8,SV:9,SV_SOUTH1:9})[sourceGame]||0,sourceUrl,formKey,availability};
- }).filter(p=>p.availability&&(!p.formKey||TRAINER_MARKET_FORM_GAMES[p.formKey]?.has(game)));
+  const availability=eligible.ids.has(id)?'Pokédex de base':eligible.dlcIds?.has(id)?'DLC attesté':eligible.homeIds.has(id)?'HOME partiel':'';
+  const safe=(value)=>String(value).normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-zA-Z0-9_-]/g,'_');
+  return {rank,key:'r'+rank+'p'+id+'f'+safe(formKey||'base')+'t'+safe(trainer)+'g'+safe(sourceGame),pokemonKey:String(id)+(formKey?':'+formKey:''),id,name,trainer,sourceGame,sourceGeneration:({RB:1,RB_ROUTE3:1,GSC:2,RS:3,DP:4,BW:5,XY:6,SM:7,SM_KUKUI:7,SWSH:8,SV:9,SV_SOUTH1:9,SV_BB:9,SV_BB_TRIAL:9,SV_KITAKAMI:9,HGSS_GYM:4,HGSS_REMATCH:4,HGSS_KANTO:4,HGSS_E4:4,HGSS_CHAMP:4,HGSS_RED:4,HGSS_ROCKET:4,HGSS_RIVAL:4})[sourceGame]||0,sourceUrl,formKey,availability};
+ }).filter(p=>p.availability&&(!p.formKey||TRAINER_MARKET_FORM_GAMES[p.formKey]?.has(game))&&!(game==='pla'&&!p.formKey&&TRAINER_MARKET_PLA_BASE_EXCLUDED.has(p.id)));
+ if(new Set(catalog.map(p=>p.key)).size!==catalog.length)throw Error('Catalogue invalide : identifiants de Pokémon dupliqués.');
  if(!catalog.length)throw Error('Aucun Pokémon vérifié comme compatible avec ce jeu.');
- const state={version:2,game,includeHome,budget,spent:{1:0,2:0},teams:{1:[],2:[]},sold:{},catalog,source:eligible.source,updated:Date.now()};
- await mpRoom(mpSession.room).child('trainerMarket').set(state);
+ const state={version:2,game,includeHome,budget,spent:{1:0,2:0},teams:{1:[],2:[]},sold:{},catalog,source:eligible.source,partial:!!eligible.partial,purchaseCount:0,updated:Date.now()};
+ const ref=mpRoom(mpSession.room).child('trainerMarket');
+ const prior=(await ref.once('value')).val();
+ if(prior&&(prior.purchaseCount||Object.keys(prior.sold||{}).length)&&!confirm('Ce marché comporte déjà des achats. Réinitialiser effacera les équipes et les budgets. Continuer ?'))return;
+ const tx=await ref.transaction(current=>{
+  if((current?.purchaseCount||Object.keys(current?.sold||{}).length)!==(prior?.purchaseCount||Object.keys(prior?.sold||{}).length))return;
+  return state;
+ });
+ if(!tx.committed)throw Error('Le marché a changé pendant la réinitialisation. Réessaie.');
  trainerMarketState=state;trainerMarketRender();
 }
 async function trainerMarketBuy(key){
@@ -3777,7 +3836,7 @@ async function trainerMarketBuy(key){
   const price=TRAINER_MARKET_RANKS[entry.rank-1][1],team=state.teams?.[seat]||[],spent=state.spent?.[seat]||0;
   if(team.length>=6||(state.budget!==0&&spent+price>state.budget))return;
   if(state.catalog.some(p=>p.pokemonKey===entry.pokemonKey&&state.sold?.[p.key]))return;
-  return {...state,sold:{...state.sold,[key]:seat},spent:{...state.spent,[seat]:spent+price},teams:{...state.teams,[seat]:[...team,{...entry,price}]},updated:Date.now()};
+  return {...state,sold:{...state.sold,[key]:seat},spent:{...state.spent,[seat]:spent+price},teams:{...state.teams,[seat]:[...team,{...entry,price}]},purchaseCount:(state.purchaseCount||0)+1,updated:Date.now()};
  });
  if(!tx.committed)alert('Achat refusé : déjà vendu, budget insuffisant ou équipe complète.');
 }
