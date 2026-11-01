@@ -2610,12 +2610,45 @@ function renderHangman(){
 
 function render(){
  if(gameMode.value==='phoneticrebus'){cards.classList.remove('boxModeGrid');const isGenerator=!mpSession||mpSession.id===mpSeats[player===1?2:1];cards.innerHTML=(isGenerator?'<div style="grid-column:1/-1;text-align:center"><strong>🔑 Vue du joueur qui randomise</strong> — réponses privées.</div>':'<div style="grid-column:1/-1;text-align:center"><strong>🧩 Rébus phonétiques</strong> — devine les Pokémon.</div>')+current.map((x,i)=>'<div class="card" id="c'+i+'"><div class="name">'+(isGenerator?mpEsc(x.p?.name||'Pokémon'):'Pokémon mystère '+(i+1))+'</div><div class="gameClue">'+(x.clue||'Rébus indisponible')+'</div>'+(!isGenerator&&(!mpSession||mpSession.id===mpSeats[player])&&!batchLocked?'<button onclick="pick('+i+')">Choisir ce Pokémon</button>':'')+'</div>').join('')+(isGenerator&&!mpSession?'<div style="grid-column:1/-1;text-align:center"><button type="button" onclick="hidePhoneticAnswers()">🔒 Passer aux joueurs</button></div>':'');return}
- if(gameMode.value==='retrosprite'||gameMode.value==='footprint'){
+function footprintCheck(){
+ if(gameMode.value!=='footprint'||current.length!==3)return;
+ const answers=[0,1,2].map(i=>document.getElementById('footGuess'+i)?.value);
+ if(answers.some(v=>v==null||v==='')){alert('Associe les trois empreintes avant de valider.');return}
+ window.footprintScore=answers.filter((v,i)=>Number(v)===i).length;
+ window.footprintRevealed=true;render();
+}
+function footprintAward(i){
+ if(gameMode.value!=='footprint'||!window.footprintRevealed||!current[i]?.p)return;
+ const score=window.footprintScore||0;
+ if(mpSession){
+  const chooser=score>0?mpSeats[player===1?2:1]:mpSeats[player];
+  if(mpSession.id!==chooser){alert('Ce choix appartient à l’autre joueur.');return}
+ }
+ if(typeof pick==='function')pick(i);
+ window.footprintRevealed=false;window.footprintScore=0;
+}
+ if(gameMode.value==='footprint'){
+  cards.classList.remove('boxModeGrid');
+  const available=current.filter(x=>x.p&&Number(x.p.id)>=1&&Number(x.p.id)<=649);
+  if(current.length!==3||available.length!==3){
+   cards.innerHTML='<div class="card" style="grid-column:1/-1"><h3>🐾 Empreintes officielles</h3><p>Le trio actuel ne contient pas trois Pokémon avec une empreinte officielle disponible (générations 1 à 5). Relance le tirage pour obtenir un trio compatible. Les empreintes des autres Pokémon seront ajoutées lorsqu’elles auront été créées et vérifiées.</p></div>';
+   return;
+  }
+  const isGenerator=!!mpSession&&mpSession.id===mpSeats[player];
+  const canGuess=!mpSession||(!isGenerator&&mpSession.id===mpSeats[player===1?2:1]);
+  const revealed=!!window.footprintRevealed;
+  cards.innerHTML='<div style="grid-column:1/-1"><h3>🐾 Associe les trois empreintes</h3><p>Une seule bonne association suffit pour choisir librement un Pokémon. Avec zéro bonne réponse, le randomiseur choisit pour toi.</p></div>'+available.map((x,i)=>{
+   const url='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/footprints/'+x.p.id+'.png';
+   const options='<option value="">Choisir un Pokémon…</option>'+available.map((y,j)=>'<option value="'+j+'">'+mpEsc(y.p.name)+'</option>').join('');
+   return '<div class="card" id="c'+i+'"><div style="height:170px;display:flex;align-items:center;justify-content:center"><img src="'+url+'" alt="Empreinte numéro '+(i+1)+'" style="width:120px;height:120px;object-fit:contain;image-rendering:pixelated" onerror="this.style.display=\'none\';this.parentElement.textContent=\'Empreinte indisponible\'"></div><b>Empreinte '+(i+1)+'</b>'+(canGuess&&!revealed?'<select id="footGuess'+i+'" aria-label="Association empreinte '+(i+1)+'">'+options+'</select>':'')+(revealed?'<div class="bodyAnswer"><img src="'+(x.p.img||'')+'"><div class="name">'+mpEsc(x.p.name)+'</div></div>':'')+'</div>';
+  }).join('')+(canGuess&&!revealed?'<div style="grid-column:1/-1;text-align:center"><button type="button" onclick="footprintCheck()">✅ Valider les trois associations</button></div>':'')+(revealed?'<div style="grid-column:1/-1;text-align:center"><p id="footResult">'+(window.footprintScore||0)+'/3 association(s) correcte(s). '+((window.footprintScore||0)>0?'Le devineur choisit un Pokémon.':'Le randomiseur impose un Pokémon.')+'</p>'+available.map((x,i)=>'<button type="button" onclick="footprintAward('+i+')">'+mpEsc(x.p.name)+'</button> ').join('')+'</div>':'');
+  return;
+ }
+ if(gameMode.value==='retrosprite'){
   cards.classList.remove('boxModeGrid');
   cards.innerHTML=current.map((x,i)=>{
    const url=extraRankImage(x.p,gameMode.value);
-   const footprint=gameMode.value==='footprint';
-   return '<div class="card" id="c'+i+'"><div style="height:200px;display:flex;align-items:center;justify-content:center"><img src="'+url+'" alt="Indice Pokémon" style="max-width:180px;max-height:180px;image-rendering:pixelated;'+(footprint?'filter:brightness(0);clip-path:inset(55% 0 0 0);transform:scale(1.7);':'clip-path:polygon(0 16%,100% 16%,100% 25%,0 25%,0 47%,100% 47%,100% 56%,0 56%,0 79%,100% 79%,100% 88%,0 88%);filter:blur(2px);')+'" onerror="this.style.display=\'none\';this.parentElement.textContent=\'Sprite indisponible\'"></div><div class="gameClue">'+x.clue+'</div><div class="bodyAnswer" style="display:none"><img src="'+(x.p.img||'')+'"><div class="name">'+mpEsc(x.p.name)+'</div></div><button onclick="pick('+i+')">CHOISIR</button></div>'
+   return '<div class="card" id="c'+i+'"><div style="height:200px;display:flex;align-items:center;justify-content:center"><img src="'+url+'" alt="Indice Pokémon" style="max-width:180px;max-height:180px;image-rendering:pixelated;clip-path:polygon(0 16%,100% 16%,100% 25%,0 25%,0 47%,100% 47%,100% 56%,0 56%,0 79%,100% 79%,100% 88%,0 88%);filter:blur(2px)" onerror="this.style.display=\'none\';this.parentElement.textContent=\'Sprite indisponible\'"></div><div class="gameClue">'+x.clue+'</div><div class="bodyAnswer" style="display:none"><img src="'+(x.p.img||'')+'"><div class="name">'+mpEsc(x.p.name)+'</div></div><button onclick="pick('+i+')">CHOISIR</button></div>'
   }).join('');
   return;
  }
