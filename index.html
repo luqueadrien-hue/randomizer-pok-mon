@@ -3483,7 +3483,35 @@ const TRAINER_MARKET_SEED=[
  [7,841,"Pomdrapi","Hassa"],
  [7,998,"Glaivodo","Hassa"],
  [8,976,"Délestin","Alisma"],
- [8,713,"Séracrawl","Alisma"]
+ [8,713,"Séracrawl","Alisma"],
+ [4,820,"Rongrigou","Pepper"],
+ [4,91,"Crustabri","Pepper"],
+ [4,952,"Scovilain","Pepper"],
+ [4,949,"Terracruel","Pepper"],
+ [4,934,"Gigansel","Pepper"],
+ [4,943,"Dogrino","Pepper"],
+ [4,197,"Noctali","Pania"],
+ [4,134,"Aquali","Pania"],
+ [4,135,"Voltali","Pania"],
+ [4,136,"Pyroli","Pania"],
+ [4,470,"Phyllali","Pania"],
+ [4,700,"Nymphali","Pania"],
+ [4,745,"Lougaroc","Menzi"],
+ [4,706,"Muplodocus","Menzi"],
+ [4,923,"Pohmarmotte","Menzi"],
+ [4,925,"Famignol","Menzi"],
+ [5,984,"Fort-Ivoire","IA Olim (Écarlate)"],
+ [5,985,"Hurle-Queue","IA Olim (Écarlate)"],
+ [5,986,"Fongus-Furie","IA Olim (Écarlate)"],
+ [5,987,"Flotte-Mèche","IA Olim (Écarlate)"],
+ [5,988,"Rampe-Ailes","IA Olim (Écarlate)"],
+ [5,989,"Pelage-Sablé","IA Olim (Écarlate)"],
+ [5,990,"Roue-de-Fer","IA Turum (Violet)"],
+ [5,991,"Hotte-de-Fer","IA Turum (Violet)"],
+ [5,992,"Paume-de-Fer","IA Turum (Violet)"],
+ [5,993,"Têtes-de-Fer","IA Turum (Violet)"],
+ [5,994,"Mite-de-Fer","IA Turum (Violet)"],
+ [5,995,"Épine-de-Fer","IA Turum (Violet)"]
 ];
 let trainerMarketState=null;
 function trainerMarketRender(){
@@ -3504,8 +3532,8 @@ async function trainerMarketStart(){
  if(!mpSession||!mpLobbyStarted||!mpSeats[1]||!mpSeats[2])return alert('Lance un salon réseau avec deux joueurs attribués.');
  const room=await mpRoom(mpSession.room).once('value');if(room.val()?.ownerUid!==mpSession.id)return alert('Seul l’hôte peut créer le marché.');
  const budget=Number(document.getElementById('trainerMarketBudget').value);
- const catalog=TRAINER_MARKET_SEED.map(([rank,id,name,trainer])=>({rank,key:'p'+id,pokemonKey:String(id),id,name,trainer}));
- const state={budget,spent:{1:0,2:0},teams:{1:[],2:[]},sold:{},catalog,source:'Sélection initiale vérifiée — Écarlate/Violet uniquement',updated:Date.now()};
+ const catalog=TRAINER_MARKET_SEED.map(([rank,id,name,trainer])=>({rank,key:'r'+rank+'p'+id+'t'+trainer,pokemonKey:String(id),id,name,trainer}));
+ const state={budget,spent:{1:0,2:0},teams:{1:[],2:[]},sold:{},catalog,source:'Sélection initiale — Écarlate/Violet, données partielles',updated:Date.now()};
  await mpRoom(mpSession.room).child('trainerMarket').set(state);trainerMarketState=state;trainerMarketRender();
 }
 async function trainerMarketBuy(key){
