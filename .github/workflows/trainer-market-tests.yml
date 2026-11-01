@@ -1,0 +1,24 @@
+name: Tests du Marché des Dresseurs
+on:
+  push:
+    paths:
+      - 'index.html'
+      - 'tests/trainer-market.test.mjs'
+      - '.github/workflows/trainer-market-tests.yml'
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/trainer-market.test.mjs'
+      - '.github/workflows/trainer-market-tests.yml'
+jobs:
+  test-market:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Vérifier les rangs, le budget, le stock et le filtre
+        run: node --test tests/trainer-market.test.mjs
