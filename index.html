@@ -3435,6 +3435,55 @@ const TRAINER_MARKET_SEED=[
  [3,919,'Lilliterelle','Éra'],[3,917,'Tissenboule','Éra'],[3,216,'Teddiursa','Éra'],
  [7,340,'Barbicha','Cayenn'],[7,323,'Camérupt','Cayenn'],[7,232,'Donphan','Cayenn'],[7,51,'Triopikeur','Cayenn'],[7,980,'Terraiste','Cayenn'],
  [8,956,'Cléopsytra','Alisma'],[8,673,'Chevroum','Alisma'],[8,975,'Balbalèze','Alisma'],[8,983,'Scalpereur','Alisma'],[8,970,'Floréclat','Alisma']
+,
+ [3,548,"Chlorobule","Colza"],
+ [3,928,"Olivini","Colza"],
+ [3,185,"Simularbre","Colza"],
+ [3,940,"Zapétrel","Mashynn"],
+ [3,939,"Ampibidou","Mashynn"],
+ [3,404,"Luxio","Mashynn"],
+ [3,429,"Magirêve","Mashynn"],
+ [3,961,"Triopikeau","Kombu"],
+ [3,740,"Crabominable","Kombu"],
+ [3,775,"Dodoala","Okuba"],
+ [3,982,"Deusolourdo","Okuba"],
+ [3,398,"Étouraptor","Okuba"],
+ [3,354,"Branette","Laïm"],
+ [3,778,"Mimiqui","Laïm"],
+ [3,972,"Tomberro","Laïm"],
+ [3,981,"Farigiraf","Tully"],
+ [3,282,"Gardevoir","Tully"],
+ [3,671,"Florges","Tully"],
+ [3,873,"Beldeneige","Grusha"],
+ [3,614,"Polagriffe","Grusha"],
+ [3,334,"Altaria","Grusha"],
+ [6,624,"Scalpion","Brome"],
+ [6,324,"Chartor","Meloco"],
+ [6,435,"Moufflair","Erio"],
+ [6,89,"Grotadmorv","Erio"],
+ [6,966,"Vrombotor","Erio"],
+ [6,184,"Azumarill","Ortiga"],
+ [6,40,"Grodoudou","Ortiga"],
+ [6,927,"Briochien","Ortiga"],
+ [6,454,"Coatox","Nèflie"],
+ [6,766,"Gouroutan","Nèflie"],
+ [6,448,"Lucario","Nèflie"],
+ [6,979,"Courrousinge","Nèflie"],
+ [7,879,"Pachyradjah","Popi"],
+ [7,462,"Magnézone","Popi"],
+ [7,437,"Archéodong","Popi"],
+ [7,823,"Corvaillus","Popi"],
+ [7,959,"Forgelina","Popi"],
+ [7,357,"Tropius","Okuba"],
+ [7,741,"Plumeline","Okuba"],
+ [7,973,"Flamenroule","Okuba"],
+ [7,715,"Bruyverne","Hassa"],
+ [7,612,"Tranchodon","Hassa"],
+ [7,691,"Kravarech","Hassa"],
+ [7,841,"Pomdrapi","Hassa"],
+ [7,998,"Glaivodo","Hassa"],
+ [8,976,"Délestin","Alisma"],
+ [8,713,"Séracrawl","Alisma"]
 ];
 let trainerMarketState=null;
 function trainerMarketRender(){
@@ -3448,7 +3497,7 @@ function trainerMarketRender(){
  }
  grid.innerHTML=TRAINER_MARKET_RANKS.map((rank,i)=>{
  const entries=(state?.catalog||[]).filter(p=>p.rank===i+1);
- return '<div class="panel" style="margin:8px 0;padding:12px"><strong>'+rank[2]+' Rang '+(i+1)+' — '+mpEsc(rank[0])+' · '+rank[1]+' ₽</strong><div class="controls">'+(entries.length?entries.map(p=>{const sold=state.sold?.[p.key];return '<button type="button" '+(sold?'disabled':'')+' onclick="trainerMarketBuy(\''+mpEsc(p.key)+'\')">'+mpEsc(p.name)+' — '+(sold?'Vendu':'Acheter')+'</button>'}).join(''):'<small>Aucun Pokémon vérifié dans cette catégorie pour le moment</small>')+'</div></div>';
+ return '<div class="panel" style="margin:8px 0;padding:12px"><strong>'+rank[2]+' Rang '+(i+1)+' — '+mpEsc(rank[0])+' · '+rank[1]+' ₽</strong><div class="controls">'+(entries.length?entries.map(p=>{const sold=state.sold?.[p.key]||Object.keys(state.sold||{}).some(k=>state.sold[k]&&state.catalog.find(x=>x.key===k)?.pokemonKey===p.pokemonKey);return '<button type="button" '+(sold?'disabled':'')+' onclick="trainerMarketBuy(\''+mpEsc(p.key)+'\')">'+mpEsc(p.name)+' — '+(sold?'Vendu':'Acheter')+'</button>'}).join(''):'<small>Aucun Pokémon vérifié dans cette catégorie pour le moment</small>')+'</div></div>';
  }).reverse().join('');
 }
 async function trainerMarketStart(){
@@ -3469,7 +3518,7 @@ async function trainerMarketBuy(key){
   if(!entry||state.sold?.[key]||!Number.isInteger(entry.rank)||entry.rank<1||entry.rank>8)return;
   const price=TRAINER_MARKET_RANKS[entry.rank-1][1],team=state.teams?.[seat]||[],spent=state.spent?.[seat]||0;
   if(team.length>=6||(state.budget!==0&&spent+price>state.budget))return;
-  if(state.catalog.some(p=>p.key!==key&&p.pokemonKey===entry.pokemonKey&&state.sold?.[p.key]))return;
+  if(state.catalog.some(p=>p.pokemonKey===entry.pokemonKey&&state.sold?.[p.key]))return;
   return {...state,sold:{...state.sold,[key]:seat},spent:{...state.spent,[seat]:spent+price},teams:{...state.teams,[seat]:[...team,{...entry,price}]},updated:Date.now()};
  });
  if(!tx.committed)alert('Achat refusé : déjà vendu, budget insuffisant ou équipe complète.');
