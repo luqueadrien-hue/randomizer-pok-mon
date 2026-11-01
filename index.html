@@ -3594,15 +3594,90 @@ const TRAINER_MARKET_SEED=[
  [1,20,"Rattatac","Gamin Joey (revanche)","GSC"],
  [1,16,"Roucool","Gamin Mikey (Route 30)","GSC"],
  [1,19,"Rattata","Gamin Mikey (Route 30)","GSC"],
- [1,10,"Chenipan","Scout Don (Route 30)","GSC"]
+ [1,10,"Chenipan","Scout Don (Route 30)","GSC"],
+ [3,299,"Tarinor","Roxanne","RS"],
+ [7,359,"Absol","Damien","RS"],
+ [7,319,"Sharpedo","Damien","RS"],
+ [7,302,"Ténéfix","Spectra","RS"],
+ [8,376,"Métalosse","Pierre Rochard","RS"],
+ [8,306,"Galeking","Pierre Rochard","RS"],
+ [8,227,"Airmure","Pierre Rochard","RS"],
+ [8,344,"Kaorine","Pierre Rochard","RS"],
+ [8,346,"Vacilys","Pierre Rochard","RS"],
+ [8,348,"Armaldo","Pierre Rochard","RS"],
+ [3,408,"Kranidos","Pierrick","DP"],
+ [7,437,"Archéodong","Lucio","DP"],
+ [8,445,"Carchacrok","Cynthia","DP"],
+ [8,448,"Lucario","Cynthia","DP"],
+ [8,442,"Spiritomb","Cynthia","DP"],
+ [8,350,"Milobellus","Cynthia","DP"],
+ [8,407,"Roserade","Cynthia","DP"],
+ [8,423,"Tritosor","Cynthia","DP"],
+ [7,625,"Scalproie","Pieris","BW"],
+ [7,553,"Crocorible","Pieris","BW"],
+ [6,635,"Trioxhydre","Ghetis","BW"],
+ [6,604,"Ohmassacre","Ghetis","BW"],
+ [6,563,"Tutankafer","Ghetis","BW"],
+ [8,637,"Pyrax","Goyah","BW"],
+ [8,621,"Drakkarmin","Goyah","BW"],
+ [8,589,"Lançargot","Goyah","BW"],
+ [8,584,"Sorbouboul","Goyah","BW"],
+ [8,626,"Frison","Goyah","BW"],
+ [8,282,"Gardevoir","Dianthéa","XY"],
+ [8,706,"Muplodocus","Dianthéa","XY"],
+ [8,701,"Brutalibré","Dianthéa","XY"],
+ [8,699,"Dragmara","Dianthéa","XY"],
+ [8,697,"Rexillius","Dianthéa","XY"],
+ [8,711,"Banshitrouye","Dianthéa","XY"],
+ [7,733,"Bazoucan","Kahili","SM"],
+ [7,227,"Airmure","Kahili","SM"],
+ [7,169,"Nostenfer","Kahili","SM"],
+ [7,630,"Vaututrice","Kahili","SM"],
+ [7,741,"Plumeline (Style Flamenco)","Kahili","SM","oricorio-baile"],
+ [7,770,"Trépassable","Margie","SM"],
+ [7,781,"Sinistrail","Margie","SM"],
+ [7,478,"Momartik","Margie","SM"],
+ [7,302,"Ténéfix","Margie","SM"],
+ [5,143,"Ronflex","Professeur Euphorbe","SM"],
+ [5,462,"Magnézone","Professeur Euphorbe","SM"],
+ [5,628,"Gueriaigle","Professeur Euphorbe","SM"],
+ [5,727,"Félinferno","Professeur Euphorbe","SM"],
+ [5,38,"Feunard d’Alola","Professeur Euphorbe","SM","ninetales-alola"],
+ [5,745,"Lougaroc (Forme Diurne)","Professeur Euphorbe","SM","lycanroc-midday"],
+ [8,6,"Dracaufeu","Tarak","SWSH"],
+ [8,887,"Lanssorien","Tarak","SWSH"],
+ [8,681,"Exagide","Tarak","SWSH"],
+ [8,612,"Tranchodon","Tarak","SWSH"],
+ [8,537,"Crapustule","Tarak","SWSH"],
+ [8,815,"Pyrobut","Tarak","SWSH"],
+ [8,866,"M. Glaquette","Tarak","SWSH"],
+ [8,818,"Lézargus","Tarak","SWSH"],
+ [8,812,"Gorythmic","Tarak","SWSH"],
+ [8,464,"Rhinastoc","Tarak","SWSH"],
+ [3,829,"Tournicoton","Percy","SWSH"],
+ [3,830,"Blancoton","Percy","SWSH"],
+ [3,834,"Torgamord","Donna","SWSH"],
+ [3,846,"Embrochet","Donna","SWSH"],
+ [3,851,"Scolocendre","Kabu","SWSH"]
 ];
 
 const TRAINER_MARKET_SOURCES={
  RB:'https://pokemondb.net/red-blue/gymleaders-elitefour',
  RB_ROUTE3:'https://www.pokemon-france.com/en/guides/blue-red/walkthrough-5/',
  GSC:'https://bulbapedia.bulbagarden.net/wiki/Appendix:Gold_and_Silver_walkthrough/Section_2',
+ RS:'https://pokemondb.net/ruby-sapphire/gymleaders-elitefour',
+ DP:'https://pokemondb.net/diamond-pearl/gymleaders-elitefour',
+ BW:'https://pokemondb.net/black-white/gymleaders-elitefour',
+ XY:'https://pokemondb.net/x-y/gymleaders-elitefour',
+ SM:'https://pokemondb.net/sun-moon/kahunas-elitefour',
+ SWSH:'https://www.serebii.net/swordshield/championcup.shtml',
  rocket:'https://www.supercheats.com/pokemon-blue-digital/walkthrough/pokemon-blue-team-rocket-listings',
  SV:'https://pokemondb.net/scarlet-violet/gymleaders-elitefour'
+};
+const TRAINER_MARKET_FORM_GAMES={
+ 'oricorio-baile':new Set(['sv']),
+ 'ninetales-alola':new Set(['sv','swsh']),
+ 'lycanroc-midday':new Set(['sv','swsh'])
 };
 const TRAINER_MARKET_DEXES={sv:['paldea','kitakami','blueberry'],swsh:['galar','isle-of-armor','crown-tundra'],pla:['hisui']};
 // Espèces attestées par les listes HOME de Serebii, sélection conservatrice, non exhaustive.
@@ -3667,8 +3742,8 @@ async function trainerMarketStart(){
  const catalog=TRAINER_MARKET_SEED.map(([rank,id,name,trainer,sourceGame='SV',formKey=''])=>{
   const sourceUrl=sourceGame==='RB'&&rank===2?TRAINER_MARKET_SOURCES.rocket:TRAINER_MARKET_SOURCES[sourceGame];
   const availability=eligible.ids.has(id)?'Pokédex / DLC':eligible.homeIds.has(id)?'HOME confirmé':'';
-  return {rank,key:'r'+rank+'p'+id+'t'+trainer+'g'+sourceGame,pokemonKey:String(id)+(formKey?':'+formKey:''),id,name,trainer,sourceGame,sourceGeneration:sourceGame==='GSC'?2:sourceGame==='SV'?9:1,sourceUrl,formKey,availability};
- }).filter(p=>p.availability);
+  return {rank,key:'r'+rank+'p'+id+'t'+trainer+'g'+sourceGame,pokemonKey:String(id)+(formKey?':'+formKey:''),id,name,trainer,sourceGame,sourceGeneration:({RB:1,RB_ROUTE3:1,GSC:2,RS:3,DP:4,BW:5,XY:6,SM:7,SWSH:8,SV:9})[sourceGame]||0,sourceUrl,formKey,availability};
+ }).filter(p=>p.availability&&(!p.formKey||TRAINER_MARKET_FORM_GAMES[p.formKey]?.has(game)));
  if(!catalog.length)throw Error('Aucun Pokémon vérifié comme compatible avec ce jeu.');
  const state={version:2,game,includeHome,budget,spent:{1:0,2:0},teams:{1:[],2:[]},sold:{},catalog,source:eligible.source,updated:Date.now()};
  await mpRoom(mpSession.room).child('trainerMarket').set(state);
