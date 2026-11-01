@@ -3701,7 +3701,15 @@ const TRAINER_MARKET_SOURCES={
  SV_BB:'https://www.serebii.net/scarletviolet/blueberryelitefour.shtml',
  SV_BB_TRIAL:'https://www.pokepedia.fr/Poste_Polaire',
  SV_KITAKAMI:'https://www.serebii.net/scarletviolet/kitakamimaskfestival.shtml',
- SM_KUKUI:'https://www.serebii.net/sunmoon/elitefour.shtml'
+ SM_KUKUI:'https://www.serebii.net/sunmoon/elitefour.shtml',
+ XY_LUMIOSE:'https://www.serebii.net/pokearth/kalos/6th/lumiosecity.shtml',
+ XY_SYCAMORE:'https://www.pokepedia.fr/Professeur_Platane',
+ RB_RIVAL:'https://www.pokepedia.fr/Blue/%C3%89quipes_dans_Pok%C3%A9mon_Rouge_et_Bleu',
+ RS_AQUA:'https://bulbapedia.bulbagarden.net/wiki/Team_Aqua',
+ ORAS_AQUA:'https://www.serebii.net/omegarubyalphasapphire/aquamagma.shtml',
+ ORAS_MAGMA:'https://www.serebii.net/omegarubyalphasapphire/aquamagma.shtml',
+ BDSP_GALACTIC:'https://bulbapedia.bulbagarden.net/wiki/Galactic_Eterna_Building',
+ SM_SKULL:'https://www.pokepedia.fr/Team_Skull'
 };
 const TRAINER_MARKET_FORM_GAMES={
  'oricorio-baile':new Set(['sv']),
@@ -3710,7 +3718,10 @@ const TRAINER_MARKET_FORM_GAMES={
  'lycanroc-midday':new Set(['sv','swsh']),
  'dugtrio-alola':new Set(['sv','swsh']),
  'sandslash-alola':new Set(['sv','swsh']),
- 'rotom-heat':new Set(['sv','swsh','bdsp','pla'])
+ 'rotom-heat':new Set(['sv','swsh','bdsp','pla']),
+ 'grimer-alola':new Set(['sv']),
+ 'rattata-alola':new Set(),
+ 'raticate-alola':new Set()
 };
 // Pokédex de base obligatoires. Les Pokédex DLC ne sont pas tous exposés par PokéAPI.
 const TRAINER_MARKET_DEXES={sv:['paldea'],swsh:['galar'],pla:['hisui']};
@@ -3810,7 +3821,7 @@ async function trainerMarketStart(){
   const sourceUrl=sourceGame==='RB'&&rank===2?TRAINER_MARKET_SOURCES.rocket:sourceGame==='SWSH'&&rank===3?'https://pokemondb.net/sword-shield/gymleaders':TRAINER_MARKET_SOURCES[sourceGame];
   const availability=eligible.ids.has(id)?'Pokédex de base':eligible.dlcIds?.has(id)?'DLC attesté':eligible.homeIds.has(id)?'HOME partiel':'';
   const safe=(value)=>String(value).normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-zA-Z0-9_-]/g,'_');
-  return {rank,key:'r'+rank+'p'+id+'f'+safe(formKey||'base')+'t'+safe(trainer)+'g'+safe(sourceGame),pokemonKey:String(id)+(formKey?':'+formKey:''),id,name,trainer,sourceGame,sourceGeneration:({RB:1,RB_ROUTE3:1,GSC:2,RS:3,DP:4,BW:5,XY:6,SM:7,SM_KUKUI:7,SWSH:8,SV:9,SV_SOUTH1:9,SV_BB:9,SV_BB_TRIAL:9,SV_KITAKAMI:9,HGSS_GYM:4,HGSS_REMATCH:4,HGSS_KANTO:4,HGSS_E4:4,HGSS_CHAMP:4,HGSS_RED:4,HGSS_ROCKET:4,HGSS_RIVAL:4})[sourceGame]||0,sourceUrl,formKey,availability};
+  return {rank,key:'r'+rank+'p'+id+'f'+safe(formKey||'base')+'t'+safe(trainer)+'g'+safe(sourceGame),pokemonKey:String(id)+(formKey?':'+formKey:''),id,name,trainer,sourceGame,sourceGeneration:({RB:1,RB_ROUTE3:1,GSC:2,RS:3,DP:4,BW:5,XY:6,SM:7,SM_KUKUI:7,SWSH:8,SV:9,SV_SOUTH1:9,SV_BB:9,SV_BB_TRIAL:9,SV_KITAKAMI:9,HGSS_GYM:4,HGSS_REMATCH:4,HGSS_KANTO:4,HGSS_E4:4,HGSS_CHAMP:4,HGSS_RED:4,HGSS_ROCKET:4,HGSS_RIVAL:4,XY_LUMIOSE:6,XY_SYCAMORE:6,RB_RIVAL:1,RS_AQUA:3,ORAS_AQUA:6,ORAS_MAGMA:6,BDSP_GALACTIC:8,SM_SKULL:7})[sourceGame]||0,sourceUrl,formKey,availability};
  }).filter(p=>p.availability&&(!p.formKey||TRAINER_MARKET_FORM_GAMES[p.formKey]?.has(game))&&!(game==='pla'&&!p.formKey&&TRAINER_MARKET_PLA_BASE_EXCLUDED.has(p.id)));
  if(new Set(catalog.map(p=>p.key)).size!==catalog.length)throw Error('Catalogue invalide : identifiants de Pokémon dupliqués.');
  if(!catalog.length)throw Error('Aucun Pokémon vérifié comme compatible avec ce jeu.');
