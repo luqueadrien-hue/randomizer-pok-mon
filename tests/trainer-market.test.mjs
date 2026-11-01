@@ -67,8 +67,8 @@ function fakeMarket(budget=3000,game='sv',ids=new Set(Array.from({length:1025},(
 
 test('huit rangs et provenance Kanto–Paldea, source documentée',()=>{
  assert.deepEqual(ranks.map(x=>x[1]),[200,350,500,650,700,800,1000,1300]);
- assert.equal(extra.length,302);
- assert.equal(allSeed.length,552);
+ assert.equal(extra.length,309);
+ assert.equal(allSeed.length,559);
  assert.ok(Array.from({length:8},(_,i)=>i+1).every(rank=>allSeed.some(x=>x[0]===rank)));
  assert.ok(allSeed.every(x=>sources[x[4]||'SV']));
  assert.ok(allSeed.every(x=>x[1]>=1&&x[1]<=1025&&x[2]&&x[3]));
@@ -79,7 +79,7 @@ test('création : clés Firebase uniques, huit rangs, sources, formes',async()=>
  const m=fakeMarket();
  await m.start();
  const catalog=m.state().catalog;
- assert.equal(catalog.length,550);
+ assert.equal(catalog.length,557);
  assert.equal(new Set(catalog.map(x=>x.key)).size,catalog.length);
  assert.ok(catalog.every(x=>!/[.#$\[\]/]/.test(x.key)));
  assert.ok(catalog.every(x=>x.sourceUrl&&x.sourceGeneration>=1&&x.sourceGeneration<=9));
