@@ -974,7 +974,7 @@ async function auditNationalDex1025(onProgress){
 }
 
 
-function valid(p){const [lo,hi]=range();if(p.id<lo||p.id>hi)return false;if(generation.value==='9'&&!p.sv)return false;const l=legend.value;if(l==='no'&&p.legendary)return false;if(l==='yes'&&!p.legendary)return false;const tf=tfilter();if(tf&&!p.types.includes(tf))return false;return ![...teams[1],...teams[2]].some(x=>x.id===p.id)}
+function valid(p){const [lo,hi]=range();if(p.id<lo||p.id>hi)return false;if(generation.value==='9'&&!p.sv)return false;const l=legend.value;if(l==='no'&&p.legendary)return false;if(l==='yes'&&!p.legendary)return false;const tf=tfilter();if(tf&&!p.types.includes(tf))return false;return ![...teams[1],...teams[2]].some(x=>x.id===p.id&&(gameMode.value!=='footprint'||footprintSamePokemon(x,p)))}
 const SPECIAL_FORM_POOL=[
  {base:483,api:'dialga',label:'Dialga'},
  {base:483,api:'dialga-origin',label:'Dialga Forme Originelle'},
@@ -2170,12 +2170,29 @@ async function rollCards(){
  const diceMode=typeMode.value==='random-d10';
  if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');if(!monoDiceType)monoRoll(player);turn.textContent='🎲 D18 : face '+monoDiceResult+'/18 → '+frt(monoDiceType)+' | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
  for(let i=0;i<n;i++){
-   let p;if(gameMode.value==='trainerteam'){const pool=Object.keys(TRAINER_HINTS).map(Number).filter(id=>trainerCandidates(id).length&&!used.has(id));const validPool=[];for(const id of pool){try{const q=await getP(id);if(valid(q))validPool.push(q)}catch(e){}}for(const key of Object.keys(TRAINER_REGIONAL_HINTS)){if(used.has('form:'+key)||!trainerFilteredOwners(TRAINER_REGIONAL_HINTS[key].owners).length)continue;try{const q=await trainerRegionalPokemon(key);if(valid(q))validPool.push(q)}catch(e){console.warn('Forme régionale indisponible',key,e)}}if(!validPool.length)throw Error('Aucun Pokémon de dresseur disponible pour ces filtres.');p=validPool[Math.floor(Math.random()*validPool.length)];used.add(p.formKey?'form:'+p.formKey:p.id)}else if(gameMode.value==='footprint'){let found=false;for(let attempts=0;attempts<200&&!found;attempts++){const id=1+Math.floor(Math.random()*649);if(used.has(id))continue;used.add(id);try{const candidate=await getP(id);if(candidate.sv&&valid(candidate)&&await validEvolutionStage(candidate)&&await footprintImageAvailable(id)){
-    const forms=FOOTPRINT_REGIONAL_FORMS.filter(f=>f.base===id);
-    const options=[candidate];
-    for(const form of forms){try{const alt=await getSpecialForm(form);if(alt.moves.some(m=>(m.version_group_details||[]).some(v=>v.version_group?.name==='scarlet-violet'))&&valid(alt))options.push(alt)}catch(e){}}
-    p=options[Math.floor(Math.random()*options.length)];found=true
-   }}catch(e){}}if(!found)throw Error('Aucune empreinte chargée et compatible avec Écarlate/Violet pour les filtres sélectionnés.')}else p=diceMode?await monoDraw(player,monoDiceType,used):await draw(used);
+   let p;if(gameMode.value==='trainerteam'){const pool=Object.keys(TRAINER_HINTS).map(Number).filter(id=>trainerCandidates(id).length&&!used.has(id));const validPool=[];for(const id of pool){try{const q=await getP(id);if(valid(q))validPool.push(q)}catch(e){}}for(const key of Object.keys(TRAINER_REGIONAL_HINTS)){if(used.has('form:'+key)||!trainerFilteredOwners(TRAINER_REGIONAL_HINTS[key].owners).length)continue;try{const q=await trainerRegionalPokemon(key);if(valid(q))validPool.push(q)}catch(e){console.warn('Forme régionale indisponible',key,e)}}if(!validPool.length)throw Error('Aucun Pokémon de dresseur disponible pour ces filtres.');p=validPool[Math.floor(Math.random()*validPool.length)];used.add(p.formKey?'form:'+p.formKey:p.id)}else if(gameMode.value==='footprint'){
+   let found=false;
+   for(let attempts=0;attempts<400&&!found;attempts++){
+    const id=1+Math.floor(Math.random()*649);
+    // Une seule empreinte d'origine par trio, y compris pour les formes régionales.
+    if(used.has(id))continue;
+    used.add(id);
+    try{
+     const base=await getP(id);
+     if(!footprintImageAvailable||!await footprintImageAvailable(id))continue;
+     const options=[];
+     if(footprintEligible(base)&&await validEvolutionStage(base))options.push(base);
+     for(const def of FOOTPRINT_REGIONAL_FORMS.filter(f=>f.base===id)){
+      try{
+       const alt=await getSpecialForm(def);
+       if(footprintHasSvMoves(alt)&&footprintEligible(alt)&&await validEvolutionStage(alt))options.push(alt);
+      }catch(e){console.warn('Forme régionale ignorée',def.api,e)}
+     }
+     if(options.length){p=options[Math.floor(Math.random()*options.length)];found=true}
+    }catch(e){console.warn('Empreinte ignorée',id,e)}
+   }
+   if(!found)throw Error('Impossible de constituer trois empreintes distinctes et vérifiées avec les filtres actuels.');
+  }else p=diceMode?await monoDraw(player,monoDiceType,used):await draw(used);
    let c=clue(p,gameMode.value);
    if(isBodyMode(gameMode.value)){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);if(!window.__bodyCropFailures)window.__bodyCropFailures=0;if(++window.__bodyCropFailures>20)throw Error('Illustrations insuffisantes pour créer des extraits. Réessaie avec d’autres filtres.');continue}window.__bodyCropFailures=0;p._bodyCrop=crop;c='🔍 Partie du corps à identifier (découpe automatique, à confirmer par l’organisateur)';}
    if(gameMode.value==='movelearn') c='⚔️ '+await randomRealMove(p);
@@ -2620,16 +2637,38 @@ const FOOTPRINT_REGIONAL_FORMS=[
  [128,'tauros-paldea-combat-breed','Tauros de Paldea (Combat)'],[128,'tauros-paldea-blaze-breed','Tauros de Paldea (Flamboyante)'],[128,'tauros-paldea-aqua-breed','Tauros de Paldea (Aquatique)'],[194,'wooper-paldea','Axoloto de Paldea']
 ].map(([base,api,label])=>({base,api,label}));
 function footprintIdentity(p){return p.formKey?'form:'+p.formKey:String(p.id)}
+function footprintSamePokemon(a,b){return footprintIdentity(a)===footprintIdentity(b)}
 function footprintSourceId(p){return Number(p.id)}
+function footprintEligible(p){return p&&p.id>=1&&p.id<=649&&p.sv&&valid(p)}
+function footprintHasSvMoves(p){return (p.moves||[]).some(m=>(m.version_group_details||[]).some(v=>v.version_group?.name==='scarlet-violet'))}
 const footprintImageCache=new Map();
 function footprintImageUrl(id){return 'https://veekun.com/dex/media/pokemon/footprints/'+id+'.png'}
 function footprintImageAvailable(id){
  if(footprintImageCache.has(id))return footprintImageCache.get(id);
  const task=new Promise(resolve=>{
-  const img=new Image();let done=false;
+  const img=new Image();img.crossOrigin='anonymous';let done=false;
   const finish=ok=>{if(done)return;done=true;clearTimeout(timeout);resolve(ok)};
   const timeout=setTimeout(()=>finish(false),6500);
-  img.onload=()=>finish(img.naturalWidth>1&&img.naturalHeight>1);
+  img.onload=()=>{
+   if(img.naturalWidth<=1||img.naturalHeight<=1)return finish(false);
+   // Une image entièrement transparente ou monochrome n'est pas une empreinte exploitable.
+   try{
+    const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+    const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);
+    const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+    let ink=0,first=-1,variation=false;
+    for(let k=0;k<pixels.length;k+=4){
+     if(pixels[k+3]<20)continue;
+     ink++;
+     const shade=pixels[k]*65536+pixels[k+1]*256+pixels[k+2];
+     if(first<0)first=shade;else if(shade!==first)variation=true;
+    }
+    finish(ink>=4&&(variation||ink<pixels.length/4));
+   }catch(e){
+    // Si l'hébergeur bloque la lecture des pixels, ne pas certifier l'image comme vérifiée.
+    finish(false);
+   }
+  };
   img.onerror=()=>finish(false);
   img.src=footprintImageUrl(id);
  });
@@ -2638,6 +2677,7 @@ function footprintImageAvailable(id){
 function footprintCheck(){
  if(gameMode.value!=='footprint'||current.length!==3||batchLocked||window.footprintRevealed)return;
  if(mpSession&&mpSession.id!==mpSeats[player])return;
+ if(new Set(current.map(x=>footprintSourceId(x.p))).size!==3)return alert('Empreintes en double : relance le tirage.');
  const answers=[0,1,2].map(i=>document.getElementById('footGuess'+i)?.value);
  if(answers.some(v=>v==null||v==='')){alert('Associe les trois empreintes avant de valider.');return}
  if(new Set(answers).size!==3){alert('Chaque nom ne peut être utilisé qu’une seule fois.');return}
@@ -2660,7 +2700,8 @@ function render(){
  if(gameMode.value==='footprint'){
   cards.classList.remove('boxModeGrid');
   const available=current.filter(x=>x.p&&Number(x.p.id)>=1&&Number(x.p.id)<=649);
-  if(current.length!==3||available.length!==3){
+  const uniqueFootprints=new Set(available.map(x=>footprintSourceId(x.p))).size===3;
+  if(current.length!==3||available.length!==3||!uniqueFootprints){
    cards.innerHTML='<div class="card" style="grid-column:1/-1"><h3>🐾 Empreintes officielles</h3><p>Le trio actuel ne contient pas trois Pokémon avec une empreinte officielle disponible (générations 1 à 5). Relance le tirage pour obtenir un trio compatible. Les empreintes des autres Pokémon seront ajoutées lorsqu’elles auront été créées et vérifiées.</p></div>';
    return;
   }
