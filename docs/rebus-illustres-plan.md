@@ -53,8 +53,8 @@ Ce sont des dessins vectoriels originaux intégrés au code, **pas** des fichier
 | 143 | Ronflex | Un sportif ronflant pendant qu'il contracte ses muscles |
 | 149 | Dracolosse | Un dragon soulevant une immense statue de colosse |
 | 102 | Nœunœuf | Deux œufs attachés ensemble par un gros nœud de ruban |
-| 927 | Pâtachiot | Un chiot sculpté dans une pâte à pain sur une plaque de boulanger |
-| 940 | Têtampoule | Un têtard nageant à l'intérieur d'une ampoule lumineuse |
+| 926 | Pâtachiot | Un chiot sculpté dans une pâte à pain sur une plaque de boulanger |
+| 938 | Têtampoule | Un têtard nageant à l'intérieur d'une ampoule lumineuse |
 
 **Statut de ce tableau : idées de dessin seulement.** Les formulations et la compatibilité précise des formes doivent être vérifiées avant intégration ; certaines idées peuvent être trop proches de l'apparence du Pokémon ou trop évidentes. Les entrées ne doivent pas être déclarées prêtes avant création et contrôle de leur illustration.
 
