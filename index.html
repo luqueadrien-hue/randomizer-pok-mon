@@ -2172,10 +2172,10 @@ async function rollCards(){
  for(let i=0;i<n;i++){
    let p;if(gameMode.value==='trainerteam'){const pool=Object.keys(TRAINER_HINTS).map(Number).filter(id=>trainerCandidates(id).length&&!used.has(id));const validPool=[];for(const id of pool){try{const q=await getP(id);if(valid(q))validPool.push(q)}catch(e){}}for(const key of Object.keys(TRAINER_REGIONAL_HINTS)){if(used.has('form:'+key)||!trainerFilteredOwners(TRAINER_REGIONAL_HINTS[key].owners).length)continue;try{const q=await trainerRegionalPokemon(key);if(valid(q))validPool.push(q)}catch(e){console.warn('Forme régionale indisponible',key,e)}}if(!validPool.length)throw Error('Aucun Pokémon de dresseur disponible pour ces filtres.');p=validPool[Math.floor(Math.random()*validPool.length)];used.add(p.formKey?'form:'+p.formKey:p.id)}else if(gameMode.value==='footprint'){
    let found=false;
-   for(let attempts=0;attempts<400&&!found;attempts++){
+   for(let attempts=0;attempts<80&&!found;attempts++){
     const id=1+Math.floor(Math.random()*649);
     // Une seule empreinte d'origine par trio, y compris pour les formes régionales.
-    if(used.has(id))continue;
+    if(used.has(id)||footprintUnavailable.has(id))continue;
     used.add(id);
     try{
      const base=await getP(id);
@@ -2191,7 +2191,7 @@ async function rollCards(){
      if(options.length){p=options[Math.floor(Math.random()*options.length)];found=true}
     }catch(e){console.warn('Empreinte ignorée',id,e)}
    }
-   if(!found)throw Error('Impossible de constituer trois empreintes distinctes et vérifiées avec les filtres actuels.');
+   if(!found)throw Error('Impossible de constituer trois empreintes distinctes avec les filtres actuels. Vérifie la connexion aux images ou assouplis les filtres.');
   }else p=diceMode?await monoDraw(player,monoDiceType,used):await draw(used);
    let c=clue(p,gameMode.value);
    if(isBodyMode(gameMode.value)){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);if(!window.__bodyCropFailures)window.__bodyCropFailures=0;if(++window.__bodyCropFailures>20)throw Error('Illustrations insuffisantes pour créer des extraits. Réessaie avec d’autres filtres.');continue}window.__bodyCropFailures=0;p._bodyCrop=crop;c='🔍 Partie du corps à identifier (découpe automatique, à confirmer par l’organisateur)';}
@@ -2643,8 +2643,10 @@ function footprintSourceId(p){return Number(p.id)}
 function footprintEligible(p){return p&&p.id>=1&&p.id<=649&&p.sv&&valid(p)}
 function footprintHasSvMoves(p){return (p.moves||[]).some(m=>(m.version_group_details||[]).some(v=>v.version_group?.name==='scarlet-violet'))}
 const footprintImageCache=new Map();
+const footprintUnavailable=new Set();
 function footprintImageUrl(id){return 'https://veekun.com/dex/media/pokemon/footprints/'+id+'.png'}
 function footprintImageAvailable(id){
+ if(footprintUnavailable.has(id))return Promise.resolve(false);
  if(footprintImageCache.has(id))return footprintImageCache.get(id);
  const task=new Promise(resolve=>{
   const img=new Image();let done=false;
@@ -2675,7 +2677,7 @@ function footprintImageAvailable(id){
   img.src=footprintImageUrl(id);
  });
  footprintImageCache.set(id,task);
- task.then(ok=>{if(!ok)footprintImageCache.delete(id)});
+ task.then(ok=>{if(!ok){footprintImageCache.delete(id);footprintUnavailable.add(id)}});
  return task;
 }
 // Validation de la manche : les identifiants d'empreintes restent uniques,
