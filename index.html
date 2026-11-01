@@ -2179,7 +2179,7 @@ async function rollCards(){
     used.add(id);
     try{
      const base=await getP(id);
-     if(!footprintImageAvailable||!await footprintImageAvailable(id))continue;
+     if(!await footprintImageAvailable(id))continue;
      const options=[];
      if(footprintEligible(base)&&await validEvolutionStage(base))options.push(base);
      for(const def of FOOTPRINT_REGIONAL_FORMS.filter(f=>f.base===id)){
@@ -2665,8 +2665,9 @@ function footprintImageAvailable(id){
     }
     finish(ink>=4&&(variation||ink<pixels.length/4));
    }catch(e){
-    // Si l'hébergeur bloque la lecture des pixels, ne pas certifier l'image comme vérifiée.
-    finish(false);
+    // Une image distante peut bloquer l'analyse des pixels (CORS). On conserve
+    // le contrôle de chargement sans prétendre avoir validé son contenu.
+    finish(img.naturalWidth>1&&img.naturalHeight>1);
    }
   };
   img.onerror=()=>finish(false);
