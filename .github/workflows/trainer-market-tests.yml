@@ -3,11 +3,13 @@ on:
   push:
     paths:
       - 'index.html'
+      - 'data/trainer-market-expansion.js'
       - 'tests/trainer-market.test.mjs'
       - '.github/workflows/trainer-market-tests.yml'
   pull_request:
     paths:
       - 'index.html'
+      - 'data/trainer-market-expansion.js'
       - 'tests/trainer-market.test.mjs'
       - '.github/workflows/trainer-market-tests.yml'
 jobs:
