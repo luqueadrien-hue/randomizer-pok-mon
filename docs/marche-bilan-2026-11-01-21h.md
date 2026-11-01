@@ -2,21 +2,21 @@
 
 ## Résultat effectivement commité
 
-Le Marché des Dresseurs possède **559 occurrences historiques de Pokémon**, contre 250 au précédent bilan : **309 entrées ajoutées** dans `data/trainer-market-expansion.js`. Cela représente **351 identités espèce + forme distinctes** sur l'ensemble du catalogue brut, et **non 559 Pokémon différents ou 559 Pokémon compatibles avec chaque jeu**.
+Le Marché des Dresseurs possède **604 occurrences historiques de Pokémon**, contre 250 au précédent bilan : **354 entrées ajoutées** dans `data/trainer-market-expansion.js`. Cela représente **358 identités espèce + forme distinctes** sur l'ensemble du catalogue brut, et **non 604 Pokémon différents ou 604 Pokémon compatibles avec chaque jeu**.
 
 | Rang | Catégorie | Prix fixe | Occurrences historiques |
 |---|---|---:|---:|
 | 1 | Dresseurs ordinaires | 200 ₽ | 39 |
 | 2 | Sbires antagonistes | 350 ₽ | 41 |
-| 3 | Champions d'Arène | 500 ₽ | 184 |
+| 3 | Champions d'Arène | 500 ₽ | 205 |
 | 4 | Rivaux | 650 ₽ | 48 |
 | 5 | Professeurs combattants | 700 ₽ | 26 |
 | 6 | Admins et chefs antagonistes | 800 ₽ | 51 |
-| 7 | Conseil 4 | 1 000 ₽ | 93 |
+| 7 | Conseil 4 | 1 000 ₽ | 117 |
 | 8 | Maîtres, boss ultimes et équivalents | 1 300 ₽ | 77 |
-| **Total** | | | **559** |
+| **Total** | | | **604** |
 
-Les sources historiques couvrent des **exemples des générations I à IX**. La présente mise à jour enrichit surtout HeartGold/SoulSilver (Champions Johto et Kanto, revanches, Conseil 4, Peter, Red, Silver, Team Rocket), le DLC *Le Disque Indigo* (Ligue Myrtille, Kassis et dresseurs du Poste Polaire), les sbires Aqua/Magma/Galaxie/Skull, le Professeur Platane, le Professeur Euphorbe, ainsi que Percupio et son Arcanin de Hisui dans Légendes Pokémon : Arceus.
+Les sources historiques couvrent des **exemples des générations I à IX**. La présente mise à jour enrichit surtout HeartGold/SoulSilver (les 16 Champions Johto et Kanto, revanches, Conseil 4 et ses revanches, Peter, Red, Silver, Team Rocket), le DLC *Le Disque Indigo* (Ligue Myrtille, Kassis et dresseurs du Poste Polaire), les sbires Aqua/Magma/Galaxie/Skull, le Professeur Platane, le Professeur Euphorbe, ainsi que Percupio et son Arcanin de Hisui dans Légendes Pokémon : Arceus.
 
 ### Changements de code
 
@@ -35,7 +35,7 @@ Les tests ont été versionnés dans `tests/trainer-market.test.mjs` ; le workfl
 
 ### Ce qui manque avant une version de production
 
-1. **Exhaustivité** : 559 occurrences ne couvrent pas tous les combats, revanches, versions et DLC de Kanto à Paldea. Il manque beaucoup de dresseurs ordinaires, de sbires et de variantes de formes, malgré la présence d'entrées dans les huit rangs.
+1. **Exhaustivité** : 604 occurrences ne couvrent pas tous les combats, revanches, versions et DLC de Kanto à Paldea. Il manque beaucoup de dresseurs ordinaires, de sbires et de variantes de formes, malgré la présence d'entrées dans les huit rangs.
 2. **Compatibilité** : PokéAPI ne fournit pas nécessairement tous les Pokédex DLC demandés. Les listes de repli sont partielles ; les formes et les transferts HOME doivent être vérifiés individuellement. Les quatre destinations actuellement proposées sont SV, Épée/Bouclier, DEPS et Légendes Arceus.
 3. **Sécurité** : les dernières règles Firebase connues (`auth != null` en lecture et écriture à la racine) permettent encore de modifier librement le marché depuis un client authentifié. Les transactions ne suffisent pas contre un utilisateur malveillant. Voir `docs/firebase-marche-securite.md` pour l'architecture serveur et les règles à migrer.
 4. **Tests réels** : aucun test confirmé sur deux navigateurs/appareils et deux identités Firebase, ni preuve de déploiement GitHub Pages. Aucun résultat de workflow GitHub Actions confirmé.
