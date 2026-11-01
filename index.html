@@ -2167,31 +2167,36 @@ async function rollCards(){
  }
  dealPanel.style.display='none';
  let n=parseInt(choiceCount.value)||3;n=Math.max(2,Math.min(12,n));if(gameMode.value==='footprint')n=3;if(gameMode.value==='luckdice'){luckRoll();n=3;}if(typeMode.value==='random-d10')n=3;if(['hangman','anagramtrio'].includes(gameMode.value))n=3;else choiceCount.value=n;hangmanState=null;
- const used=new Set();current=[];if(gameMode.value==='footprint'){window.footprintRevealed=false;window.footprintScore=0;}batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML=pokeWaitingHTML('Trois Pokémon mystères en préparation…');if(mpSession){current=[];mpLastReveal=null;await mpSyncState()}
+ const used=new Set();const footprintDeadline=Date.now()+18000;current=[];if(gameMode.value==='footprint'){window.footprintRevealed=false;window.footprintScore=0;}batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML=pokeWaitingHTML('Trois Pokémon mystères en préparation…');if(mpSession){current=[];mpLastReveal=null;await mpSyncState()}
  const diceMode=typeMode.value==='random-d10';
  if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');if(!monoDiceType)monoRoll(player);turn.textContent='🎲 D18 : face '+monoDiceResult+'/18 → '+frt(monoDiceType)+' | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
  for(let i=0;i<n;i++){
    let p;if(gameMode.value==='trainerteam'){const pool=Object.keys(TRAINER_HINTS).map(Number).filter(id=>trainerCandidates(id).length&&!used.has(id));const validPool=[];for(const id of pool){try{const q=await getP(id);if(valid(q))validPool.push(q)}catch(e){}}for(const key of Object.keys(TRAINER_REGIONAL_HINTS)){if(used.has('form:'+key)||!trainerFilteredOwners(TRAINER_REGIONAL_HINTS[key].owners).length)continue;try{const q=await trainerRegionalPokemon(key);if(valid(q))validPool.push(q)}catch(e){console.warn('Forme régionale indisponible',key,e)}}if(!validPool.length)throw Error('Aucun Pokémon de dresseur disponible pour ces filtres.');p=validPool[Math.floor(Math.random()*validPool.length)];used.add(p.formKey?'form:'+p.formKey:p.id)}else if(gameMode.value==='footprint'){
    let found=false;
-   for(let attempts=0;attempts<80&&!found;attempts++){
+   for(let attempts=0;attempts<80&&!found&&Date.now()<footprintDeadline;attempts++){
     const id=1+Math.floor(Math.random()*649);
     // Une seule empreinte d'origine par trio, y compris pour les formes régionales.
     if(used.has(id))continue;
     used.add(id);
     try{
-     const base=await getP(id);
+     const base=await footprintBounded(()=>getP(id),1800);
      const options=[];
      if(footprintEligible(base)&&await validEvolutionStage(base))options.push(base);
      for(const def of FOOTPRINT_REGIONAL_FORMS.filter(f=>f.base===id)){
       try{
-       const alt=await getSpecialForm(def);
+       const alt=await footprintBounded(()=>getSpecialForm(def),1400);
        if(footprintEligible(alt)&&await validEvolutionStage(alt))options.push(alt);
       }catch(e){console.warn('Forme régionale ignorée',def.api,e)}
      }
      if(options.length&&await footprintImageAvailable(id)){p=options[Math.floor(Math.random()*options.length)];found=true}
     }catch(e){console.warn('Empreinte ignorée',id,e)}
    }
-   if(!found)throw Error('Impossible de constituer trois empreintes distinctes avec les filtres actuels. Vérifie la connexion aux images ou assouplis les filtres.');
+   if(!found){
+    current=[];batchLocked=false;
+    cards.innerHTML='<div class="card" style="grid-column:1/-1"><h3>🐾 Tirage interrompu</h3><p>Le chargement des empreintes a dépassé le délai de sécurité de 18 secondes, ou les filtres ne permettent pas de constituer un trio. Vérifie la connexion ou assouplis les filtres, puis relance le tirage.</p></div>';
+    if(mpSession)mpSyncState();
+    return;
+   }
   }else p=diceMode?await monoDraw(player,monoDiceType,used):await draw(used);
    let c=clue(p,gameMode.value);
    if(isBodyMode(gameMode.value)){const crop=await bodyCrop(p);if(!crop){i--;used.delete(p.id);if(!window.__bodyCropFailures)window.__bodyCropFailures=0;if(++window.__bodyCropFailures>20)throw Error('Illustrations insuffisantes pour créer des extraits. Réessaie avec d’autres filtres.');continue}window.__bodyCropFailures=0;p._bodyCrop=crop;c='🔍 Partie du corps à identifier (découpe automatique, à confirmer par l’organisateur)';}
@@ -2644,13 +2649,15 @@ function footprintEligible(p){return p&&p.id>=1&&p.id<=649&&p.sv&&valid(p)}
 function footprintHasSvMoves(p){return (p.moves||[]).some(m=>(m.version_group_details||[]).some(v=>v.version_group?.name==='scarlet-violet'))}
 const footprintImageCache=new Map();
 function footprintImageUrl(id){return 'https://veekun.com/dex/media/pokemon/footprints/'+id+'.png'}
+// Empêche une requête externe lente de bloquer tout le tirage.
+function footprintBounded(task,ms){return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(new Error('Délai réseau dépassé')),ms);Promise.resolve().then(task).then(value=>{clearTimeout(timeout);resolve(value)},error=>{clearTimeout(timeout);reject(error)})})}
 // Les succès sont mémorisés. Un échec n'est jamais bloquant pour les prochains tirages.
 function footprintImageAvailable(id){
  if(footprintImageCache.has(id))return footprintImageCache.get(id);
  const task=new Promise(resolve=>{
   const img=new Image();let finished=false;
   const finish=ok=>{if(finished)return;finished=true;clearTimeout(timeout);img.onload=null;img.onerror=null;resolve(ok)};
-  const timeout=setTimeout(()=>finish(false),4000);
+  const timeout=setTimeout(()=>finish(false),2200);
   img.onload=()=>{
    if(img.naturalWidth<=1||img.naturalHeight<=1)return finish(false);
    try{
