@@ -2608,8 +2608,6 @@ function renderHangman(){
  cards.innerHTML=html;
 }
 
-function render(){
- if(gameMode.value==='phoneticrebus'){cards.classList.remove('boxModeGrid');const isGenerator=!mpSession||mpSession.id===mpSeats[player===1?2:1];cards.innerHTML=(isGenerator?'<div style="grid-column:1/-1;text-align:center"><strong>🔑 Vue du joueur qui randomise</strong> — réponses privées.</div>':'<div style="grid-column:1/-1;text-align:center"><strong>🧩 Rébus phonétiques</strong> — devine les Pokémon.</div>')+current.map((x,i)=>'<div class="card" id="c'+i+'"><div class="name">'+(isGenerator?mpEsc(x.p?.name||'Pokémon'):'Pokémon mystère '+(i+1))+'</div><div class="gameClue">'+(x.clue||'Rébus indisponible')+'</div>'+(!isGenerator&&(!mpSession||mpSession.id===mpSeats[player])&&!batchLocked?'<button onclick="pick('+i+')">Choisir ce Pokémon</button>':'')+'</div>').join('')+(isGenerator&&!mpSession?'<div style="grid-column:1/-1;text-align:center"><button type="button" onclick="hidePhoneticAnswers()">🔒 Passer aux joueurs</button></div>':'');return}
 function footprintCheck(){
  if(gameMode.value!=='footprint'||current.length!==3)return;
  const answers=[0,1,2].map(i=>document.getElementById('footGuess'+i)?.value);
@@ -2621,12 +2619,15 @@ function footprintAward(i){
  if(gameMode.value!=='footprint'||!window.footprintRevealed||!current[i]?.p)return;
  const score=window.footprintScore||0;
  if(mpSession){
-  const chooser=score>0?mpSeats[player===1?2:1]:mpSeats[player];
+  const chooser=score>0?mpSeats[player]:mpSeats[player===1?2:1];
   if(mpSession.id!==chooser){alert('Ce choix appartient à l’autre joueur.');return}
  }
  if(typeof pick==='function')pick(i);
  window.footprintRevealed=false;window.footprintScore=0;
 }
+
+function render(){
+ if(gameMode.value==='phoneticrebus'){cards.classList.remove('boxModeGrid');const isGenerator=!mpSession||mpSession.id===mpSeats[player===1?2:1];cards.innerHTML=(isGenerator?'<div style="grid-column:1/-1;text-align:center"><strong>🔑 Vue du joueur qui randomise</strong> — réponses privées.</div>':'<div style="grid-column:1/-1;text-align:center"><strong>🧩 Rébus phonétiques</strong> — devine les Pokémon.</div>')+current.map((x,i)=>'<div class="card" id="c'+i+'"><div class="name">'+(isGenerator?mpEsc(x.p?.name||'Pokémon'):'Pokémon mystère '+(i+1))+'</div><div class="gameClue">'+(x.clue||'Rébus indisponible')+'</div>'+(!isGenerator&&(!mpSession||mpSession.id===mpSeats[player])&&!batchLocked?'<button onclick="pick('+i+')">Choisir ce Pokémon</button>':'')+'</div>').join('')+(isGenerator&&!mpSession?'<div style="grid-column:1/-1;text-align:center"><button type="button" onclick="hidePhoneticAnswers()">🔒 Passer aux joueurs</button></div>':'');return}
  if(gameMode.value==='footprint'){
   cards.classList.remove('boxModeGrid');
   const available=current.filter(x=>x.p&&Number(x.p.id)>=1&&Number(x.p.id)<=649);
@@ -2634,8 +2635,8 @@ function footprintAward(i){
    cards.innerHTML='<div class="card" style="grid-column:1/-1"><h3>🐾 Empreintes officielles</h3><p>Le trio actuel ne contient pas trois Pokémon avec une empreinte officielle disponible (générations 1 à 5). Relance le tirage pour obtenir un trio compatible. Les empreintes des autres Pokémon seront ajoutées lorsqu’elles auront été créées et vérifiées.</p></div>';
    return;
   }
-  const isGenerator=!!mpSession&&mpSession.id===mpSeats[player];
-  const canGuess=!mpSession||(!isGenerator&&mpSession.id===mpSeats[player===1?2:1]);
+  const isGenerator=!!mpSession&&mpSession.id===mpSeats[player===1?2:1];
+  const canGuess=!mpSession||(!isGenerator&&mpSession.id===mpSeats[player]);
   const revealed=!!window.footprintRevealed;
   cards.innerHTML='<div style="grid-column:1/-1"><h3>🐾 Associe les trois empreintes</h3><p>Une seule bonne association suffit pour choisir librement un Pokémon. Avec zéro bonne réponse, le randomiseur choisit pour toi.</p></div>'+available.map((x,i)=>{
    const url='https://veekun.com/dex/media/pokemon/footprints/'+x.p.id+'.png';
