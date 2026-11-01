@@ -389,7 +389,7 @@ const mpJoin=document.getElementById('mpJoin');
 const mpLeave=document.getElementById('mpLeave');
 const mpCopy=document.getElementById('mpCopy');
 const mpPlayers=document.getElementById('mpPlayers');
-let mpSession=null,mpApplying=false,mpListener=null,mpPrivateBatchOwner=null,mpLobbyStarted=false,mpSeats={},mpGenerators={};
+let mpSession=null,mpApplying=false,mpPendingState=null,mpListener=null,mpPrivateBatchOwner=null,mpLobbyStarted=false,mpSeats={},mpGenerators={};
 function mpEsc(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function mpRoom(c){mpRequireDB();return MPDB.ref('rooms/'+c)}
 function mpTableCode(root,n){return root+'+T'+n}
@@ -446,7 +446,10 @@ async function mpSyncState(){
  try{await mpRoom(mpSession.room).child('state').set(await mpSnapshot())}catch(e){console.warn('Sync Firebase',e)}
 }
 async function mpHydrateState(st){
- if(!st||mpApplying)return;mpApplying=true;
+ if(!st)return;
+ // Pendant une hydratation asynchrone, conserver le dernier état reçu au lieu de le perdre.
+ if(mpApplying){mpPendingState={state:st,room:mpSession?.room||null};return}
+ mpApplying=true;
  try{
   if(st.mode&&gameMode.value!=='triochoice'&&st.mode!=='triochoice'){if(gameMode.value!==st.mode)surpriseActive=false;gameMode.value=(st.mode==='olddesc'?'dexdesc':st.mode==='bstonly'?'stats':st.mode);}
   luckDie=st.mode==='luckdice'?(st.luckDie||null):null;if(Array.isArray(st.luckUsedFaces))luckUsedFaces=st.luckUsedFaces;const z=st.settings||{};for(const [k,v] of Object.entries(z)){const el=document.getElementById(k);if(el&&v!=null)el.value=v}
@@ -475,7 +478,11 @@ async function mpHydrateState(st){
   else if(!st.batchLocked&&(!st.current||!st.current.length))cards.innerHTML=pokeWaitingHTML('Le joueur adverse prépare les Pokémon…');
   else cards.innerHTML='<div style="grid-column:1/-1;text-align:center">🔎 Indices de la manche — Pokémon masqués</div>'+(st.current||[]).map((x,i)=>'<div class="card"><div class="name">Pokémon mystère '+(i+1)+'</div><div class="gameClue">'+(x.clue||'Indice indisponible')+'</div>'+(mpSession&&mpSession.id===mpSeats[player]&&!st.batchLocked?'<button onclick="pick('+i+')">Choisir ce Pokémon</button>':'')+'</div>').join('');
   drawTeams();
- }catch(e){console.warn('Hydratation multijoueur',e)}finally{mpApplying=false}
+ }catch(e){console.warn('Hydratation multijoueur',e)}finally{
+  mpApplying=false;
+  const pending=mpPendingState;mpPendingState=null;
+  if(pending&&pending.room===(mpSession?.room||null))mpHydrateState(pending.state);
+ }
 }
 function mpReceive(r){
  if(!r)return;
@@ -2147,6 +2154,7 @@ async function pcBoxPick(i){
  }catch(e){console.warn('Action PC commune',e);alert('Action non enregistrée : '+e.message)}
  finally{pcBoxBusy=false}
 }
+let rollCardsBusy=false;
 async function rollCards(){
  if(gameMode.value==='trainerteam'&&!Object.keys(TRAINER_HINTS).some(id=>trainerCandidates(Number(id)).length)){alert('Aucun dresseur disponible avec ces filtres.');return}
  if(gameMode.value==='questionduel'){document.getElementById('questionDuelPanel').style.display='block';return qd.phase==='idle'?qdCreateBox():qdRender();}
@@ -2155,6 +2163,10 @@ async function rollCards(){
  if(gameMode.value==='surprise')return surpriseRoll();
  if(gameMode.value==='triochoice')return trioEntry()
  if(gameMode.value==='blinddraft')return blindDraftRoll()
+ // Bloque les doubles clics et les tirages simultanés pendant les appels réseau.
+ if(rollCardsBusy)return;
+ rollCardsBusy=true;
+ try{
  if(mpSession&&!mpLobbyStarted){alert('Attends que l’organisateur attribue les pseudos et lance le challenge.');return}
  if(mpSession){const generator=mpSeats[player===1?2:1];if(mpSession.id!==generator){alert('C’est au générateur désigné de lancer les propositions pour ce tour.');return}}
  if(mpSession)mpPrivateBatchOwner=mpSession.id; else mpPrivateBatchOwner=null;
@@ -2307,6 +2319,7 @@ async function rollCards(){
  render();
  await mpSyncState();
  if(['hangman','anagramtrio'].includes(gameMode.value)&&mpSession)await mpRoom(mpSession.room).child('hangman').set({phase:'setup',ids:current.map(x=>x.p.id),generator:mpSession.id,guesser:mpSeats[player],player,updated:Date.now()});
+ }finally{rollCardsBusy=false}
 }
 
 async function applyLieMode(){
@@ -2854,11 +2867,12 @@ function drawTeams(){[1,2].forEach(n=>document.getElementById('team'+n).innerHTM
 function pokeWaitingHTML(message='Le Pokémon arrive…'){return '<div class="pokeWaiting" aria-live="polite"><div class="pokeBallRow"><span class="pokeBall"></span><span class="pokeBall"></span><span class="pokeBall"></span></div><strong>'+mpEsc(message)+'</strong></div>'}
 function pokeReleaseAnimation(p){if(!p)return;document.getElementById('pokeReleaseLayer')?.remove();const layer=document.createElement('div');layer.id='pokeReleaseLayer';layer.className='pokeRevealLayer';layer.setAttribute('role','dialog');layer.setAttribute('aria-label','Pokémon sélectionné');const ball=document.createElement('span');ball.className='pokeBall';layer.appendChild(ball);document.body.appendChild(layer);setTimeout(()=>{if(!layer.isConnected)return;ball.remove();const img=document.createElement('img');img.src=p.img||p.sprite||'';img.alt=p.name||'Pokémon';layer.appendChild(img);const title=document.createElement('h2');title.textContent=p.name||'Pokémon dévoilé';layer.appendChild(title);const btn=document.createElement('button');btn.textContent='Continuer';btn.className='primary';btn.onclick=()=>layer.remove();layer.appendChild(btn);setTimeout(()=>layer.remove(),4200)},850)}
 function pick(i){
+ if(rollCardsBusy)return;
  if(mpSession&&!mpLobbyStarted)return;
  // En réseau, l'adversaire génère les propositions mais c'est bien le joueur actif qui choisit.
  if(mpSession&&mpSession.id!==(gameMode.value==='footprint'&&window.footprintRevealed&&(Number(window.footprintScore)||0)===0?mpSeats[player===1?2:1]:mpSeats[player]))return;
  if(gameMode.value==='footprint'&&!window.footprintRevealed)return;
- if(gameMode.value==='footprint'&&new Set(current.map(x=>footprintSourceId(x.p))).size!==3)return;
+ if(gameMode.value==='footprint'&&(current.length!==3||current.some(x=>!x?.p)||new Set(current.map(x=>footprintSourceId(x.p))).size!==3))return;
  if(batchLocked||!current[i]||!current[i].p)return;if(gameMode.value==='luckdice'&&luckDie?.hint==='generator'&&mpSession&&mpSession.id!==mpSeats[player===1?2:1])return alert('🎲 Cette face donne le choix à la personne qui randomise.');
  if(gameMode.value==='learnleave'&&dealStage!==4)return;
  batchLocked=true;
