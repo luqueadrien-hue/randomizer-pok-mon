@@ -206,7 +206,7 @@ img,video,canvas,svg{max-width:100%}
 <option value="impossibledilemma">😈 Dilemmes impossibles</option>
 <option value="blinddraft">🕶️ Draft à l’aveugle — 6 manches par joueur</option>
 <option value="trainerdraft6" disabled>🧢 Draft des 6 Dresseurs — non numéroté (en préparation)</option>
-<option value="trainerrankgrid" disabled>🏆 Grille des rangs de dresseurs — non numéroté (en préparation)</option>
+<option value="trainerrankgrid">🏆 Marché des Dresseurs — 8 rangs (réseau bêta)</option>
 <option value="auction">💰 Enchères Pokémon</option>
 <option value="noel">🎄 NOËL — Cadoizo et capacités</option>
 <option value="tcgattacks">🃏 Attaques TCG — Deviner par les cartes</option>
@@ -214,6 +214,13 @@ img,video,canvas,svg{max-width:100%}
 <option value="surprise">🎲 Randomizer multi-jeux : jeu aléatoire</option>
 </select>
 <div id="surpriseNotice" aria-live="polite" style="margin:8px 0"></div></label>
+<div id="trainerMarketPanel" class="panel" style="display:none;margin-top:14px">
+<h2>🏆 Marché des Dresseurs — 8 rangs</h2>
+<p>Grille commune en réseau. Les achats sont exclusifs, limités à six Pokémon par joueur. <strong>Bêta :</strong> le catalogue historique complet des équipes des dresseurs n'est pas encore chargé ; aucun achat ne sera proposé tant qu'il n'est pas vérifié.</p>
+<div class="controls"><label>Budget par joueur <select id="trainerMarketBudget"><option value="1500">1 500 ₽</option><option value="3000" selected>3 000 ₽</option><option value="4500">4 500 ₽</option><option value="6500">6 500 ₽</option><option value="0">Illimité</option></select></label><button type="button" id="trainerMarketStart" onclick="trainerMarketStart()">Créer / réinitialiser le marché</button></div>
+<div id="trainerMarketStatus" class="turn"></div>
+<div id="trainerMarketGrid"></div>
+</div>
 
 <label>Taille équipe<select id="teamSize"><option>3</option><option>4</option><option>5</option><option selected>6</option></select></label>
 <label>Nombre de choix<input id="choiceCount" type="number" min="2" max="12" value="3"></label>
@@ -502,6 +509,7 @@ async function mpHydrateState(st){
 }
 function mpReceive(r){
  if(!r)return;
+ trainerMarketState=r.trainerMarket||null;trainerMarketRender();
  if(gameMode.value==='luckdice'&&luckDie){luckRequests=r.luckRequest?.face===luckDie.face?(r.luckRequest.positions||[]):[];luckPublished=r.luckPublic?.face===luckDie.face?(r.luckPublic.values||{}):{};}
  try{if(typeof moduloReceive==='function')moduloReceive(r.modulo||null)}catch(e){console.warn('Module modulo isolé :',e)}
  const ps=r.players||{},entries=Object.entries(ps).filter(([id,p])=>p&&p.online!==false);
@@ -3215,7 +3223,7 @@ document.getElementById('auctionCustomBudget').addEventListener('input',auctionU
 auctionUpdatePrices();auctionRender();
 function syncCompetitiveGeneration(){const mode=gameMode.value;document.getElementById('competitiveGenerationWrap').style.display=(mode==='smogontier'||mode==='vgc')?'':'none'}
 syncCompetitiveGeneration();
-gameMode.addEventListener('change',()=>{syncCompetitiveGeneration();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('noelPanel').style.display=gameMode.value==='noel'?'block':'none';document.getElementById('tcgAttacksPanel').style.display=gameMode.value==='tcgattacks'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';document.getElementById('trainerOptions').style.display=gameMode.value==='trainerteam'?'block':'none';document.getElementById('moduloPanel').style.display=gameMode.value==='modulodex'?'block':'none';if(gameMode.value==='modulodex')moduloRender();if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
+gameMode.addEventListener('change',()=>{trainerMarketRender();syncCompetitiveGeneration();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('noelPanel').style.display=gameMode.value==='noel'?'block':'none';document.getElementById('tcgAttacksPanel').style.display=gameMode.value==='tcgattacks'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';document.getElementById('trainerOptions').style.display=gameMode.value==='trainerteam'?'block':'none';document.getElementById('moduloPanel').style.display=gameMode.value==='modulodex'?'block':'none';if(gameMode.value==='modulodex')moduloRender();if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
 ['teamSize','choiceCount','legend','generation','competitiveGeneration','typeMode','revealMode','lieMode','boxSize'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
 
 const CALC_NATURE_MAP={Assuré:['defense','attack'],Bizarre:[null,null],Brave:['attack','speed'],Calme:['special-defense','attack'],Discret:['special-attack','speed'],Docile:[null,null],Doux:['special-attack','defense'],Foufou:['special-attack','special-defense'],Gentil:['special-defense','defense'],Hardi:[null,null],Jovial:['speed','special-attack'],Lâche:['defense','special-defense'],Malin:['defense','special-attack'],Malpoli:['special-defense','speed'],Mauvais:['attack','special-defense'],Modeste:['special-attack','attack'],Naïf:['speed','special-defense'],Pressé:['speed','defense'],Prudent:['special-defense','special-attack'],Pudique:[null,null],Relax:['defense','speed'],Rigide:['attack','special-attack'],Sérieux:[null,null],Solo:['attack','defense'],Timide:['speed','attack']};
@@ -3416,6 +3424,48 @@ async function moduloDex(game){if(moduloDexCache[game])return moduloDexCache[gam
 function moduloAvailability(id,game,data,transfer){if(game==='bdsp'&&id>493)return null;if(game==='swsh'&&id>898)return null;if(data.sets.some(set=>set.has(id)))return{state:'dex',label:'Présent dans le Pokédex du jeu'};if(!transfer)return null;return{state:'transfer',label:'Transfert ou disponibilité spéciale : non vérifié'};}
 async function moduloStart(){if(moduloBusy||!moduloIs(moduloGenerator())||moduloProgress[1]>=6&&moduloProgress[2]>=6||moduloRemote?.phase==='published'||moduloRemote?.phase==='complete')return;const game=document.getElementById('moduloGame').value,transfer=document.getElementById('moduloTransfer').checked,status=document.getElementById('moduloStatus'),out=document.getElementById('moduloChoices');moduloBusy=true;document.getElementById('moduloStart').disabled=true;if(moduloRemote?.phase==='waiting')moduloRemote=null;status.textContent='Chargement des Pokédex et recherche de combinaisons…';out.innerHTML='';try{const data=await moduloDex(game);let round=null;for(let i=0;i<90;i++){const start=1+Math.floor(Math.random()*1025),ids=moduloNumbers(start),eligible=ids.map(id=>({id,availability:moduloAvailability(id,game,data,transfer)})).filter(x=>x.availability);if(eligible.length>=2&&eligible.some(x=>x.id!==start)&&moduloAvailability(start,game,data,transfer)){round={start,eligible};break}}if(!round)throw Error('Aucune combinaison trouvée pour ces paramètres.');const source=await getP(round.start);const correct=round.eligible.sort(()=>Math.random()-.5).slice(0,Math.min(3,round.eligible.length));const distractors=[];for(let j=0;j<250&&correct.length+distractors.length<6;j++){const id=1+Math.floor(Math.random()*(game==='bdsp'?493:game==='swsh'?898:1025));if(round.eligible.some(x=>x.id===id)||distractors.some(x=>x.id===id))continue;const availability=moduloAvailability(id,game,data,transfer);if(availability)distractors.push({id,availability})}const chosen=[...correct,...distractors].sort(()=>Math.random()-.5);const pokes=await Promise.all(chosen.map(async x=>({...x,p:await getP(x.id)})));moduloRound={start:round.start,ids:new Set(round.eligible.map(x=>x.id)),game};moduloDraft={start:round.start,sourceName:source.name,game,chooser:moduloChooser(),counts:{...moduloProgress},options:pokes.map(x=>({id:x.id,name:x.p.name,label:x.availability.label}))};status.textContent='Départ : '+source.name+' — n° '+round.start+'. Sélectionne un numéro construit avec les mêmes chiffres (zéro supplémentaire facultatif). '+(data.complete?'':'Attention : couverture des Pokédex régionaux incomplète.');out.innerHTML=pokes.map(x=>'<div class="card" style="text-align:left"><strong>'+mpEsc(x.p.name)+'</strong> — n° '+x.id+'<div><small>'+mpEsc(x.availability.label)+'</small></div></div>').join('');document.getElementById('moduloPublish').style.display=''}catch(e){console.error(e);status.textContent='❌ '+e.message}finally{moduloBusy=false;document.getElementById('moduloStart').disabled=false}}
 async function moduloChoose(id){if(!moduloIs(moduloRemote?.chooser||2)||!moduloRemote||moduloRemote.phase!=='published')return;const option=moduloRemote.options.find(x=>x.id===Number(id));if(!option)return;const correct=moduloNumbers(moduloRemote.start).includes(Number(id));if(!correct){document.getElementById('moduloStatus').textContent='❌ Ce numéro ne correspond pas aux chiffres du Pokémon initial. Choisis une autre proposition.';return}const counts={...moduloRemote.counts,[moduloRemote.chooser]:Math.min(6,Number(moduloRemote.counts?.[moduloRemote.chooser]||0)+1)};const completed={...moduloRemote,phase:'complete',choice:id,choiceName:option.name,counts};if(mpSession){const ref=mpRoom(mpSession.room).child('modulo');await ref.transaction(cur=>cur&&cur.phase==='published'?{...cur,phase:'complete',choice:id,choiceName:option.name,counts:{...cur.counts,[cur.chooser]:Math.min(6,Number(cur.counts?.[cur.chooser]||0)+1)}}:undefined)}else{moduloReceive(completed)}}
+
+
+const TRAINER_MARKET_RANKS=[
+ ['Dresseurs ordinaires',200,'🧢'],['Sbires antagonistes',350,'🚩'],['Champions d’Arène',500,'🏅'],['Rivaux',650,'⚡'],['Professeurs combattants',700,'🎓'],['Admins et chefs antagonistes',800,'🛡️'],['Conseil 4',1000,'💎'],['Maîtres de Ligue et équivalents',1300,'👑']
+];
+let trainerMarketState=null;
+function trainerMarketRender(){
+ const panel=document.getElementById('trainerMarketPanel');if(!panel)return;
+ panel.style.display=gameMode.value==='trainerrankgrid'?'block':'none';
+ if(gameMode.value!=='trainerrankgrid')return;
+ const state=trainerMarketState,grid=document.getElementById('trainerMarketGrid'),status=document.getElementById('trainerMarketStatus');
+ if(!state){status.textContent='En attente de création du marché par l’hôte du salon.';}
+ else {const budget=n=>state.budget===0?'Illimité':Math.max(0,state.budget-(state.spent?.[n]||0)).toLocaleString('fr-FR')+' ₽';
+ status.textContent='Joueur 1 : '+budget(1)+' ('+(state.teams?.[1]||[]).length+'/6) · Joueur 2 : '+budget(2)+' ('+(state.teams?.[2]||[]).length+'/6)';
+ }
+ grid.innerHTML=TRAINER_MARKET_RANKS.map((rank,i)=>{
+ const entries=(state?.catalog||[]).filter(p=>p.rank===i+1);
+ return '<div class="panel" style="margin:8px 0;padding:12px"><strong>'+rank[2]+' Rang '+(i+1)+' — '+mpEsc(rank[0])+' · '+rank[1]+' ₽</strong><div class="controls">'+(entries.length?entries.map(p=>{const sold=state.sold?.[p.key];return '<button type="button" '+(sold?'disabled':'')+' onclick="trainerMarketBuy(\''+mpEsc(p.key)+'\')">'+mpEsc(p.name)+' — '+(sold?'Vendu':'Acheter')+'</button>'}).join(''):'<small>Catalogue historique à vérifier et importer</small>')+'</div></div>';
+ }).reverse().join('');
+}
+async function trainerMarketStart(){
+ if(!mpSession||!mpLobbyStarted||!mpSeats[1]||!mpSeats[2])return alert('Lance un salon réseau avec deux joueurs attribués.');
+ const room=await mpRoom(mpSession.room).once('value');if(room.val()?.ownerUid!==mpSession.id)return alert('Seul l’hôte peut créer le marché.');
+ const budget=Number(document.getElementById('trainerMarketBudget').value);
+ const state={budget,spent:{1:0,2:0},teams:{1:[],2:[]},sold:{},catalog:[],updated:Date.now()};
+ await mpRoom(mpSession.room).child('trainerMarket').set(state);trainerMarketState=state;trainerMarketRender();
+}
+async function trainerMarketBuy(key){
+ if(!mpSession||!mpLobbyStarted)return;
+ const seat=mpSession.id===mpSeats[1]?1:mpSession.id===mpSeats[2]?2:0;if(!seat)return;
+ const ref=mpRoom(mpSession.room).child('trainerMarket');
+ const tx=await ref.transaction(state=>{
+  if(!state||!Array.isArray(state.catalog))return;
+  const entry=state.catalog.find(p=>p.key===key);
+  if(!entry||state.sold?.[key]||!Number.isInteger(entry.rank)||entry.rank<1||entry.rank>8)return;
+  const price=TRAINER_MARKET_RANKS[entry.rank-1][1],team=state.teams?.[seat]||[],spent=state.spent?.[seat]||0;
+  if(team.length>=6||(state.budget!==0&&spent+price>state.budget))return;
+  if(state.catalog.some(p=>p.key!==key&&p.pokemonKey===entry.pokemonKey&&state.sold?.[p.key]))return;
+  return {...state,sold:{...state.sold,[key]:seat},spent:{...state.spent,[seat]:spent+price},teams:{...state.teams,[seat]:[...team,{...entry,price}]},updated:Date.now()};
+ });
+ if(!tx.committed)alert('Achat refusé : déjà vendu, budget insuffisant ou équipe complète.');
+}
 
 </script>
 </body>
