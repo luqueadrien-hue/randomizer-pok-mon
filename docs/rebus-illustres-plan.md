@@ -24,6 +24,10 @@ Le champ `sv` actuel du site repose notamment sur les attaques répertoriées da
 | 58 | Caninos | Un chien tient un grand os dans la gueule | SVG intégré |
 | 38 | Feunard | Un renard à une seule queue se tient près d'un feu de camp | SVG intégré |
 | 28 | Sablaireau | Un blaireau est à côté d'un château de sable | SVG intégré |
+| 9 | Tortank | Une tortue conduit un petit char d'assaut | SVG intégré |
+| 37 | Goupix | Un renard observe six pommes | SVG intégré |
+| 39 | Rondoudou | Un doudou parfaitement rond | SVG intégré |
+| 113 | Leveinard | Un canard tient un trèfle à quatre feuilles | SVG intégré |
 
 Ce sont des dessins vectoriels originaux intégrés au code, **pas** des fichiers PNG produits par un générateur d'images. Leur lisibilité doit encore être testée auprès de vrais joueurs. Les autres Pokémon utilisent encore les rébus textuels existants ou le découpage phonétique provisoire.
 
@@ -35,17 +39,13 @@ Ce sont des dessins vectoriels originaux intégrés au code, **pas** des fichier
 | 4 | Salamèche | Une salamandre coiffée d'une mèche de cheveux enflammée |
 | 6 | Dracaufeu | Un dragon soufflant une longue flamme sur un feu de camp |
 | 7 | Carapuce | Une tortue portant une carapace avec une minuscule puce posée dessus |
-| 9 | Tortank | Une tortue aux commandes d'un petit char d'assaut |
 | 25 | Pikachu | Un pika sauvage éternuant avec des éclairs autour de lui |
-| 37 | Goupix | Un renard regardant exactement six pommes alignées |
-| 39 | Rondoudou | Un doudou parfaitement rond sur un coussin |
 | 52 | Miaouss | Un chat miaulant devant un microphone, avec des ondes sonores |
 | 54 | Psykokwak | Un canard tentant de lire dans une boule de cristal qui se fissure |
 | 59 | Arcanin | Un chien debout au centre d'un cercle de symboles magiques |
 | 74 | Racaillou | Un gros rocher couvert de minuscules cailloux |
 | 79 | Ramoloss | Un molosse endormi, complètement affalé dans un hamac |
 | 81 | Magnéti | Un aimant en fer à cheval attirant une pluie de vis |
-| 113 | Leveinard | Un canard chanceux portant un trèfle à quatre feuilles |
 | 133 | Évoli | Une chenille en pleine métamorphose vers un papillon |
 | 134 | Aquali | Un lit flottant sur une vague d'eau |
 | 135 | Voltali | Un lit traversé par un éclair électrique |
