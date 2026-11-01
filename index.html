@@ -991,7 +991,8 @@ const formCache=new Map();
 async function getSpecialForm(def){
  if(formCache.has(def.api))return formCache.get(def.api);
  const base=await getP(def.base),p=await fetch('https://pokeapi.co/api/v2/pokemon/'+def.api).then(r=>{if(!r.ok)throw Error('Forme indisponible : '+def.api);return r.json()});
- const o={...base,id:def.base,formKey:def.api,apiName:def.api,name:def.label,img:p.sprites.other?.['official-artwork']?.front_default||p.sprites.front_default||base.img,sprite:p.sprites.front_default||base.sprite,shiny:p.sprites.other?.['official-artwork']?.front_shiny||p.sprites.front_shiny||base.shiny,types:p.types.map(x=>x.type.name),height:p.height/10,weight:p.weight/10,total:p.stats.reduce((a,x)=>a+x.base_stat,0),stats:Object.fromEntries(p.stats.map(x=>[x.stat.name,x.base_stat])),moves:p.moves.map(m=>({name:m.move.name,url:m.move.url,version_group_details:(m.version_group_details||[]).map(v=>({level_learned_at:v.level_learned_at||0,move_learn_method:{name:v.move_learn_method?.name||''},version_group:{name:v.version_group?.name||''}}))})),abilities:p.abilities.map(a=>({name:a.ability.name,url:a.ability.url,hidden:!!a.is_hidden,slot:a.slot})),cries:p.cries||base.cries,gameIndices:(p.game_indices||[]).map(x=>x.version?.name).filter(Boolean),baseExperience:p.base_experience??base.baseExperience,evYield:(p.stats||[]).filter(x=>x.effort>0).map(x=>({stat:x.stat.name,amount:x.effort}))};
+ const sv=p.moves.some(m=>(m.version_group_details||[]).some(v=>v.version_group?.name==='scarlet-violet'));
+ const o={...base,id:def.base,formKey:def.api,apiName:def.api,name:def.label,sv,img:p.sprites.other?.['official-artwork']?.front_default||p.sprites.front_default||base.img,sprite:p.sprites.front_default||base.sprite,shiny:p.sprites.other?.['official-artwork']?.front_shiny||p.sprites.front_shiny||base.shiny,types:p.types.map(x=>x.type.name),height:p.height/10,weight:p.weight/10,total:p.stats.reduce((a,x)=>a+x.base_stat,0),stats:Object.fromEntries(p.stats.map(x=>[x.stat.name,x.base_stat])),moves:p.moves.map(m=>({name:m.move.name,url:m.move.url,version_group_details:(m.version_group_details||[]).map(v=>({level_learned_at:v.level_learned_at||0,move_learn_method:{name:v.move_learn_method?.name||''},version_group:{name:v.version_group?.name||''}}))})),abilities:p.abilities.map(a=>({name:a.ability.name,url:a.ability.url,hidden:!!a.is_hidden,slot:a.slot})),cries:p.cries||base.cries,gameIndices:(p.game_indices||[]).map(x=>x.version?.name).filter(Boolean),baseExperience:p.base_experience??base.baseExperience,evYield:(p.stats||[]).filter(x=>x.effort>0).map(x=>({stat:x.stat.name,amount:x.effort}))};
  formCache.set(def.api,o);return o;
 }
 function specialFormsForSelection(){
@@ -2184,7 +2185,7 @@ async function rollCards(){
      for(const def of FOOTPRINT_REGIONAL_FORMS.filter(f=>f.base===id)){
       try{
        const alt=await getSpecialForm(def);
-       if(footprintHasSvMoves(alt)&&footprintEligible(alt)&&await validEvolutionStage(alt))options.push(alt);
+       if(footprintEligible(alt)&&await validEvolutionStage(alt))options.push(alt);
       }catch(e){console.warn('Forme régionale ignorée',def.api,e)}
      }
      if(options.length&&await footprintImageAvailable(id)){p=options[Math.floor(Math.random()*options.length)];found=true}
