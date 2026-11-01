@@ -3819,6 +3819,7 @@ async function trainerMarketStart(){
  const room=await mpRoom(mpSession.room).once('value');
  if(room.val()?.ownerUid!==mpSession.id)throw Error('Seul l’hôte peut créer le marché.');
  const budget=Number(document.getElementById('trainerMarketBudget').value);
+ if(![0,1500,3000,4500,6500].includes(budget))throw Error('Budget du marché invalide.');
  const game=document.getElementById('trainerMarketGame').value;
  const includeHome=document.getElementById('trainerMarketHome').checked;
  document.getElementById('trainerMarketStatus').textContent='Chargement des Pokédex du jeu et de ses DLC…';
@@ -3848,7 +3849,7 @@ async function trainerMarketBuy(key){
  const seat=mpSession.id===mpSeats[1]?1:mpSession.id===mpSeats[2]?2:0;if(!seat)return;
  const ref=mpRoom(mpSession.room).child('trainerMarket');
  const tx=await ref.transaction(state=>{
-  if(!state||!Array.isArray(state.catalog)||state.version!==2)return;
+  if(!state||!Array.isArray(state.catalog)||state.version!==2||![0,1500,3000,4500,6500].includes(state.budget))return;
   const entry=state.catalog.find(p=>p.key===key);
   if(!entry||state.sold?.[key]||!Number.isInteger(entry.rank)||entry.rank<1||entry.rank>8)return;
   const price=TRAINER_MARKET_RANKS[entry.rank-1][1],team=state.teams?.[seat]||[],spent=state.spent?.[seat]||0;
