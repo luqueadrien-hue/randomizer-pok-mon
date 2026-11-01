@@ -217,7 +217,7 @@ img,video,canvas,svg{max-width:100%}
 <div id="trainerMarketPanel" class="panel" style="display:none;margin-top:14px">
 <h2>🏆 Marché des Dresseurs — 8 rangs</h2>
 <p>Grille commune en réseau. Les achats sont exclusifs, limités à six Pokémon par joueur. <strong>Bêta :</strong> le catalogue historique est encore incomplet : seuls les Pokémon confirmés du catalogue initial sont achetables.</p>
-<div class="controls"><label>Jeu de destination <select id="trainerMarketGame"><option value="sv">Écarlate / Violet + DLC</option><option value="swsh">Épée / Bouclier + DLC</option><option value="bdsp">Diamant Étincelant / Perle Scintillante</option><option value="pla">Légendes Pokémon : Arceus</option></select></label><label><input type="checkbox" id="trainerMarketHome" checked> Transferts HOME confirmés (liste partielle)</label><label>Budget par joueur <select id="trainerMarketBudget"><option value="1500">1 500 ₽</option><option value="3000" selected>3 000 ₽</option><option value="4500">4 500 ₽</option><option value="6500">6 500 ₽</option><option value="0">Illimité</option></select></label><button type="button" id="trainerMarketStart" onclick="trainerMarketStart().catch(e=>{alert(e.message);console.error(e)})">Créer / réinitialiser le marché</button></div>
+<div class="controls"><label>Jeu de destination <select id="trainerMarketGame"><option value="sv">Écarlate / Violet + DLC</option><option value="swsh">Épée / Bouclier + DLC</option><option value="bdsp">Diamant Étincelant / Perle Scintillante</option><option value="pla">Légendes Pokémon : Arceus</option></select></label><label><input type="checkbox" id="trainerMarketHome" checked> Transferts HOME confirmés (liste partielle)</label><label>Budget par joueur <select id="trainerMarketBudget"><option value="1500">1 500 ₽</option><option value="3000" selected>3 000 ₽</option><option value="4500">4 500 ₽</option><option value="6500">6 500 ₽</option><option value="0">Illimité</option></select></label><button type="button" id="trainerMarketStart" onclick="trainerMarketStart().catch(e=>{document.getElementById('trainerMarketStatus').textContent='❌ '+e.message;alert(e.message);console.error(e)})">Créer / réinitialiser le marché</button></div>
 <div id="trainerMarketStatus" class="turn"></div>
 <div id="trainerMarketGrid"></div>
 </div>
@@ -3727,6 +3727,7 @@ function trainerMarketRender(){
  const gameLabels={sv:'Écarlate / Violet',swsh:'Épée / Bouclier',bdsp:'DEPS',pla:'Légendes Arceus'};
  const startButton=document.getElementById('trainerMarketStart');
  if(startButton)startButton.style.display=mpSession?.id&&mpSession?.role==='host'?'':'none';
+ if(state&&mpSession?.role!=='host'){document.getElementById('trainerMarketGame').value=state.game||'sv';document.getElementById('trainerMarketBudget').value=String(state.budget);document.getElementById('trainerMarketHome').checked=!!state.includeHome;}
  if(!state){status.textContent='En attente de création par l’hôte. Corpus historique Kanto à Paldea partiel, filtré par jeu de destination.';}
  else {
   const budget=n=>state.budget===0?'Illimité':Math.max(0,state.budget-(state.spent?.[n]||0)).toLocaleString('fr-FR')+' ₽';
