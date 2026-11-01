@@ -2167,7 +2167,7 @@ async function rollCards(){
  }
  dealPanel.style.display='none';
  let n=parseInt(choiceCount.value)||3;n=Math.max(2,Math.min(12,n));if(gameMode.value==='footprint')n=3;if(gameMode.value==='luckdice'){luckRoll();n=3;}if(typeMode.value==='random-d10')n=3;if(['hangman','anagramtrio'].includes(gameMode.value))n=3;else choiceCount.value=n;hangmanState=null;
- const used=new Set();const footprintDeadline=Date.now()+18000;current=[];if(gameMode.value==='footprint'){window.footprintRevealed=false;window.footprintScore=0;}batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML=pokeWaitingHTML('Trois Pokémon mystères en préparation…');if(mpSession){current=[];mpLastReveal=null;await mpSyncState()}
+ const used=new Set();const footprintDeadline=gameMode.value==='footprint'?Date.now()+18000:Infinity;current=[];if(gameMode.value==='footprint'){window.footprintRevealed=false;window.footprintScore=0;}batchLocked=false;gmInfo.textContent='';gmPanel.style.display='none';cards.innerHTML=pokeWaitingHTML('Trois Pokémon mystères en préparation…');if(mpSession){current=[];mpLastReveal=null;await mpSyncState()}
  const diceMode=typeMode.value==='random-d10';
  if(diceMode){if(sixRoundCounts[player]>=6)throw Error('Les six manches de ce joueur sont terminées.');if(!monoDiceType)monoRoll(player);turn.textContent='🎲 D18 : face '+monoDiceResult+'/18 → '+frt(monoDiceType)+' | Joueur '+player+' — manche '+(sixRoundCounts[player]+1)+'/6';}
  for(let i=0;i<n;i++){
@@ -2179,20 +2179,21 @@ async function rollCards(){
     if(used.has(id))continue;
     used.add(id);
     try{
-     const base=await footprintBounded(()=>getP(id),1800);
+     const base=await footprintBounded(()=>getP(id),Math.max(1,Math.min(1800,footprintDeadline-Date.now())));
      const options=[];
      if(footprintEligible(base)&&await validEvolutionStage(base))options.push(base);
      for(const def of FOOTPRINT_REGIONAL_FORMS.filter(f=>f.base===id)){
+      if(Date.now()>=footprintDeadline)break;
       try{
-       const alt=await footprintBounded(()=>getSpecialForm(def),1400);
+       const alt=await footprintBounded(()=>getSpecialForm(def),Math.max(1,Math.min(1400,footprintDeadline-Date.now())));
        if(footprintEligible(alt)&&await validEvolutionStage(alt))options.push(alt);
       }catch(e){console.warn('Forme régionale ignorée',def.api,e)}
      }
-     if(options.length&&await footprintImageAvailable(id)){p=options[Math.floor(Math.random()*options.length)];found=true}
+     if(options.length&&Date.now()<footprintDeadline&&await footprintBounded(()=>footprintImageAvailable(id),Math.max(1,footprintDeadline-Date.now()))){p=options[Math.floor(Math.random()*options.length)];found=true}
     }catch(e){console.warn('Empreinte ignorée',id,e)}
    }
    if(!found){
-    current=[];batchLocked=false;
+    current=[];used.clear();batchLocked=false;window.footprintRevealed=false;window.footprintScore=0;
     cards.innerHTML='<div class="card" style="grid-column:1/-1"><h3>🐾 Tirage interrompu</h3><p>Le chargement des empreintes a dépassé le délai de sécurité de 18 secondes, ou les filtres ne permettent pas de constituer un trio. Vérifie la connexion ou assouplis les filtres, puis relance le tirage.</p></div>';
     if(mpSession)mpSyncState();
     return;
