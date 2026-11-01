@@ -2363,5 +2363,55 @@ window.TRAINER_MARKET_EXPANSION=[
   "Moufflair",
   "Jupiter (Commandante Galaxie)",
   "BDSP_GALACTIC"
+ ],
+ [
+  1,
+  175,
+  "Togepi",
+  "Percupio (premier combat)",
+  "PLA_VOLO"
+ ],
+ [
+  8,
+  442,
+  "Spiritomb",
+  "Percupio (boss final)",
+  "PLA_VOLO"
+ ],
+ [
+  8,
+  407,
+  "Roserade",
+  "Percupio (boss final)",
+  "PLA_VOLO"
+ ],
+ [
+  8,
+  468,
+  "Togekiss",
+  "Percupio (boss final)",
+  "PLA_VOLO"
+ ],
+ [
+  8,
+  59,
+  "Arcanin de Hisui",
+  "Percupio (boss final)",
+  "PLA_VOLO",
+  "arcanine-hisui"
+ ],
+ [
+  8,
+  448,
+  "Lucario",
+  "Percupio (boss final)",
+  "PLA_VOLO"
+ ],
+ [
+  8,
+  445,
+  "Carchacrok",
+  "Percupio (boss final)",
+  "PLA_VOLO"
  ]
 ];
