@@ -2728,5 +2728,11 @@ window.TRAINER_MARKET_EXPANSION=[
   "Absol",
   "Marion (revanche)",
   "HGSS_E4_REMATCH"
- ]
+ ],
+ // Compléments attestés : Menzi (finale) et Goyah (Noir/Blanc).
+ [4,968,"Ferdeter","Menzi (finale Ligue)","SV",""],
+ [4,908,"Miascarade","Menzi (finale Ligue, starter alternatif)","SV",""],
+ [4,911,"Flâmigator","Menzi (finale Ligue, starter alternatif)","SV",""],
+ [4,914,"Palmaval","Menzi (finale Ligue, starter alternatif)","SV",""],
+ [8,617,"Limaspeed","Goyah (Maître de Ligue)","BW",""]
 ];
