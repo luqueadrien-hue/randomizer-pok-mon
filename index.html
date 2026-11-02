@@ -496,6 +496,11 @@ async function mpHydrateState(st){
  try{
   if(st.mode&&gameMode.value!=='triochoice'&&st.mode!=='triochoice'){if(gameMode.value!==st.mode)surpriseActive=false;gameMode.value=restoreLegacyMode(st.mode);}
   luckDie=st.mode==='luckdice'?(st.luckDie||null):null;if(Array.isArray(st.luckUsedFaces))luckUsedFaces=st.luckUsedFaces;const z=st.settings||{};for(const [k,v] of Object.entries(z)){const el=document.getElementById(k);if(el&&v!=null)el.value=v}
+  if(st.mode==='evomethod'&&!Object.hasOwn(z,'evolutionMergedStyle'))document.getElementById('evolutionMergedStyle').value='method';
+  if(st.mode==='evochain'&&!Object.hasOwn(z,'evolutionMergedStyle'))document.getElementById('evolutionMergedStyle').value='chain';
+  if(st.mode==='hiddenability'&&!Object.hasOwn(z,'abilityMergedStyle'))document.getElementById('abilityMergedStyle').value='hidden';
+  if(st.mode==='realhabitat'&&!Object.hasOwn(z,'habitatMergedStyle'))document.getElementById('habitatMergedStyle').value='real';
+  if(st.mode==='dominantstat'&&!Object.hasOwn(z,'statHighestMergedStyle'))document.getElementById('statHighestMergedStyle').value='hard';
   if(typeof updateModePanels==='function')updateModePanels();if(typeof syncMergedModeControls==='function')syncMergedModeControls();if(typeof syncCompetitiveGeneration==='function')syncCompetitiveGeneration();if(typeof trainerMarketRender==='function')trainerMarketRender();if(window.TrainerDraft6)window.TrainerDraft6.render();
   const mine=!!mpSession&&!!st.proposalOwnerId&&st.proposalOwnerId===mpSession.id;
   mpPrivateBatchOwner=st.proposalOwnerId||null;if(st.mode==='footprint'){window.footprintRevealed=!!st.footprintResult?.revealed;window.footprintScore=Number(st.footprintResult?.score)||0;}
