@@ -1,4 +1,4 @@
-# Draft des 6 Dresseurs — spécification (à implémenter)
+# Draft des 6 Dresseurs — spécification et suivi d'implémentation
 
 ## Principe
 - Mode réseau à deux joueurs, six manches chacun.
@@ -34,5 +34,12 @@
 - Les sets sont générés puis figés par le système (et non choisis manuellement par les dresseurs). Quatre attaques initialement proposées mais modifiables par le joueur parmi les attaques légales du Pokémon ; objet, talent et EV/IV prédéfinis sous réserve des contraintes du jeu choisi.
 - La prise en charge d'un jeu doit être désactivée tant que les dresseurs disponibles, les données Pokémon et les validations de sets n'y sont pas suffisants.
 
-## État
-Spécification uniquement : ce fichier ne signifie pas que le nouveau mode est codé ou testé.
+## État au 2 novembre 2026
+- **Code implémenté sur `main`** : sélection de six dresseurs distincts, tirage de 18 espèces différentes parmi un ensemble de candidats de Paldea, sets fixes, personnalisation de quatre capacités, de la nature et du type Téracristal, six choix par joueur, interdiction de réutiliser un dresseur pour le même joueur. Les deux joueurs peuvent sélectionner les mêmes propositions.
+- **Réseau** : tirage hôte et choix par joueur stockés dans `rooms/$room/trainerDraft6` ; transaction Firebase sur `choices/$seat`, synchronisation via l'écoute du salon et reprise de l'état au reconnectement. Règles de base ajoutées dans `firebase.database.rules.json`.
+- **Périmètre réellement activé** : Écarlate/Violet, uniquement espèces de la liste candidate figurant dans le Pokédex de base de Paldea ; capacités filtrées selon la version `scarlet-violet` de PokéAPI. Les autres jeux Switch, les formes particulières, les transferts HOME et la couverture DLC sont désactivés jusqu'à validation.
+- **Tests** : tests unitaires Node et contrôles statiques intégrés à GitHub Actions ; aucun test de bout en bout à deux comptes Firebase ni validation complète de légalité compétitive n'a encore été exécuté.
+- **Déploiement** : les fichiers GitHub Pages sont publiables automatiquement, mais les règles Firebase commitées doivent être déployées dans la console Firebase ou via un pipeline disposant des autorisations nécessaires. Sans ce déploiement, les écritures `trainerDraft6` et `trainerMarket` peuvent être refusées.
+- **Limites** : PokéAPI peut être indisponible ; les capacités non traduites s'affichent en anglais ; les objets tenus sont issus d'une courte liste de quatre objets connus d'Écarlate/Violet ; EV/IV prédéfinis légaux mais non optimisés. Les règles Firebase actuelles ne suffisent pas encore à garantir contre un client malveillant l'immuabilité des offres et la légalité de chaque attaque : renforcement côté serveur nécessaire avant un usage compétitif ouvert.
+
+**Statut : bêta codée, tests unitaires réussis ; fonctionnement réseau réel à confirmer après publication des règles et test sur deux navigateurs.**
