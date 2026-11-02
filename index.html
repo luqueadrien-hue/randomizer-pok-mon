@@ -1613,9 +1613,23 @@ const ENCOUNTER_VERSION_GROUPS={
  'sword-shield':['sword','shield'],'brilliant-diamond-shining-pearl':['brilliant-diamond','shining-pearl'],
  'legends-arceus':['legends-arceus'],'scarlet-violet':['scarlet','violet']
 };
+// Vérifications manuelles ciblées (Poképédia, 2 novembre 2026).
+// Ces entrées ne prétendent pas couvrir tous les Pokémon ni toutes les versions Switch.
+const SV_VERIFIED_WILD={
+ 595:{name:'Statitik',locations:['Caverne Électrolithe (Disque Indigo)','Zone Canyon (Disque Indigo)','Zone Polaire (Disque Indigo)'],source:'https://www.pokepedia.fr/Statitik'},
+ 185:{name:'Simularbre',locations:['Forêt Toastée (Paldea)','Zone Ouest n° 3 (Paldea)','Grotte Douche Froide (Septentria)','Lande de la Quiétude (Septentria)','Plaine des Glycines (Septentria)'],source:'https://www.pokepedia.fr/Simularbre'},
+ 398:{name:'Étouraptor',locations:['Lac Asrol (Paldea)','Zone Sud n° 5 (Paldea)','Gorge de la Corne (Septentria)'],source:'https://www.pokepedia.fr/Etouraptor'}
+};
+const SWITCH_ENCOUNTER_VERSIONS=new Set(['sword','shield','brilliant-diamond','shining-pearl','legends-arceus','scarlet','violet']);
+function verifiedSVEncounter(p){
+ const row=SV_VERIFIED_WILD[p.id];if(!row)return null;
+ return {locations:row.locations.slice(),details:row.locations.map(x=>x+' — Pokémon Écarlate/Violet'),methods:['walk'],verified:true,source:row.source,coverage:'partielle'};
+}
 async function encounterInfo(p){
  const cacheKey=p.id+'|'+generation.value;
  if(ENCOUNTER_CACHE.has(cacheKey))return ENCOUNTER_CACHE.get(cacheKey);
+ const verified=(generation.value==='9'||generation.value==='all')?verifiedSVEncounter(p):null;
+ if(generation.value==='9'&&verified){ENCOUNTER_CACHE.set(cacheKey,verified);return verified}
  try{
    const arr=await fetch(p.encounterUrl).then(r=>{if(!r.ok)throw Error('Rencontres indisponibles');return r.json()});
    const locations=[],details=[];const methods=new Set();
@@ -1630,6 +1644,7 @@ async function encounterInfo(p){
      }catch(_){}
      for(const vd of e.version_details||[]){
        const selected=String(generation.value||'all');
+       if(selected==='all'&&!SWITCH_ENCOUNTER_VERSIONS.has(vd.version?.name))continue;
        if(selected!=='all'&&GEN_VERSION_GROUPS[selected]&&!GEN_VERSION_GROUPS[selected].some(group=>ENCOUNTER_VERSION_GROUPS[group]?.includes(vd.version?.name)))continue;
        const game=VERSION_FR[vd.version?.name]||String(vd.version?.name||'').replace(/-/g,' ');
        locations.push(areaName);
@@ -1637,9 +1652,9 @@ async function encounterInfo(p){
        for(const ed of vd.encounter_details||[])if(ed.method?.name)methods.add(ed.method.name);
      }
    }
-   const o={locations:[...new Set(locations)].filter(Boolean),details:[...new Set(details)].filter(Boolean),methods:[...methods]};
+   const o={locations:[...new Set([...(verified?.locations||[]),...locations])].filter(Boolean),details:[...new Set([...(verified?.details||[]),...details])].filter(Boolean),methods:[...new Set([...(verified?.methods||[]),...methods])],verified:!!verified,source:verified?.source||null,coverage:'partielle'};
    ENCOUNTER_CACHE.set(cacheKey,o);return o;
- }catch(e){const o={locations:[],details:[],methods:[]};ENCOUNTER_CACHE.set(cacheKey,o);return o;}
+ }catch(e){const o=verified||{locations:[],details:[],methods:[],coverage:'incomplète'};ENCOUNTER_CACHE.set(cacheKey,o);return o;}
 }
 const METHOD_FR={walk:'Herbes / marche','old-rod':'Canne','good-rod':'Super Canne','super-rod':'Méga Canne',surf:'Surf','rock-smash':'Éclate-Roc','headbutt':'Coup d’Boule','dark-grass':'Herbes sombres','grass-spots':'Herbes mouvantes','cave-spots':'Nuages de poussière','bridge-spots':'Ombres','gift':'Pokémon offert','gift-egg':'Œuf offert'};
 function methodFr(x){return METHOD_FR[x]||String(x||'Rencontre spéciale').replace(/-/g,' ')}
