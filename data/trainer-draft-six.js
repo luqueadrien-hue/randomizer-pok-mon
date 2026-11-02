@@ -33,9 +33,9 @@ function render(){
  status.textContent='Écarlate/Violet · 6 dresseurs · 18 Pokémon partagés · J1 : '+one+'/6 · J2 : '+two+'/6'+(seat?' · Tes manches : '+mine.length+'/6':'');
  grid.innerHTML=state.offers.map((group,i)=>{
   const unavailable=used.has(i),chosen=mine.find(x=>x.trainerIndex===i);
-  return '<section class="panel" style="margin:8px 0;padding:12px"><h3 style="margin:0 0 8px">'+(i+1)+'. '+esc(group.trainer)+(unavailable?' — déjà utilisé':'')+'</h3><div class="controls">'+group.pokemon.map((p,j)=>{
+  return '<section class="draftBoxGroup"><h3 class="draftBoxTrainer">'+(i+1)+'. '+esc(group.trainer)+(unavailable?' — déjà utilisé':'')+'</h3><div class="draftBoxOffers">'+group.pokemon.map((p,j)=>{
    const selected=chosen?.offerIndex===j;
-   return '<div class="card" style="max-width:220px;padding:8px"><img alt="" src="'+esc(p.img||'')+'" style="width:80px;height:80px;object-fit:contain"><strong>'+esc(p.name)+'</strong><small>Talent : '+esc(p.ability)+' · '+esc(p.itemName)+'</small><small>EV : '+esc(formatEV(p.ev))+' · IV : 31 partout</small><button type="button" data-draft-trainer="'+i+'" data-draft-offer="'+j+'" '+(unavailable||!seat||mine.length>=6||busy?'disabled':'')+'>'+(selected?'Choisi':'Personnaliser / choisir')+'</button></div>';
+   return '<div class="draftBoxOffer'+(selected?' is-selected':'')+'"><span class="draftBoxSlot">'+(j+1)+'</span><img alt="" src="'+esc(p.img||'')+'"><strong>'+esc(p.name)+'</strong><small>Talent : '+esc(p.ability)+' · '+esc(p.itemName)+'</small><small>EV : '+esc(formatEV(p.ev))+' · IV : 31 partout</small><button type="button" data-draft-trainer="'+i+'" data-draft-offer="'+j+'" '+(unavailable||!seat||mine.length>=6||busy?'disabled':'')+'>'+(selected?'Choisi':'Personnaliser / choisir')+'</button></div>';
   }).join('')+'</div></section>';
  }).join('');
  grid.querySelectorAll('[data-draft-trainer]').forEach(b=>b.addEventListener('click',()=>openEditor(Number(b.dataset.draftTrainer),Number(b.dataset.draftOffer))));
