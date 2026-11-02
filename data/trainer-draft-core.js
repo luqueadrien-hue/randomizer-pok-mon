@@ -20,10 +20,11 @@ function td6Create(offers,previous,rng=Math.random){
 function td6AddChoice(state,seat,trainerIndex,offerIndex,custom){
  if(!state||state.version!==1||state.game!=="sv"||![1,2].includes(Number(seat)))throw Error("Partie invalide.");
  const current=state.choices?.[seat]||state.choices?.[String(seat)];
- if(!current||current.gameId!==state.gameId||!Array.isArray(current.entries))throw Error("Partie modifiée : recharge les choix.");
- if(current.entries.length>=6)throw Error("Les six manches sont terminées.");
+ if(!current||current.gameId!==state.gameId||(current.entries!=null&&!Array.isArray(current.entries)))throw Error("Partie modifiée : recharge les choix.");
+ const entries=Array.isArray(current.entries)?current.entries:[];
+ if(entries.length>=6)throw Error("Les six manches sont terminées.");
  if(!Number.isInteger(trainerIndex)||trainerIndex<0||trainerIndex>5||!Number.isInteger(offerIndex)||offerIndex<0||offerIndex>2)throw Error("Proposition inconnue.");
- if(current.entries.some(e=>e.trainerIndex===trainerIndex))throw Error("Dresseur déjà utilisé par ce joueur.");
+ if(entries.some(e=>e.trainerIndex===trainerIndex))throw Error("Dresseur déjà utilisé par ce joueur.");
  const offer=state.offers?.[trainerIndex]?.pokemon?.[offerIndex];
  if(!offer||!Array.isArray(offer.legalMoves)||offer.legalMoves.length<4)throw Error("Pokémon sans données légales.");
  const moves=custom?.moves;
@@ -31,7 +32,7 @@ function td6AddChoice(state,seat,trainerIndex,offerIndex,custom){
  if(!TD6_NATURES.includes(custom?.nature))throw Error("Nature invalide.");
  if(!TD6_TYPES.includes(custom?.tera))throw Error("Type Téracristal invalide.");
  const entry={trainerIndex,offerIndex,pokemonId:offer.id,moves:[...moves],nature:custom.nature,tera:custom.tera};
- return {gameId:state.gameId,entries:[...current.entries,entry]};
+ return {gameId:state.gameId,entries:[...entries,entry]};
 }
 const TrainerDraftCore={TD6_TRAINERS,TD6_POOL,TD6_NATURES,TD6_TYPES,TD6_ITEMS,td6Shuffle,td6Create,td6AddChoice};
 if(typeof module!=='undefined'&&module.exports)module.exports=TrainerDraftCore;
