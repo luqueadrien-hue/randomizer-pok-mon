@@ -160,6 +160,13 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 #trainerDraftPanel .draftPcCell .draftPcLogo{font-size:2.6rem;line-height:1}
 #trainerDraftPanel .draftPcCell.is-locked{opacity:.55;filter:grayscale(.6)}
 @media(max-width:650px){#trainerDraftPanel .draftPcRank{font-size:.7rem;gap:5px}#trainerDraftPanel .draftPcRank small{font-size:.6rem}#trainerDraftPanel .draftPcCell.pcSlot{min-height:70px}#trainerDraftPanel .draftPcCell .draftPcLogo{font-size:1.9rem}}
+
+/* Marché & Draft : supprimer la colonne descriptive étroite et privilégier la boîte PC. */
+#trainerDraftPanel{width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+#trainerDraftPanel>.controls{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 12px}
+#trainerDraftPanel>.controls>button{width:auto;flex:1 1 230px}
+#trainerDraftPanel .draftPcRow,#trainerDraftPanel .draftPcSlots{min-width:0}
+@media(max-width:600px){#trainerDraftPanel>.controls>button{flex-basis:100%}}
 </style>
 <script src="data/trainer-market-expansion.js"></script>
 </head>
@@ -274,12 +281,11 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 </div>
 
 <div id="trainerDraftPanel" class="panel" style="display:none;margin-top:14px">
-<h2>🏆 Marché & Draft des Dresseurs — réseau</h2>
-<p>Les deux joueurs disposent chacun de 6 000 Pokédollars pour acheter leurs six Pokémon. Les deux joueurs reçoivent les mêmes six dresseurs et les mêmes 18 propositions. La boîte PC contient six lignes de trois cases cachées : rangs 6–7 réunis en haut, dresseurs ordinaires en bas. Chaque joueur choisit une case par rang ; toute case prise est verrouillée pour les deux joueurs. Les quatre capacités, la nature et le type Téracristal sont personnalisables ; talent, objet et EV/IV sont fixés au tirage.</p>
-<div class="controls"><label>Jeu Switch de référence <select id="trainerDraftGame"><option value="sv">Écarlate / Violet (Pokédex de Paldea validé)</option><option value="swsh" disabled>Épée / Bouclier — données à vérifier</option><option value="bdsp" disabled>Diamant Étincelant / Perle Scintillante — données à vérifier</option><option value="pla" disabled>Légendes : Arceus — données à vérifier</option></select></label>
+
+<div class="controls"><label style="display:none">Jeu Switch de référence <select id="trainerDraftGame"><option value="sv">Écarlate / Violet (Pokédex de Paldea validé)</option><option value="swsh" disabled>Épée / Bouclier — données à vérifier</option><option value="bdsp" disabled>Diamant Étincelant / Perle Scintillante — données à vérifier</option><option value="pla" disabled>Légendes : Arceus — données à vérifier</option></select></label>
 <button type="button" id="trainerDraftSolo" onclick="TrainerDraft6.trySolo().catch(e=>{document.getElementById('trainerDraftStatus').textContent='❌ Essai solo : '+e.message;console.error(e)})">🧪 Essayer en solo — boîte PC</button>
 <button type="button" id="trainerDraftStart" onclick="TrainerDraft6.start().catch(e=>{document.getElementById('trainerDraftStatus').textContent='❌ '+e.message;console.error(e)})">🎲 Ouvrir le marché : 6 rangs et 18 Pokémon</button></div>
-<p class="mpstate">Version bêta limitée au Pokédex de base de Paldea. La légalité des capacités est contrôlée selon le groupe de versions « scarlet-violet » de PokéAPI ; les formes régionales, transferts HOME et DLC non audités ne sont pas proposés. Aucun autre jeu n'est activé sans catalogue vérifié. <a href="https://pokeapi.co/" target="_blank" rel="noopener noreferrer">Source des données</a>.</p>
+
 <div id="trainerDraftStatus" class="turn">En attente d'un salon réseau.</div>
 <div class="pcBoxHeader trainerPcHeader"><span>📦 BOÎTE PC — MARCHÉ & DRAFT DES DRESSEURS</span><span>6 rangs · 18 cases · 2 joueurs</span></div>
 <div id="trainerDraftGrid"></div><div id="trainerDraftEditor"></div><div id="trainerDraftTeams"></div>
