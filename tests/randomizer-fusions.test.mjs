@@ -62,3 +62,17 @@ test('one audio control per card, responsive styling',()=>{
  assert.match(html,/audio\.pokemonZoneAudio\{display:block;width:100%/);
  assert.doesNotMatch(html,/if\(!audio\)audio=await musicPreview\(\['Pokemon soundtrack'/);
 });
+
+test('three verified Scarlet/Violet encounters are labeled and sourced',()=>{
+ const src=section('const SV_VERIFIED_WILD=','async function encounterInfo(p){');
+ const get=runInNewContext(src+';verifiedSVEncounter');
+ for(const id of [595,185,398]){
+  const row=get({id});
+  assert.ok(row.verified);
+  assert.ok(row.details.length>=3);
+  assert.ok(row.details.every(x=>x.includes('Pokémon Écarlate/Violet')));
+  assert.match(row.source,/^https:\/\/www\.pokepedia\.fr\//);
+ }
+ assert.equal(get({id:999}),null);
+ assert.match(html,/SWITCH_ENCOUNTER_VERSIONS\.has\(vd\.version\?\.name\)/);
+});
