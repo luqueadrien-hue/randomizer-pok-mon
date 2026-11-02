@@ -31,12 +31,14 @@ function render(){
  const mine=state.choices?.[seat]?.entries||[],used=new Set(mine.map(x=>x.trainerIndex));
  const one=state.choices?.[1]?.entries?.length||0,two=state.choices?.[2]?.entries?.length||0;
  status.textContent='Écarlate/Violet · 6 dresseurs · 18 Pokémon partagés · J1 : '+one+'/6 · J2 : '+two+'/6'+(seat?' · Tes manches : '+mine.length+'/6':'');
+ const taken=new Map();for(const n of [1,2])for(const e of state.choices?.[n]?.entries||[])taken.set(e.trainerIndex+':'+e.offerIndex,n);
+ grid.classList.add('draftPcGrid');
  grid.innerHTML=state.offers.map((group,i)=>{
-  const unavailable=used.has(i),chosen=mine.find(x=>x.trainerIndex===i);
-  return '<section class="draftBoxGroup"><h3 class="draftBoxTrainer">'+(i+1)+'. '+esc(group.trainer)+(unavailable?' — déjà utilisé':'')+'</h3><div class="draftBoxOffers">'+group.pokemon.map((p,j)=>{
-   const selected=chosen?.offerIndex===j;
-   return '<div class="draftBoxOffer'+(selected?' is-selected':'')+'"><span class="draftBoxSlot">'+(j+1)+'</span><img alt="" src="'+esc(p.img||'')+'"><strong>'+esc(p.name)+'</strong><small>Talent : '+esc(p.ability)+' · '+esc(p.itemName)+'</small><small>EV : '+esc(formatEV(p.ev))+' · IV : 31 partout</small><button type="button" data-draft-trainer="'+i+'" data-draft-offer="'+j+'" '+(unavailable||!seat||mine.length>=6||busy?'disabled':'')+'>'+(selected?'Choisi':'Personnaliser / choisir')+'</button></div>';
-  }).join('')+'</div></section>';
+  const rank=group.rank||Core.TD6_RANKS[5-i],unavailable=used.has(i),chosen=mine.find(x=>x.trainerIndex===i);
+  return '<section class="draftPcRow"><div class="draftPcRank"><span class="draftPcIcon">'+esc(rank.icon)+'</span><strong>Rang '+(rank.id===6?'6–7':rank.id)+'</strong><small>'+esc(rank.label)+'</small></div>'+group.pokemon.map((p,j)=>{
+   const owner=taken.get(i+':'+j),selected=chosen?.offerIndex===j,locked=!!owner;
+   return '<button type="button" class="pcSlot draftPcCell'+(selected?' is-selected':'')+(locked?' is-locked':'')+'" data-draft-trainer="'+i+'" data-draft-offer="'+j+'" '+(locked||unavailable||!seat||mine.length>=6||busy?'disabled':'')+' aria-label="Rang '+rank.id+', case '+(j+1)+(locked?', déjà prise par J'+owner:'')+'"><span class="draftPcLogo">'+esc(rank.icon)+'</span><span class="draftPcQuestion">'+(locked?'🔒':'?')+'</span><small>'+(locked?'Prise par J'+owner:'Case '+(j+1))+'</small></button>';
+  }).join('')+'</section>';
  }).join('');
  grid.querySelectorAll('[data-draft-trainer]').forEach(b=>b.addEventListener('click',()=>openEditor(Number(b.dataset.draftTrainer),Number(b.dataset.draftOffer))));
  const team=$('trainerDraftTeams');
@@ -62,7 +64,7 @@ function renderEditor(){
 }
 function openEditor(trainerIndex,offerIndex){
  const seat=currentSeat(),mine=state?.choices?.[seat]?.entries||[];
- if(!seat||!state||mine.length>=6||mine.some(c=>c.trainerIndex===trainerIndex))return;
+ if(!seat||!state||mine.length>=6||mine.some(c=>c.trainerIndex===trainerIndex)||[1,2].some(n=>(state.choices?.[n]?.entries||[]).some(e=>e.trainerIndex===trainerIndex&&e.offerIndex===offerIndex)))return;
  const p=state.offers?.[trainerIndex]?.pokemon?.[offerIndex];if(!p)return;
  editing={gameId:state.gameId,trainerIndex,offerIndex,pokemonId:p.id,moves:[...p.initialMoves],nature:p.nature,tera:p.tera};
  renderEditor();
@@ -131,15 +133,16 @@ async function choose(){
  Core.td6AddChoice(draft,seat,editing.trainerIndex,editing.offerIndex,form);
  busy=true;renderEditor();
  try{
-  const ref=mpRoom(mpSession.room).child('trainerDraft6/choices/'+seat);
+  const ref=mpRoom(mpSession.room).child('trainerDraft6');
   const tx=await ref.transaction(current=>{
    try{
-    const local={...draft,choices:{...draft.choices,[seat]:current}};
-    return Core.td6AddChoice(local,seat,editing.trainerIndex,editing.offerIndex,form);
+    if(!current||current.gameId!==draft.gameId)return;
+    const next=Core.td6AddChoice(current,seat,editing.trainerIndex,editing.offerIndex,form);
+    current.choices[seat]=next;return current;
    }catch(e){return}
   });
-  if(!tx.committed)throw Error('Choix déjà effectué, manche terminée ou nouvelle partie en cours.');
-  state.choices[seat]=tx.snapshot.val();editing=null;render();
+  if(!tx.committed)throw Error('Case déjà choisie, rang déjà utilisé ou partie modifiée.');
+  state=tx.snapshot.val();editing=null;render();
  }finally{busy=false;renderEditor()}
 }
 function receive(value){state=value||null;if(editing&&editing.gameId!==state?.gameId)editing=null;render()}
