@@ -3850,7 +3850,7 @@ async function trainerMarketStart(){
  const prior=(await ref.once('value')).val();
  if(prior&&(prior.purchaseCount||Object.keys(prior.sold||{}).length)&&!confirm('Ce marché comporte déjà des achats. Réinitialiser effacera les équipes et les budgets. Continuer ?'))return;
  const tx=await ref.transaction(current=>{
-  if((current?.purchaseCount||Object.keys(current?.sold||{}).length)!==(prior?.purchaseCount||Object.keys(prior?.sold||{}).length))return;
+  if((current?.purchaseCount||Object.keys(current?.sold||{}).length)!==(prior?.purchaseCount||Object.keys(prior?.sold||{}).length)||current?.updated!==prior?.updated||current?.game!==prior?.game||current?.budget!==prior?.budget)return;
   return state;
  });
  if(!tx.committed)throw Error('Le marché a changé pendant la réinitialisation. Réessaie.');
