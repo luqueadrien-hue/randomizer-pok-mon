@@ -1,4 +1,6 @@
 'use strict';
+const TD6_START_BUDGET=6000;
+const TD6_RANK_PRICES={1:200,2:450,3:750,4:1000,5:1150,6:1500};
 const TD6_RANKS=[{id:1,label:"Dresseurs ordinaires",icon:"🧢"},{id:2,label:"Spires d’organisation",icon:"🅁"},{id:3,label:"Champions d’Arène",icon:"🏅"},{id:4,label:"Rivaux",icon:"⚡"},{id:5,label:"Admins et chefs d’organisation",icon:"👑"},{id:6,label:"Conseil 4 et Maîtres de Ligue",icon:"🏆"}];
 // Catégories de dresseurs officielles : les Pokémon restent des propositions aléatoires,
 // et ne sont pas présentés comme les équipes canoniques de ces personnages.
@@ -26,7 +28,7 @@ function td6Create(offers,previous,rng=Math.random){
   signature=trainers.join("|")+"#"+selected.map(x=>x.id).join(",");
   if(signature!==previous?.signature)break;
  }
- return {version:1,game:"sv",gameId:"",signature,trainers,offers:trainers.map((trainer,i)=>({trainer,rank:TD6_RANKS[5-i],pokemon:selected.slice(i*3,i*3+3)})),choices:{"1":{gameId:"",entries:[]},"2":{gameId:"",entries:[]}},created:Date.now()};
+ return {version:1,game:"sv",gameId:"",budget:TD6_START_BUDGET,signature,trainers,offers:trainers.map((trainer,i)=>({trainer,rank:TD6_RANKS[5-i],pokemon:selected.slice(i*3,i*3+3)})),choices:{"1":{gameId:"",entries:[]},"2":{gameId:"",entries:[]}},created:Date.now()};
 }
 function td6AddChoice(state,seat,trainerIndex,offerIndex,custom){
  if(!state||state.version!==1||state.game!=="sv"||![1,2].includes(Number(seat)))throw Error("Partie invalide.");
@@ -44,9 +46,12 @@ function td6AddChoice(state,seat,trainerIndex,offerIndex,custom){
  if(!Array.isArray(moves)||moves.length!==4||new Set(moves).size!==4||moves.some(m=>!offer.legalMoves.includes(m)))throw Error("Les quatre capacités doivent être distinctes et légales.");
  if(!TD6_NATURES.includes(custom?.nature))throw Error("Nature invalide.");
  if(!TD6_TYPES.includes(custom?.tera))throw Error("Type Téracristal invalide.");
- const entry={trainerIndex,offerIndex,pokemonId:offer.id,moves:[...moves],nature:custom.nature,tera:custom.tera};
+ const price=TD6_RANK_PRICES[state.offers[trainerIndex].rank?.id]||0;
+ const spent=entries.reduce((sum,e)=>sum+(e.price||TD6_RANK_PRICES[state.offers[e.trainerIndex]?.rank?.id]||0),0);
+ if(spent+price>(state.budget||TD6_START_BUDGET))throw Error("Budget de Pokédollars insuffisant.");
+ const entry={trainerIndex,offerIndex,price,pokemonId:offer.id,moves:[...moves],nature:custom.nature,tera:custom.tera};
  return {gameId:state.gameId,entries:[...entries,entry]};
 }
-const TrainerDraftCore={TD6_RANKS,TD6_TRAINERS,TD6_TRAINERS_BY_RANK,TD6_POOL,TD6_NATURES,TD6_TYPES,TD6_ITEMS,td6Shuffle,td6Create,td6AddChoice};
+const TrainerDraftCore={TD6_START_BUDGET,TD6_RANK_PRICES,TD6_RANKS,TD6_TRAINERS,TD6_TRAINERS_BY_RANK,TD6_POOL,TD6_NATURES,TD6_TYPES,TD6_ITEMS,td6Shuffle,td6Create,td6AddChoice};
 if(typeof module!=='undefined'&&module.exports)module.exports=TrainerDraftCore;
 if(typeof window!=='undefined')window.TrainerDraftCore=TrainerDraftCore;
