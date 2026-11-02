@@ -20,15 +20,655 @@ const TD6_ITEMS=[["leftovers","Restes"],["sitrus-berry","Baie Sitrus"],["shell-b
 // Références de Pokémon utilisés par des catégories de dresseurs dans les jeux.
 // Une entrée n'est admissible qu'avec une attribution explicite ; aucune déduction par puissance.
 const TD6_LORE=[
- {id:814,rank:4,trainer:'Nabil',source:'Pokémon Épée / Bouclier',note:'Starter Feu selon le choix du joueur'},
- {id:813,rank:4,trainer:'Nabil',source:'Pokémon Épée / Bouclier',note:'Starter Feu selon le choix du joueur'},
- {id:815,rank:4,trainer:'Nabil',source:'Pokémon Épée / Bouclier',note:'Starter Feu selon le choix du joueur'},
- {id:25,rank:1,trainer:'Gamin',source:'Jeux Pokémon',note:'Rencontres de dresseurs ordinaires'},
- {id:130,rank:3,trainer:'Ondine',source:'Pokémon Or / Argent',note:'Équipe de Championne'},
- {id:95,rank:3,trainer:'Pierre',source:'Pokémon Rouge / Bleu',note:'Équipe de Champion'},
- {id:59,rank:3,trainer:'Auguste',source:'Pokémon Rouge / Bleu',note:'Équipe de Champion'},
- {id:94,rank:5,trainer:'Agatha',source:'Pokémon Rouge / Bleu',note:'Conseil 4 (à ranger au rang 6–7)'}
-].filter(x=>x.trainer!=='Agatha');
+ {
+  "id": 19,
+  "rank": 1,
+  "trainer": "Gamin",
+  "source": "Jeux Pokémon — rencontres de dresseurs ordinaires",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Youngster_(Trainer_class)",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 20,
+  "rank": 1,
+  "trainer": "Gamin",
+  "source": "Jeux Pokémon — rencontres de dresseurs ordinaires",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Youngster_(Trainer_class)",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 16,
+  "rank": 1,
+  "trainer": "Gamin",
+  "source": "Jeux Pokémon — rencontres de dresseurs ordinaires",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Youngster_(Trainer_class)",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 17,
+  "rank": 1,
+  "trainer": "Gamin",
+  "source": "Jeux Pokémon — rencontres de dresseurs ordinaires",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Youngster_(Trainer_class)",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 10,
+  "rank": 1,
+  "trainer": "Gamin",
+  "source": "Jeux Pokémon — rencontres de dresseurs ordinaires",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Youngster_(Trainer_class)",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 13,
+  "rank": 1,
+  "trainer": "Gamin",
+  "source": "Jeux Pokémon — rencontres de dresseurs ordinaires",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Youngster_(Trainer_class)",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 25,
+  "rank": 1,
+  "trainer": "Gamin",
+  "source": "Jeux Pokémon — rencontres de dresseurs ordinaires",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Youngster_(Trainer_class)",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 41,
+  "rank": 1,
+  "trainer": "Gamin",
+  "source": "Jeux Pokémon — rencontres de dresseurs ordinaires",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Youngster_(Trainer_class)",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 74,
+  "rank": 1,
+  "trainer": "Gamin",
+  "source": "Jeux Pokémon — rencontres de dresseurs ordinaires",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Youngster_(Trainer_class)",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 129,
+  "rank": 1,
+  "trainer": "Pêcheur",
+  "source": "Jeux Pokémon — rencontres de dresseurs ordinaires",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Youngster_(Trainer_class)",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 19,
+  "rank": 2,
+  "trainer": "Sbire Team Rocket",
+  "source": "Pokémon Rouge / Bleu — Team Rocket",
+  "url": "https://www.pokepedia.fr/Team_Rocket",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 20,
+  "rank": 2,
+  "trainer": "Sbire Team Rocket",
+  "source": "Pokémon Rouge / Bleu — Team Rocket",
+  "url": "https://www.pokepedia.fr/Team_Rocket",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 23,
+  "rank": 2,
+  "trainer": "Sbire Team Rocket",
+  "source": "Pokémon Rouge / Bleu — Team Rocket",
+  "url": "https://www.pokepedia.fr/Team_Rocket",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 24,
+  "rank": 2,
+  "trainer": "Sbire Team Rocket",
+  "source": "Pokémon Rouge / Bleu — Team Rocket",
+  "url": "https://www.pokepedia.fr/Team_Rocket",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 27,
+  "rank": 2,
+  "trainer": "Sbire Team Rocket",
+  "source": "Pokémon Rouge / Bleu — Team Rocket",
+  "url": "https://www.pokepedia.fr/Team_Rocket",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 41,
+  "rank": 2,
+  "trainer": "Sbire Team Rocket",
+  "source": "Pokémon Rouge / Bleu — Team Rocket",
+  "url": "https://www.pokepedia.fr/Team_Rocket",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 42,
+  "rank": 2,
+  "trainer": "Sbire Team Rocket",
+  "source": "Pokémon Rouge / Bleu — Team Rocket",
+  "url": "https://www.pokepedia.fr/Team_Rocket",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 88,
+  "rank": 2,
+  "trainer": "Sbire Team Rocket",
+  "source": "Pokémon Rouge / Bleu — Team Rocket",
+  "url": "https://www.pokepedia.fr/Team_Rocket",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 109,
+  "rank": 2,
+  "trainer": "Sbire Team Rocket",
+  "source": "Pokémon Rouge / Bleu — Team Rocket",
+  "url": "https://www.pokepedia.fr/Team_Rocket",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 110,
+  "rank": 2,
+  "trainer": "Sbire Team Rocket",
+  "source": "Pokémon Rouge / Bleu — Team Rocket",
+  "url": "https://www.pokepedia.fr/Team_Rocket",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 95,
+  "rank": 3,
+  "trainer": "Pierre",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 74,
+  "rank": 3,
+  "trainer": "Pierre",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 120,
+  "rank": 3,
+  "trainer": "Ondine",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 121,
+  "rank": 3,
+  "trainer": "Ondine",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 130,
+  "rank": 3,
+  "trainer": "Ondine",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 26,
+  "rank": 3,
+  "trainer": "Major Bob",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 45,
+  "rank": 3,
+  "trainer": "Erika",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 59,
+  "rank": 3,
+  "trainer": "Auguste",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 94,
+  "rank": 3,
+  "trainer": "Mortimer",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 208,
+  "rank": 3,
+  "trainer": "Jasmine",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 448,
+  "rank": 3,
+  "trainer": "Cornélia",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 700,
+  "rank": 3,
+  "trainer": "Valérie",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 778,
+  "rank": 3,
+  "trainer": "Margie",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 861,
+  "rank": 3,
+  "trainer": "Percy",
+  "source": "Jeux Pokémon — combats de Champions",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 810,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 811,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 812,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 813,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 814,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 815,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 816,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 817,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 818,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 831,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 832,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 821,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 822,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 823,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 143,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 871,
+  "rank": 4,
+  "trainer": "Nabil",
+  "source": "Pokémon Épée / Bouclier — Nabil",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Hop/Sword_and_Shield",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 53,
+  "rank": 5,
+  "trainer": "Giovanni",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 51,
+  "rank": 5,
+  "trainer": "Giovanni",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 34,
+  "rank": 5,
+  "trainer": "Giovanni",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 31,
+  "rank": 5,
+  "trainer": "Giovanni",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 112,
+  "rank": 5,
+  "trainer": "Giovanni",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 111,
+  "rank": 5,
+  "trainer": "Giovanni",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 105,
+  "rank": 5,
+  "trainer": "Giovanni",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 130,
+  "rank": 5,
+  "trainer": "Giovanni",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 229,
+  "rank": 5,
+  "trainer": "Hélio",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 461,
+  "rank": 5,
+  "trainer": "Hélio",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 430,
+  "rank": 5,
+  "trainer": "Hélio",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 635,
+  "rank": 5,
+  "trainer": "Ghetis",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 625,
+  "rank": 5,
+  "trainer": "Ghetis",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 563,
+  "rank": 5,
+  "trainer": "Ghetis",
+  "source": "Jeux Pokémon — chefs d'organisations",
+  "url": "https://bulbapedia.bulbagarden.net/wiki/Giovanni",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 149,
+  "rank": 6,
+  "trainer": "Peter",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 130,
+  "rank": 6,
+  "trainer": "Peter",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 94,
+  "rank": 6,
+  "trainer": "Agatha",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 131,
+  "rank": 6,
+  "trainer": "Olga",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 68,
+  "rank": 6,
+  "trainer": "Aldo",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 445,
+  "rank": 6,
+  "trainer": "Cynthia",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 448,
+  "rank": 6,
+  "trainer": "Cynthia",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 407,
+  "rank": 6,
+  "trainer": "Cynthia",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 350,
+  "rank": 6,
+  "trainer": "Cynthia",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 392,
+  "rank": 6,
+  "trainer": "Adrien",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 467,
+  "rank": 6,
+  "trainer": "Adrien",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 681,
+  "rank": 6,
+  "trainer": "Thyméo",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 706,
+  "rank": 6,
+  "trainer": "Tarak",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 6,
+  "rank": 6,
+  "trainer": "Tarak",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 887,
+  "rank": 6,
+  "trainer": "Tarak",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 282,
+  "rank": 6,
+  "trainer": "Dianthéa",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ },
+ {
+  "id": 671,
+  "rank": 6,
+  "trainer": "Dianthéa",
+  "source": "Jeux Pokémon — Conseil 4 et Maîtres",
+  "url": "https://www.poketools.com/gym-teams",
+  "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
+ }
+];
 function td6LoreFor(id,rank){return TD6_LORE.filter(x=>x.id===id&&x.rank===rank)}
 function td6Shuffle(input,rng=Math.random){const a=[...input];for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function td6Create(offers,previous,rng=Math.random,game='sv'){
