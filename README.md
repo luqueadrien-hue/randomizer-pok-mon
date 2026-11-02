@@ -2,6 +2,13 @@
 
 Application web de défis Pokémon, avec salons Firebase et plusieurs modes de jeu. Le code principal est dans `index.html`.
 
+## Suivi consolidé du 2 novembre 2026
+
+- [Cahier des charges consolidé](docs/cahier-des-charges-consolide-2026-11-02.md) : dernières fusions/suppressions, Draft, Marché, Modulo, Lieux de rencontre et audit des données.
+- **Modulo Pokédex** : toutes les permutations nationales confirmées dans les Pokédex sélectionnés, sans distracteurs ni transferts non vérifiés ; tests ajoutés dans `tests/modulo-pokedex.test.mjs`.
+- **Draft des 6 Dresseurs** : présentation visuelle inspirée de la Boîte Randomizer ; le réseau réel Firebase et la légalité exhaustive restent à confirmer.
+- **Lieux de rencontre** : mode de capture existant renommé, indices avec jeu/version quand disponibles ; échanges PNJ et autres obtentions encore incomplets.
+
 ## Centre Pokémon — nouveau portail (2 novembre 2026)
 
 - [Ouvrir le portail dans le dépôt](portail.html) : accueil en français avec **Randomizer, Stratégie, Pokédex, Guides, Reproduction et Outils**. Le menu est aussi visible en haut de `index.html`.
