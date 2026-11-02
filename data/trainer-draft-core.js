@@ -17,6 +17,19 @@ const TD6_POOL=[25,26,183,184,187,188,189,198,200,203,204,205,206,215,216,217,22
 const TD6_NATURES=["Hardi","Solo","Brave","Rigide","Mauvais","Assuré","Docile","Relax","Malin","Lâche","Timide","Pressé","Sérieux","Jovial","Naïf","Modeste","Doux","Discret","Foufou","Pudique","Calme","Gentil","Malpoli","Prudent","Bizarre"];
 const TD6_TYPES=["normal","fire","water","electric","grass","ice","fighting","poison","ground","flying","psychic","bug","rock","ghost","dragon","dark","steel","fairy"];
 const TD6_ITEMS=[["leftovers","Restes"],["sitrus-berry","Baie Sitrus"],["shell-bell","Grelot Coque"],["expert-belt","Ceinture Pro"]];
+// Références de Pokémon utilisés par des catégories de dresseurs dans les jeux.
+// Une entrée n'est admissible qu'avec une attribution explicite ; aucune déduction par puissance.
+const TD6_LORE=[
+ {id:814,rank:4,trainer:'Nabil',source:'Pokémon Épée / Bouclier',note:'Starter Feu selon le choix du joueur'},
+ {id:813,rank:4,trainer:'Nabil',source:'Pokémon Épée / Bouclier',note:'Starter Feu selon le choix du joueur'},
+ {id:815,rank:4,trainer:'Nabil',source:'Pokémon Épée / Bouclier',note:'Starter Feu selon le choix du joueur'},
+ {id:25,rank:1,trainer:'Gamin',source:'Jeux Pokémon',note:'Rencontres de dresseurs ordinaires'},
+ {id:130,rank:3,trainer:'Ondine',source:'Pokémon Or / Argent',note:'Équipe de Championne'},
+ {id:95,rank:3,trainer:'Pierre',source:'Pokémon Rouge / Bleu',note:'Équipe de Champion'},
+ {id:59,rank:3,trainer:'Auguste',source:'Pokémon Rouge / Bleu',note:'Équipe de Champion'},
+ {id:94,rank:5,trainer:'Agatha',source:'Pokémon Rouge / Bleu',note:'Conseil 4 (à ranger au rang 6–7)'}
+].filter(x=>x.trainer!=='Agatha');
+function td6LoreFor(id,rank){return TD6_LORE.filter(x=>x.id===id&&x.rank===rank)}
 function td6Shuffle(input,rng=Math.random){const a=[...input];for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function td6Create(offers,previous,rng=Math.random,game='sv'){
  if(!Array.isArray(offers)||offers.length<18)throw Error("Il faut 18 Pokémon validés.");
@@ -24,7 +37,12 @@ function td6Create(offers,previous,rng=Math.random,game='sv'){
  let trainers,selected,signature;
  for(let attempt=0;attempt<8;attempt++){
   trainers=TD6_RANKS.slice().reverse().map(rank=>td6Shuffle(TD6_TRAINERS_BY_RANK[rank.id],rng)[0]);
-  selected=td6Shuffle([...unique.values()],rng).slice(0,18);
+  selected=[];
+  for(const rank of TD6_RANKS.slice().reverse()){
+   const pool=td6Shuffle([...unique.values()].filter(p=>td6LoreFor(p.id,rank.id).length&&!selected.some(x=>x.id===p.id)),rng);
+   if(pool.length<3)throw Error('Catalogue lore insuffisant pour le rang '+rank.id+' : '+pool.length+'/3 Pokémon documentés. Aucun Pokémon ne sera classé arbitrairement.');
+   selected.push(...pool.slice(0,3).map(p=>({...p,lore:td6LoreFor(p.id,rank.id)[0]})));
+  }
   signature=trainers.join("|")+"#"+selected.map(x=>x.id).join(",");
   if(signature!==previous?.signature)break;
  }
@@ -52,6 +70,6 @@ function td6AddChoice(state,seat,trainerIndex,offerIndex,custom){
  const entry={trainerIndex,offerIndex,price,pokemonId:offer.id,moves:[...moves],nature:custom.nature,tera:custom.tera};
  return {gameId:state.gameId,entries:[...entries,entry]};
 }
-const TrainerDraftCore={TD6_START_BUDGET,TD6_RANK_PRICES,TD6_RANKS,TD6_TRAINERS,TD6_TRAINERS_BY_RANK,TD6_POOL,TD6_NATURES,TD6_TYPES,TD6_ITEMS,td6Shuffle,td6Create,td6AddChoice};
+const TrainerDraftCore={TD6_LORE,td6LoreFor,TD6_START_BUDGET,TD6_RANK_PRICES,TD6_RANKS,TD6_TRAINERS,TD6_TRAINERS_BY_RANK,TD6_POOL,TD6_NATURES,TD6_TYPES,TD6_ITEMS,td6Shuffle,td6Create,td6AddChoice};
 if(typeof module!=='undefined'&&module.exports)module.exports=TrainerDraftCore;
 if(typeof window!=='undefined')window.TrainerDraftCore=TrainerDraftCore;
