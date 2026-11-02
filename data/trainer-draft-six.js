@@ -11,6 +11,11 @@ const active=()=>gameMode.value==='trainerdraft6';
 const labelMove=slug=>moveNames.get(slug)||String(slug).replace(/-/g,' ');
 const labelType=slug=>typeof TYPE_FR!=='undefined'&&TYPE_FR[slug]||slug;
 const formatEV=ev=>Object.entries(ev||{}).map(([key,val])=>key+': '+val).join(' · ');
+function renderPcPlaceholder(){
+ const grid=$('trainerDraftGrid');if(!grid)return;
+ grid.classList.add('draftPcGrid');
+ grid.innerHTML=Core.TD6_RANKS.slice().reverse().map((rank,i)=>'<section class="draftPcRow"><div class="draftPcRank"><span class="draftPcIcon">'+esc(rank.icon)+'</span><strong>Rang '+(rank.id===6?'6–7':rank.id)+'</strong><small>'+esc(rank.label)+'</small></div><div class="draftPcSlots">'+Array.from({length:3},(_,j)=>'<div class="pcSlot draftPcCell draftPcPlaceholder" aria-label="Case '+(i*3+j+1)+' en attente du tirage"><span class="slotNo">'+(i*3+j+1)+'</span><span class="draftPcLogo" aria-hidden="true">'+esc(rank.icon)+'</span><span class="slotName">'+Core.TD6_RANK_PRICES[rank.id]+' ₽</span></div>').join('')+'</div></section>').join('');
+}
 function render(){
  const panel=$('trainerDraftPanel');if(!panel)return;
  panel.style.display=active()?'block':'none';
@@ -22,7 +27,7 @@ function render(){
  const status=$('trainerDraftStatus'),grid=$('trainerDraftGrid');
  if(!mpSession||!mpLobbyStarted||!mpSeats[1]||!mpSeats[2]){
   status.textContent='Deux joueurs attribués et un challenge réseau démarré sont nécessaires.';
-  grid.innerHTML='';$('trainerDraftEditor').innerHTML='';return;
+  renderPcPlaceholder();$('trainerDraftEditor').innerHTML='';return;
  }
  if(!state||state.version!==1){
   status.textContent='En attente du tirage commun par l’hôte. Jeu actuellement validé : Écarlate/Violet (Pokédex de Paldea).';
