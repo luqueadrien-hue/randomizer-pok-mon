@@ -146,6 +146,8 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 .draftPcLogo{font-size:1.8rem}.draftPcQuestion{font-size:1.25rem;font-weight:900}.draftPcCell small{font-size:.7rem}
 .draftPcCell.is-locked{opacity:.55;cursor:not-allowed}.draftPcCell.is-selected{border:3px solid #f5cb3b}
 @media(max-width:650px){.draftPcRow{grid-template-columns:minmax(78px,1fr) repeat(3,minmax(0,1fr));gap:4px}.draftPcRank{padding:4px;gap:2px;font-size:.68rem}.draftPcRank small{font-size:.6rem}.draftPcCell.pcSlot{min-height:65px;padding:3px}.draftPcLogo{font-size:1.25rem}}
+
+#trainerDraftPanel .trainerPcHeader{max-width:900px;margin:14px auto 0;background:#171020;border-color:#786a91}#trainerDraftPanel #trainerDraftGrid.draftPcGrid{max-width:900px;margin:0 auto 16px;border:4px solid #8f82a9;border-top:0;border-radius:0 0 20px 20px;background:linear-gradient(180deg,#43345c,#241b38);box-shadow:inset 0 0 0 3px #171020,0 7px 20px #0005}#trainerDraftPanel .draftPcCell.pcSlot{border:2px solid #75688d;border-radius:11px;background:linear-gradient(145deg,#c8bed7,#9386a7)}#trainerDraftPanel .draftPcRow:nth-child(1) .draftPcCell{background:linear-gradient(145deg,#ffeb85,#b89022)}#trainerDraftPanel .draftPcRow:nth-child(2) .draftPcCell{background:linear-gradient(145deg,#d5b2ff,#7d50b4)}#trainerDraftPanel .draftPcRow:nth-child(3) .draftPcCell{background:linear-gradient(145deg,#b6f4cc,#358c64)}#trainerDraftPanel .draftPcRow:nth-child(4) .draftPcCell{background:linear-gradient(145deg,#ffe0a1,#bd6a24)}#trainerDraftPanel .draftPcRow:nth-child(5) .draftPcCell{background:linear-gradient(145deg,#ffb4bd,#a73449)}#trainerDraftPanel .draftPcRow:nth-child(6) .draftPcCell{background:linear-gradient(145deg,#b9e8ff,#3277b6)}
 </style>
 <script src="data/trainer-market-expansion.js"></script>
 </head>
@@ -262,11 +264,12 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 
 <div id="trainerDraftPanel" class="panel" style="display:none;margin-top:14px">
 <h2>🧢 Draft des 6 Dresseurs — réseau</h2>
-<p>Les deux joueurs reçoivent les mêmes six dresseurs et les mêmes 18 propositions. Chaque joueur utilise chaque dresseur une seule fois, mais les deux peuvent choisir le même Pokémon. Les quatre capacités, la nature et le type Téracristal sont personnalisables ; talent, objet et EV/IV sont fixés au tirage.</p>
+<p>Les deux joueurs reçoivent les mêmes six dresseurs et les mêmes 18 propositions. La boîte PC contient six lignes de trois cases cachées : rangs 6–7 réunis en haut, dresseurs ordinaires en bas. Chaque joueur choisit une case par rang ; toute case prise est verrouillée pour les deux joueurs. Les quatre capacités, la nature et le type Téracristal sont personnalisables ; talent, objet et EV/IV sont fixés au tirage.</p>
 <div class="controls"><label>Jeu Switch de référence <select id="trainerDraftGame"><option value="sv">Écarlate / Violet (Pokédex de Paldea validé)</option><option value="swsh" disabled>Épée / Bouclier — données à vérifier</option><option value="bdsp" disabled>Diamant Étincelant / Perle Scintillante — données à vérifier</option><option value="pla" disabled>Légendes : Arceus — données à vérifier</option></select></label>
 <button type="button" id="trainerDraftStart" onclick="TrainerDraft6.start().catch(e=>{document.getElementById('trainerDraftStatus').textContent='❌ '+e.message;console.error(e)})">🎲 Tirer 6 dresseurs et 18 Pokémon</button></div>
 <p class="mpstate">Version bêta limitée au Pokédex de base de Paldea. La légalité des capacités est contrôlée selon le groupe de versions « scarlet-violet » de PokéAPI ; les formes régionales, transferts HOME et DLC non audités ne sont pas proposés. Aucun autre jeu n'est activé sans catalogue vérifié. <a href="https://pokeapi.co/" target="_blank" rel="noopener noreferrer">Source des données</a>.</p>
 <div id="trainerDraftStatus" class="turn">En attente d'un salon réseau.</div>
+<div class="pcBoxHeader trainerPcHeader"><span>📦 BOÎTE PC — DRAFT DES 6 DRESSEURS</span><span>6 rangs · 18 cases · 2 joueurs</span></div>
 <div id="trainerDraftGrid"></div><div id="trainerDraftEditor"></div><div id="trainerDraftTeams"></div>
 </div>
 
