@@ -5,12 +5,20 @@ on:
       - 'index.html'
       - 'data/trainer-market-expansion.js'
       - 'tests/trainer-market.test.mjs'
+      - 'tests/portail.test.mjs'
+      - 'portail.html'
+      - 'data/portail.js'
+      - 'data/encyclopedie-index.js'
       - '.github/workflows/trainer-market-tests.yml'
   pull_request:
     paths:
       - 'index.html'
       - 'data/trainer-market-expansion.js'
       - 'tests/trainer-market.test.mjs'
+      - 'tests/portail.test.mjs'
+      - 'portail.html'
+      - 'data/portail.js'
+      - 'data/encyclopedie-index.js'
       - '.github/workflows/trainer-market-tests.yml'
 jobs:
   test-market:
@@ -23,4 +31,4 @@ jobs:
         with:
           node-version: '20'
       - name: Vérifier les rangs, le budget, le stock et le filtre
-        run: node --test tests/trainer-market.test.mjs
+        run: node --test tests/trainer-market.test.mjs tests/portail.test.mjs
