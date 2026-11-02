@@ -38,7 +38,7 @@ function eligibleFn(apiJson){
  );
 }
 function fakeMarket(budget=3000,game='sv',ids=new Set(Array.from({length:1025},(_,i)=>i+1))){
- let market=null,resetCount=0;
+ let market=null,resetCount=0,onNextTransaction=null;
  const alerts=[],controls={
   trainerMarketBudget:{value:String(budget)},trainerMarketGame:{value:game},trainerMarketHome:{checked:true},
   trainerMarketStatus:{textContent:''}
@@ -46,7 +46,7 @@ function fakeMarket(budget=3000,game='sv',ids=new Set(Array.from({length:1025},(
  const document={getElementById:id=>controls[id]};
  const ref={
   once:async()=>({val:()=>market}),
-  transaction:async fn=>{const next=fn(market);if(next===undefined)return {committed:false};market=next;return {committed:true};}
+  transaction:async fn=>{if(onNextTransaction){market=onNextTransaction(market);onNextTransaction=null;}const next=fn(market);if(next===undefined)return {committed:false};market=next;return {committed:true};}
  };
  const room=()=>({
   once:async()=>({val:()=>({ownerUid:'A'})}),
@@ -62,7 +62,7 @@ function fakeMarket(budget=3000,game='sv',ids=new Set(Array.from({length:1025},(
  const makeBuy=(id)=>new Function('mpSession','mpLobbyStarted','gameMode','mpSeats','mpRoom','TRAINER_MARKET_RANKS','MPAUTH','alert','return ('+buySource+')')(
   {id,room:'TEST'},true,{value:'trainerrankgrid'},{1:'A',2:'B'},room,ranks,{currentUser:{uid:id}},x=>alerts.push(x)
  );
- return {start,buy1:makeBuy('A'),buy2:makeBuy('B'),state:()=>market,alerts,resetCount:()=>resetCount};
+ return {start,buy1:makeBuy('A'),buy2:makeBuy('B'),state:()=>market,alerts,resetCount:()=>resetCount,injectConcurrent:fn=>{onNextTransaction=fn}};
 }
 
 test('huit rangs et provenance Kanto–Paldea, source documentée',()=>{
@@ -181,4 +181,13 @@ test('Arcanin de Hisui disponible dans PLA sans autoriser Arcanin normal',async(
  const eligible=eligibleFn(async()=>{throw Error('API simulée indisponible')});
  const result=await eligible('pla',false);
  assert.ok(result.ids.has(59));
+});
+
+test('réinitialisation refusée si le marché change entre lecture et transaction',async()=>{
+ const m=fakeMarket();await m.start();
+ const before=m.state();
+ m.injectConcurrent(state=>({...state,updated:state.updated+1,budget:1500}));
+ await assert.rejects(()=>m.start(),/marché a changé/);
+ assert.equal(m.state().budget,1500);
+ assert.equal(m.state().purchaseCount,before.purchaseCount);
 });
