@@ -1626,7 +1626,7 @@ function verifiedSVEncounter(p){
  return {locations:row.locations.slice(),details:row.locations.map(x=>x+' — Pokémon Écarlate/Violet'),methods:['walk'],verified:true,source:row.source,coverage:'partielle'};
 }
 async function encounterInfo(p){
- const cacheKey=p.id+'|'+generation.value;
+ const cacheKey=(p.formKey||p.apiName||p.id)+'|'+generation.value;
  if(ENCOUNTER_CACHE.has(cacheKey))return ENCOUNTER_CACHE.get(cacheKey);
  const verified=(generation.value==='9'||generation.value==='all')?verifiedSVEncounter(p):null;
  if(generation.value==='9'&&verified){ENCOUNTER_CACHE.set(cacheKey,verified);return verified}
@@ -1634,6 +1634,9 @@ async function encounterInfo(p){
    const arr=await fetch(p.encounterUrl).then(r=>{if(!r.ok)throw Error('Rencontres indisponibles');return r.json()});
    const locations=[],details=[];const methods=new Set();
    for(const e of arr||[]){
+     const selected=String(generation.value||'all');
+     const matching=(e.version_details||[]).filter(vd=>selected==='all'?SWITCH_ENCOUNTER_VERSIONS.has(vd.version?.name):!GEN_VERSION_GROUPS[selected]||GEN_VERSION_GROUPS[selected].some(group=>ENCOUNTER_VERSION_GROUPS[group]?.includes(vd.version?.name)));
+     if(!matching.length)continue;
      let areaName=String(e.location_area?.name||'').replace(/-/g,' ');
      try{
        const ad=await fetch(e.location_area.url).then(r=>r.json());
@@ -1642,10 +1645,7 @@ async function encounterInfo(p){
        const locFr=loc?.names?.find(x=>x.language?.name==='fr')?.name;
        areaName=fr||locFr||areaName;
      }catch(_){}
-     for(const vd of e.version_details||[]){
-       const selected=String(generation.value||'all');
-       if(selected==='all'&&!SWITCH_ENCOUNTER_VERSIONS.has(vd.version?.name))continue;
-       if(selected!=='all'&&GEN_VERSION_GROUPS[selected]&&!GEN_VERSION_GROUPS[selected].some(group=>ENCOUNTER_VERSION_GROUPS[group]?.includes(vd.version?.name)))continue;
+     for(const vd of matching){
        const game=VERSION_FR[vd.version?.name]||String(vd.version?.name||'').replace(/-/g,' ');
        locations.push(areaName);
        details.push(areaName+' — '+game);
