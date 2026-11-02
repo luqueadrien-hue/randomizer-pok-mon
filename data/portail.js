@@ -134,7 +134,7 @@ gameEl.addEventListener('change',()=>{if(detailOpen){const b=$('back');b.click()
 document.querySelectorAll('[data-section]').forEach(a=>a.addEventListener('click',()=>{kindEl.value=a.dataset.section;loadKind()}));
 async function init(){
  species=frRows.filter(x=>!x[2]).map(x=>({id:Number(x[0]),slug:String(x[0]),name:x[1],kind:'pokemon'}));
- try{const d=await api('pokemon-species?limit=1025');const byId=new Map(species.map(x=>[x.id,x]));d.results.forEach(x=>{const id=Number(x.url.split('/').filter(Boolean).pop());if(id>=1&&id<=1025&&!byId.has(id))byId.set(id,{id,slug:x.name,name:label(x.name),kind:'pokemon'})});species=[...byId.values()].sort((a,b)=>a.id-b.id);apply()}
+ try{const d=await api('pokemon-species?limit=1025');const byId=new Map(species.map(x=>[x.id,x]));d.results.forEach(x=>{const id=Number(x.url.split('/').filter(Boolean).pop());if(id>=1&&id<=1025){if(byId.has(id))byId.get(id).slug=x.name;else byId.set(id,{id,slug:x.name,name:label(x.name),kind:'pokemon'})}});species=[...byId.values()].sort((a,b)=>a.id-b.id);apply()}
  catch(e){apply();status('PokéAPI inaccessible : affichage limité à '+species.length+' espèces de l’index local. '+e.message,true)}
 }
 init();
