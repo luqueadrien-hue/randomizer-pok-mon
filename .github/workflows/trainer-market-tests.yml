@@ -5,6 +5,10 @@ on:
       - 'index.html'
       - 'data/trainer-market-expansion.js'
       - 'tests/trainer-market.test.mjs'
+      - 'tests/trainer-draft-six.test.mjs'
+      - 'data/trainer-draft-core.js'
+      - 'data/trainer-draft-six.js'
+      - 'firebase.database.rules.json'
       - 'tests/portail.test.mjs'
       - 'tests/portail-dom.test.mjs'
       - 'portail.html'
@@ -16,6 +20,10 @@ on:
       - 'index.html'
       - 'data/trainer-market-expansion.js'
       - 'tests/trainer-market.test.mjs'
+      - 'tests/trainer-draft-six.test.mjs'
+      - 'data/trainer-draft-core.js'
+      - 'data/trainer-draft-six.js'
+      - 'firebase.database.rules.json'
       - 'tests/portail.test.mjs'
       - 'tests/portail-dom.test.mjs'
       - 'portail.html'
@@ -33,4 +41,4 @@ jobs:
         with:
           node-version: '20'
       - name: Vérifier les rangs, le budget, le stock et le filtre
-        run: node --test tests/trainer-market.test.mjs tests/portail.test.mjs tests/portail-dom.test.mjs
+        run: node --test tests/trainer-market.test.mjs tests/trainer-draft-six.test.mjs tests/portail.test.mjs tests/portail-dom.test.mjs
