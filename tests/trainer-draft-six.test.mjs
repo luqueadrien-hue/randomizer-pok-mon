@@ -82,3 +82,10 @@ test('scripts analysables par Node et aucun dessin-rébus réactivé',()=>{
  assert.match(html,/function phoneticRebus\(p\)/);
  assert.doesNotMatch(html,/REBUS_ILLUSTRATED_FR|rebusIllustration\(/);
 });
+
+test('Firebase peut omettre les tableaux vides sans bloquer le premier choix',()=>{
+ const state=make();
+ delete state.choices[1].entries;
+ const next=C.td6AddChoice(state,1,0,0,custom);
+ assert.equal(next.entries.length,1);
+});
