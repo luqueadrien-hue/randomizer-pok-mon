@@ -11,6 +11,8 @@ const active=()=>gameMode.value==='trainerdraft6';
 const labelMove=slug=>moveNames.get(slug)||String(slug).replace(/-/g,' ');
 const labelType=slug=>typeof TYPE_FR!=='undefined'&&TYPE_FR[slug]||slug;
 const formatEV=ev=>Object.entries(ev||{}).map(([key,val])=>key+': '+val).join(' · ');
+function selectedGame(){const dex=$('generation')?.value;const games={'9':'sv','8':'swsh','4':'bdsp'};if(!games[dex])throw Error('Choisis un Dex compatible dans « Dex / Génération » : Paldea (9), Galar (8) ou Sinnoh (4).');return games[dex];}
+const gameLabel={sv:'Écarlate / Violet',swsh:'Épée / Bouclier',bdsp:'Diamant Étincelant / Perle Scintillante'};
 function renderPcPlaceholder(){
  const grid=$('trainerDraftGrid');if(!grid)return;
  grid.classList.add('draftPcGrid');
@@ -32,12 +34,12 @@ function render(){
  }
  if(solo)state=soloState;
  if(!state||state.version!==1){
-  status.textContent='En attente du tirage commun par l’hôte. Jeu actuellement validé : Écarlate/Violet (Pokédex de Paldea).';
+  status.textContent='Choisis un Dex compatible, puis génère la boîte PC.';
   grid.innerHTML='';$('trainerDraftEditor').innerHTML='';return;
  }
  const mine=state.choices?.[seat]?.entries||[],used=new Set(mine.map(x=>x.trainerIndex));
  const one=state.choices?.[1]?.entries?.length||0,two=state.choices?.[2]?.entries?.length||0;
- status.textContent='Écarlate/Violet · Marché & Draft · 18 cases partagées · Budget : '+(state.budget||Core.TD6_START_BUDGET)+' ₽ par joueur · J1 : '+one+'/6 · J2 : '+two+'/6'+(seat?' · Tes manches : '+mine.length+'/6':'');
+ status.textContent=(gameLabel[state.game]||state.game)+' · Marché & Draft · 18 cases partagées · Budget : '+(state.budget||Core.TD6_START_BUDGET)+' ₽ par joueur · J1 : '+one+'/6 · J2 : '+two+'/6'+(seat?' · Tes manches : '+mine.length+'/6':'');
  const taken=new Map();for(const n of [1,2])for(const e of state.choices?.[n]?.entries||[])taken.set(e.trainerIndex+':'+e.offerIndex,n);
  grid.classList.add('draftPcGrid');
  grid.innerHTML=state.offers.map((group,i)=>{
@@ -99,17 +101,17 @@ async function start(){
   const room=(await mpRoom(mpSession.room).once('value')).val()||{};
   if(room.ownerUid!==mpSession.id)throw Error('Seul l’hôte peut préparer le tirage.');
   if(!room.started||!room.seats?.[1]||!room.seats?.[2]||room.seats[1]===room.seats[2])throw Error('Il faut deux joueurs attribués.');
-  if($('trainerDraftGame').value!=='sv')throw Error('Ce jeu n’a pas encore de catalogue de sets vérifié.');
+  const game=selectedGame();
   $('trainerDraftStatus').textContent='Vérification des Pokémon et capacités Écarlate/Violet…';
-  const eligible=await trainerMarketEligible('sv',false);
-  const ids=Core.td6Shuffle(Core.TD6_POOL.filter(id=>eligible.ids.has(id)));
+  const eligible=await trainerMarketEligible(game,false);
+  const ids=Core.td6Shuffle([...eligible.ids].filter(id=>Number.isInteger(id)&&id>0&&id<=1025));
   const candidates=[];
   for(let offset=0;offset<ids.length&&candidates.length<18;offset+=8){
    const group=await Promise.all(ids.slice(offset,offset+8).map(async id=>{
     try{
      const p=await getP(id);
-     if(!p.sv||p.legendary||!p.abilities?.length)return null;
-     const legalMoves=[...new Set((p.moves||[]).filter(m=>(m.version_group_details||[]).some(d=>d.version_group?.name==='scarlet-violet'&&['level-up','machine','egg','tutor'].includes(d.move_learn_method?.name))).map(m=>m.name))].sort();
+     if(p.legendary||!p.abilities?.length)return null;
+     const legalMoves=[...new Set((p.moves||[]).filter(m=>(m.version_group_details||[]).some(d=>d.version_group?.name===({sv:'scarlet-violet',swsh:'sword-shield',bdsp:'brilliant-diamond-and-shining-pearl'}[game])&&['level-up','machine','egg','tutor'].includes(d.move_learn_method?.name))).map(m=>m.name))].sort();
      if(legalMoves.length<4)return null;
      const ability=p.abilities.find(a=>!a.hidden)||p.abilities[0];
      const physical=(p.stats?.attack||0)>=(p.stats?.['special-attack']||0);
@@ -124,7 +126,7 @@ async function start(){
   const ref=mpRoom(mpSession.room).child('trainerDraft6');
   const prior=(await ref.once('value')).val();
   if(prior&&((prior.choices?.[1]?.entries?.length||0)+(prior.choices?.[2]?.entries?.length||0))>0&&!confirm('Nouvelle partie : effacer les choix actuels des deux joueurs ?'))return;
-  const next=Core.td6Create(candidates,prior);
+  const next=Core.td6Create(candidates,prior,Math.random,game);
   next.gameId=mpId()+Date.now();
   next.choices[1].gameId=next.gameId;next.choices[2].gameId=next.gameId;
   const tx=await ref.transaction(current=>{
@@ -159,6 +161,7 @@ async function choose(){
 function receive(value){if(solo)return;state=value||null;if(editing&&editing.gameId!==state?.gameId)editing=null;render()}
 async function trySolo(){
  if(busy)return;
+ const game=selectedGame();
  busy=true;solo=true;soloState=null;editing=null;render();
  try{
   const eligible=await trainerMarketEligible('sv',false);
@@ -166,8 +169,8 @@ async function trySolo(){
   const candidates=[];
   for(let offset=0;offset<ids.length&&candidates.length<18;offset+=8){
    const batch=await Promise.all(ids.slice(offset,offset+8).map(async id=>{
-    try{const p=await getP(id);if(!p.sv||p.legendary||!p.abilities?.length)return null;
-     const legalMoves=[...new Set((p.moves||[]).filter(m=>(m.version_group_details||[]).some(d=>d.version_group?.name==='scarlet-violet'&&['level-up','machine','egg','tutor'].includes(d.move_learn_method?.name))).map(m=>m.name))].sort();
+    try{const p=await getP(id);if(p.legendary||!p.abilities?.length)return null;
+     const legalMoves=[...new Set((p.moves||[]).filter(m=>(m.version_group_details||[]).some(d=>d.version_group?.name===({sv:'scarlet-violet',swsh:'sword-shield',bdsp:'brilliant-diamond-and-shining-pearl'}[game])&&['level-up','machine','egg','tutor'].includes(d.move_learn_method?.name))).map(m=>m.name))].sort();
      if(legalMoves.length<4)return null;
      const ability=p.abilities.find(a=>!a.hidden)||p.abilities[0];
      const physical=(p.stats?.attack||0)>=(p.stats?.['special-attack']||0);
@@ -178,7 +181,7 @@ async function trySolo(){
    }));candidates.push(...batch.filter(Boolean));
   }
   if(candidates.length<18)throw Error('Catalogue insuffisant pour constituer 18 propositions.');
-  soloState=Core.td6Create(candidates,null);soloState.gameId='solo-'+Date.now();soloState.choices[1].gameId=soloState.gameId;soloState.choices[2].gameId=soloState.gameId;
+  soloState=Core.td6Create(candidates,null,Math.random,game);soloState.gameId='solo-'+Date.now();soloState.choices[1].gameId=soloState.gameId;soloState.choices[2].gameId=soloState.gameId;
   state=soloState;
  }catch(e){soloState=null;$('trainerDraftStatus').textContent='❌ Essai solo : '+e.message;throw e}
  finally{busy=false;render()}
