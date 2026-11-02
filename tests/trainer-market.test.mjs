@@ -67,8 +67,8 @@ function fakeMarket(budget=3000,game='sv',ids=new Set(Array.from({length:1025},(
 
 test('huit rangs et provenance Kanto–Paldea, source documentée',()=>{
  assert.deepEqual(ranks.map(x=>x[1]),[200,350,500,650,700,800,1000,1300]);
- assert.equal(extra.length,354);
- assert.equal(allSeed.length,604);
+ assert.equal(extra.length,359);
+ assert.equal(allSeed.length,609);
  assert.ok(Array.from({length:8},(_,i)=>i+1).every(rank=>allSeed.some(x=>x[0]===rank)));
  assert.ok(allSeed.every(x=>sources[x[4]||'SV']));
  assert.ok(allSeed.every(x=>x[1]>=1&&x[1]<=1025&&x[2]&&x[3]));
@@ -79,7 +79,7 @@ test('création : clés Firebase uniques, huit rangs, sources, formes',async()=>
  const m=fakeMarket();
  await m.start();
  const catalog=m.state().catalog;
- assert.equal(catalog.length,602);
+ assert.equal(catalog.length,607);
  assert.equal(new Set(catalog.map(x=>x.key)).size,catalog.length);
  assert.ok(catalog.every(x=>!/[.#$\[\]/]/.test(x.key)));
  assert.ok(catalog.every(x=>x.sourceUrl&&x.sourceGeneration>=1&&x.sourceGeneration<=9));
@@ -190,4 +190,13 @@ test('réinitialisation refusée si le marché change entre lecture et transacti
  await assert.rejects(()=>m.start(),/marché a changé/);
  assert.equal(m.state().budget,1500);
  assert.equal(m.state().purchaseCount,before.purchaseCount);
+});
+
+test('Menzi et Goyah : équipes historiques complétées et formes conservées',()=>{
+ assert.ok(allSeed.some(x=>x[0]===4&&x[1]===968&&x[3].startsWith('Menzi')));
+ assert.ok(allSeed.some(x=>x[0]===4&&x[1]===982&&x[5]==='dudunsparce-three-segment'));
+ assert.ok(allSeed.some(x=>x[0]===4&&x[1]===745&&x[5]==='lycanroc-midday'));
+ assert.ok(!allSeed.some(x=>x[0]===4&&x[1]===925&&x[3]==='Menzi'));
+ assert.ok(allSeed.some(x=>x[0]===8&&x[1]===617&&x[3].startsWith('Goyah')));
+ assert.ok([908,911,914].every(id=>allSeed.some(x=>x[0]===4&&x[1]===id&&x[3].startsWith('Menzi'))));
 });
