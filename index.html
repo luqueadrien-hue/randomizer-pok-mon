@@ -148,6 +148,18 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 @media(max-width:650px){.draftPcRow{grid-template-columns:minmax(78px,1fr) repeat(3,minmax(0,1fr));gap:4px}.draftPcRank{padding:4px;gap:2px;font-size:.68rem}.draftPcRank small{font-size:.6rem}.draftPcCell.pcSlot{min-height:65px;padding:3px}.draftPcLogo{font-size:1.25rem}}
 
 #trainerDraftPanel .trainerPcHeader{max-width:900px;margin:14px auto 0;background:#171020;border-color:#786a91}#trainerDraftPanel #trainerDraftGrid.draftPcGrid{max-width:900px;margin:0 auto 16px;border:4px solid #8f82a9;border-top:0;border-radius:0 0 20px 20px;background:linear-gradient(180deg,#43345c,#241b38);box-shadow:inset 0 0 0 3px #171020,0 7px 20px #0005}#trainerDraftPanel .draftPcCell.pcSlot{border:2px solid #75688d;border-radius:11px;background:linear-gradient(145deg,#c8bed7,#9386a7)}#trainerDraftPanel .draftPcRow:nth-child(1) .draftPcCell{background:linear-gradient(145deg,#ffeb85,#b89022)}#trainerDraftPanel .draftPcRow:nth-child(2) .draftPcCell{background:linear-gradient(145deg,#d5b2ff,#7d50b4)}#trainerDraftPanel .draftPcRow:nth-child(3) .draftPcCell{background:linear-gradient(145deg,#b6f4cc,#358c64)}#trainerDraftPanel .draftPcRow:nth-child(4) .draftPcCell{background:linear-gradient(145deg,#ffe0a1,#bd6a24)}#trainerDraftPanel .draftPcRow:nth-child(5) .draftPcCell{background:linear-gradient(145deg,#ffb4bd,#a73449)}#trainerDraftPanel .draftPcRow:nth-child(6) .draftPcCell{background:linear-gradient(145deg,#b9e8ff,#3277b6)}
+
+/* Draft : même présentation que les emplacements de la boîte PC commune. */
+#trainerDraftPanel .draftPcRow{display:block;padding:6px 3px;border-radius:10px;background:#372b4b}
+#trainerDraftPanel .draftPcRank{display:flex;align-items:center;flex-wrap:nowrap;padding:4px 8px;margin-bottom:5px;border-radius:7px;background:#1b1428;font-size:.86rem}
+#trainerDraftPanel .draftPcRank small{flex-basis:auto;margin-left:auto;text-align:right}
+#trainerDraftPanel .draftPcSlots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#trainerDraftPanel .draftPcCell.pcSlot{aspect-ratio:1.15/1;min-height:100px;position:relative;padding:4px;justify-content:center;overflow:hidden;box-shadow:inset 0 0 0 1px #e7dff5}
+#trainerDraftPanel .draftPcCell .slotNo{position:absolute;top:4px;left:4px;font-size:11px;background:#eee8f5c9;border-radius:6px;color:#241b38;padding:1px 4px;font-weight:900}
+#trainerDraftPanel .draftPcCell .slotName{position:absolute;bottom:2px;left:2px;right:2px;background:#33283e;color:#fff;border-radius:5px;font-size:11px;text-align:center;font-weight:800}
+#trainerDraftPanel .draftPcCell .draftPcLogo{font-size:2.6rem;line-height:1}
+#trainerDraftPanel .draftPcCell.is-locked{opacity:.55;filter:grayscale(.6)}
+@media(max-width:650px){#trainerDraftPanel .draftPcRank{font-size:.7rem;gap:5px}#trainerDraftPanel .draftPcRank small{font-size:.6rem}#trainerDraftPanel .draftPcCell.pcSlot{min-height:70px}#trainerDraftPanel .draftPcCell .draftPcLogo{font-size:1.9rem}}
 </style>
 <script src="data/trainer-market-expansion.js"></script>
 </head>
