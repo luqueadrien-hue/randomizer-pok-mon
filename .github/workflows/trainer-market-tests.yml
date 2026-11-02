@@ -6,6 +6,7 @@ on:
       - 'data/trainer-market-expansion.js'
       - 'tests/trainer-market.test.mjs'
       - 'tests/portail.test.mjs'
+      - 'tests/portail-dom.test.mjs'
       - 'portail.html'
       - 'data/portail.js'
       - 'data/encyclopedie-index.js'
@@ -16,6 +17,7 @@ on:
       - 'data/trainer-market-expansion.js'
       - 'tests/trainer-market.test.mjs'
       - 'tests/portail.test.mjs'
+      - 'tests/portail-dom.test.mjs'
       - 'portail.html'
       - 'data/portail.js'
       - 'data/encyclopedie-index.js'
@@ -31,4 +33,4 @@ jobs:
         with:
           node-version: '20'
       - name: Vérifier les rangs, le budget, le stock et le filtre
-        run: node --test tests/trainer-market.test.mjs tests/portail.test.mjs
+        run: node --test tests/trainer-market.test.mjs tests/portail.test.mjs tests/portail-dom.test.mjs
