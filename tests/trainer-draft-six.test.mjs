@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
+import { Script } from 'node:vm';
 const require=createRequire(import.meta.url);
 const C=require('../data/trainer-draft-core.js');
 const offer=id=>({id,name:'Pokémon '+id,legalMoves:['tackle','growl','protect','rest','quick-attack'],initialMoves:['tackle','growl','protect','rest'],nature:'Hardi',tera:'normal'});
@@ -70,4 +71,14 @@ test('le mode est branché au DOM, à la synchronisation et aux règles Firebase
  assert.match(ui,/trainerMarketEligible\('sv',false\)/);
  assert.ok(rules.rules.rooms['$room'].trainerDraft6.choices['$seat']['.write']);
  assert.ok(rules.rules.rooms['$room'].trainerMarket['.write']);
+});
+
+test('scripts analysables par Node et aucun dessin-rébus réactivé',()=>{
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ const js=readFileSync(new URL('../data/trainer-draft-six.js',import.meta.url),'utf8');
+ new Script(js,{filename:'trainer-draft-six.js'});
+ const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(Boolean);
+ for(const [i,source] of scripts.entries())new Script(source,{filename:'index-inline-'+i+'.js'});
+ assert.match(html,/function phoneticRebus\(p\)/);
+ assert.doesNotMatch(html,/REBUS_ILLUSTRATED_FR|rebusIllustration\(/);
 });
