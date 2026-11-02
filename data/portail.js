@@ -44,12 +44,30 @@ function apply(){
  filtered=list.filter(p=>!q||normalize(p.name).includes(q)||normalize(p.slug).includes(q)||String(p.id||'').includes(q));
  shown=36;detailOpen=false;$('detail').classList.add('hide');$('back').classList.add('hide');$('cards').classList.remove('hide');render();
 }
+async function loadFormThumbs(list){
+ const grid=$('cards');
+ if(typeof grid.querySelectorAll!=='function')return;
+ const visible=list.filter(p=>p.form);
+ for(const p of visible){
+  try{
+   const d=await api('pokemon/'+encodeURIComponent(p.slug));
+   const url=d.sprites?.other?.['official-artwork']?.front_default||d.sprites?.front_default;
+   if(!url)continue;
+   const button=[...grid.querySelectorAll('button[data-slug]')].find(x=>x.dataset.slug===p.slug);
+   const placeholder=button?.querySelector('.placeholder');
+   if(!placeholder)continue;
+   const img=document.createElement('img');img.loading='lazy';img.alt='';img.src=url;
+   placeholder.replaceWith(img);
+  }catch{/* Laisser l'indicateur de forme si le sprite est indisponible. */}
+ }
+}
 function render(){
  const list=filtered.slice(0,shown);
  $('cards').innerHTML=list.map(p=>'<button class="poke-card" type="button" data-slug="'+escapeHTML(p.slug)+'" data-kind="'+escapeHTML(p.kind)+'" aria-label="Ouvrir la fiche de '+escapeHTML(p.name)+'">'+thumb(p)+'<small>'+(p.id?'N° '+String(p.id).padStart(4,'0'):'')+(p.form?' · Forme':'')+'</small><strong>'+escapeHTML(p.name)+'</strong></button>').join('');
  $('more').classList.toggle('hide',filtered.length<=shown);
  status(filtered.length+' résultat(s) · '+list.length+' affiché(s).');
  populateSuggestions(filtered);
+ loadFormThumbs(list);
 }
 function showDetail(html){$('detail').innerHTML=html;$('detail').classList.remove('hide');$('cards').classList.add('hide');$('more').classList.add('hide');$('back').classList.remove('hide');detailOpen=true;$('detail').scrollIntoView({behavior:'smooth',block:'start'});}
 function detailHeading(name,sub,img){return '<div class="detail-head">'+(img?'<img alt="'+escapeHTML(name)+'" src="'+escapeHTML(img)+'" onerror="this.style.display=\'none\'">':'')+'<div><h2>'+escapeHTML(name)+'</h2><p class="muted">'+escapeHTML(sub)+'</p></div></div>'}
