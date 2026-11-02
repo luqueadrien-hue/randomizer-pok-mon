@@ -123,6 +123,18 @@ img,video,canvas,svg{max-width:100%}
 </head>
 <body>
 <div class="wrap">
+<section id="accueilPokemon" class="panel" aria-label="Accueil Centre Pokémon" style="margin-bottom:18px;background:#152c47;border:1px solid #607c9d">
+<h2 style="margin:0 0 8px;text-align:center">🏠 Centre Pokémon — Accueil</h2>
+<p style="text-align:center;color:#d7e4f4">Choisis une rubrique. Le Randomizer en réseau reste disponible juste en dessous.</p>
+<nav aria-label="Rubriques du site" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:9px">
+<a href="#multiplayerPanel" style="display:block;background:#244669;border-radius:12px;padding:13px;color:#fff;text-decoration:none;font-weight:700">🎲 Randomizer<br><small>Salons et défis réseau</small></a>
+<a href="portail.html#encyclopedie" style="display:block;background:#244669;border-radius:12px;padding:13px;color:#fff;text-decoration:none;font-weight:700">📖 Pokédex<br><small>Images et fiches</small></a>
+<a href="portail.html#encyclopedie" style="display:block;background:#244669;border-radius:12px;padding:13px;color:#fff;text-decoration:none;font-weight:700">🎒 Objets et talents<br><small>Grilles et recherche</small></a>
+<a href="portail.html#guides" style="display:block;background:#244669;border-radius:12px;padding:13px;color:#fff;text-decoration:none;font-weight:700">🎓 Guides<br><small>Jeux et générations</small></a>
+<a href="portail.html#reproduction" style="display:block;background:#244669;border-radius:12px;padding:13px;color:#fff;text-decoration:none;font-weight:700">🥚 Reproduction<br><small>IV, EV et œufs</small></a>
+<a href="portail.html#outils" style="display:block;background:#244669;border-radius:12px;padding:13px;color:#fff;text-decoration:none;font-weight:700">⚔️ Stratégie<br><small>Types, dégâts, capacités</small></a>
+</nav>
+</section>
 <h1>🎲 Pokémon Randomizer Multi-Jeux</h1>
 <div class="sub">Œufs, stats, espèce, taille, poids, apprendre ou laisser, silhouette et plus.</div>
 <div class="mainTabs primarySiteTabs" role="tablist" aria-label="Espaces du site"><button id="tabRandomizerBtn" type="button" onclick="switchMainTab('randomizer')" role="tab" aria-selected="true">🎲 Randomizer</button></div>
@@ -3862,6 +3874,17 @@ async function trainerMarketBuy(key){
  if(!tx.committed)alert('Achat refusé : déjà vendu, budget insuffisant ou équipe complète.');
 }
 
+</script>
+<script>
+/* Navigation depuis le portail : ne modifie ni les salons ni les règles de jeu. */
+window.addEventListener('DOMContentLoaded',function(){
+  const tab=new URLSearchParams(location.search).get('outil');
+  const allowed=['randomizer','strategy','damage','types','nature','abilities','moves','rules','training','mechanics'];
+  if(!allowed.includes(tab))return;
+  if(typeof switchMainTab==='function')switchMainTab(tab);
+  if(tab==='abilities'&&typeof loadAbilityDex==='function')loadAbilityDex();
+  if(tab==='moves'&&typeof loadMoveDex==='function')loadMoveDex();
+});
 </script>
 </body>
 </html>
