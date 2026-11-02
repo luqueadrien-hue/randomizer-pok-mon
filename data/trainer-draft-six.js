@@ -2,11 +2,11 @@
 (function(){
 'use strict';
 const Core=window.TrainerDraftCore;
-let state=null,editing=null,busy=false;
+let state=null,editing=null,busy=false,solo=false,soloState=null;
 const moveNames=new Map();
 const $=id=>document.getElementById(id);
 const esc=value=>String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const currentSeat=()=>!mpSession?0:mpSession.id===mpSeats[1]?1:mpSession.id===mpSeats[2]?2:0;
+const currentSeat=()=>solo?1:!mpSession?0:mpSession.id===mpSeats[1]?1:mpSession.id===mpSeats[2]?2:0;
 const active=()=>gameMode.value==='trainerdraft6';
 const labelMove=slug=>moveNames.get(slug)||String(slug).replace(/-/g,' ');
 const labelType=slug=>typeof TYPE_FR!=='undefined'&&TYPE_FR[slug]||slug;
@@ -22,13 +22,15 @@ function render(){
  if(!active())return;
  $('roll').disabled=true;
  const seat=currentSeat(),host=!!mpSession&&mpSession.role==='host';
+ const soloButton=$('trainerDraftSolo');if(soloButton){soloButton.style.display='';soloButton.disabled=busy;soloButton.textContent=solo?'↻ Recommencer l’essai solo':'🧪 Essayer en solo';}
  const start=$('trainerDraftStart');
- start.style.display=host?'':'none';start.disabled=busy||!mpLobbyStarted||!seat;
+ start.style.display=host&&!solo?'':'none';start.disabled=busy||!mpLobbyStarted||!seat;
  const status=$('trainerDraftStatus'),grid=$('trainerDraftGrid');
- if(!mpSession||!mpLobbyStarted||!mpSeats[1]||!mpSeats[2]){
+ if(!solo&&(!mpSession||!mpLobbyStarted||!mpSeats[1]||!mpSeats[2])){
   status.textContent='Deux joueurs attribués et un challenge réseau démarré sont nécessaires.';
   renderPcPlaceholder();$('trainerDraftEditor').innerHTML='';return;
  }
+ if(solo)state=soloState;
  if(!state||state.version!==1){
   status.textContent='En attente du tirage commun par l’hôte. Jeu actuellement validé : Écarlate/Violet (Pokédex de Paldea).';
   grid.innerHTML='';$('trainerDraftEditor').innerHTML='';return;
@@ -135,12 +137,13 @@ async function start(){
 }
 async function choose(){
  if(busy||!editing||!state||!active())return;
- const seat=currentSeat();if(!seat||!mpLobbyStarted)throw Error('Tu ne fais pas partie des joueurs de cette table.');
- if(!MPAUTH?.currentUser||MPAUTH.currentUser.uid!==mpSession?.id)throw Error('Session Firebase expirée.');
+ const seat=currentSeat();if(!seat||(!solo&&!mpLobbyStarted))throw Error('Tu ne fais pas partie des joueurs de cette table.');
+ if(!solo&&(!MPAUTH?.currentUser||MPAUTH.currentUser.uid!==mpSession?.id))throw Error('Session Firebase expirée.');
  const draft=state,form={moves:[...editing.moves],nature:editing.nature,tera:editing.tera};
  Core.td6AddChoice(draft,seat,editing.trainerIndex,editing.offerIndex,form);
  busy=true;renderEditor();
  try{
+  if(solo){soloState.choices[seat]=Core.td6AddChoice(soloState,seat,editing.trainerIndex,editing.offerIndex,form);state=soloState;editing=null;render();return;}
   const ref=mpRoom(mpSession.room).child('trainerDraft6');
   const tx=await ref.transaction(current=>{
    try{
@@ -153,6 +156,32 @@ async function choose(){
   state=tx.snapshot.val();editing=null;render();
  }finally{busy=false;renderEditor()}
 }
-function receive(value){state=value||null;if(editing&&editing.gameId!==state?.gameId)editing=null;render()}
-window.TrainerDraft6={start,receive,render};
+function receive(value){if(solo)return;state=value||null;if(editing&&editing.gameId!==state?.gameId)editing=null;render()}
+async function trySolo(){
+ if(busy)return;
+ busy=true;solo=true;soloState=null;editing=null;render();
+ try{
+  const eligible=await trainerMarketEligible('sv',false);
+  const ids=Core.td6Shuffle(Core.TD6_POOL.filter(id=>eligible.ids.has(id)));
+  const candidates=[];
+  for(let offset=0;offset<ids.length&&candidates.length<18;offset+=8){
+   const batch=await Promise.all(ids.slice(offset,offset+8).map(async id=>{
+    try{const p=await getP(id);if(!p.sv||p.legendary||!p.abilities?.length)return null;
+     const legalMoves=[...new Set((p.moves||[]).filter(m=>(m.version_group_details||[]).some(d=>d.version_group?.name==='scarlet-violet'&&['level-up','machine','egg','tutor'].includes(d.move_learn_method?.name))).map(m=>m.name))].sort();
+     if(legalMoves.length<4)return null;
+     const ability=p.abilities.find(a=>!a.hidden)||p.abilities[0];
+     const physical=(p.stats?.attack||0)>=(p.stats?.['special-attack']||0);
+     const ev={hp:252,speed:4};ev[physical?'attack':'special-attack']=252;
+     const item=Core.TD6_ITEMS[Math.floor(Math.random()*Core.TD6_ITEMS.length)];
+     return {id,name:p.name,img:p.img||'',ability:ability.name,item:item[0],itemName:item[1],ev,iv:{hp:31,attack:31,defense:31,'special-attack':31,'special-defense':31,speed:31},legalMoves,initialMoves:Core.td6Shuffle(legalMoves).slice(0,4),nature:physical?'Rigide':'Modeste',tera:p.types[0]||'normal'};
+    }catch(e){return null}
+   }));candidates.push(...batch.filter(Boolean));
+  }
+  if(candidates.length<18)throw Error('Catalogue insuffisant pour constituer 18 propositions.');
+  soloState=Core.td6Create(candidates,null);soloState.gameId='solo-'+Date.now();soloState.choices[1].gameId=soloState.gameId;soloState.choices[2].gameId=soloState.gameId;
+  state=soloState;
+ }catch(e){soloState=null;$('trainerDraftStatus').textContent='❌ Essai solo : '+e.message;throw e}
+ finally{busy=false;render()}
+}
+window.TrainerDraft6={start,receive,render,trySolo};
 })();
