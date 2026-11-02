@@ -1737,10 +1737,8 @@ async function zoneMusicFor(p,e){
  const game=row?.game||'Pokémon';
  const qs=[];
  if(zone)qs.push('Pokemon '+game+' '+zone+' theme','Pokemon '+zone+' theme','Pokemon '+zone+' soundtrack');
- qs.push('Pokemon '+game+' route theme',...(MUSIC_FALLBACK_BY_GEN[latest]||[]),'Pokemon game soundtrack');
  let audio=await musicPreview(qs);
- // Dernier filet de sécurité : un thème Pokémon générique doit toujours être tenté.
- if(!audio)audio=await musicPreview(['Pokemon soundtrack','Pokemon game music','Pokemon theme']);
+ // Ne pas substituer de thème générique lorsque la zone est inconnue.
  return {audio,zone:zone||'Zone non renseignée',game,gen:latest};
 }
 async function shinyPalette(p,count=5){
@@ -1757,7 +1755,28 @@ async function shinyPalette(p,count=5){
 function shinyPaletteHtml(cols){return '<div style="display:flex;justify-content:center;gap:8px;margin:10px 0">'+cols.map(c=>'<span title="'+c+'" style="width:38px;height:38px;border-radius:50%;display:inline-block;background:'+c+';border:2px solid rgba(255,255,255,.75);box-shadow:0 1px 5px #0008"></span>').join('')+'</div>'}
 const FIRST_CONSOLE_BY_GEN={'generation-i':'Game Boy','generation-ii':'Game Boy Color','generation-iii':'Game Boy Advance','generation-iv':'Nintendo DS','generation-v':'Nintendo DS','generation-vi':'Nintendo 3DS','generation-vii':'Nintendo 3DS','generation-viii':'Nintendo Switch','generation-ix':'Nintendo Switch'};
 function firstLastLetterClue(p){const n=(p.name||'').trim();return n?'Première lettre : '+n[0].toUpperCase()+' • Dernière lettre : '+n[n.length-1].toUpperCase():'Lettres inconnues'}
-async function japaneseNameClue(p){try{const d=await fetch('https://pokeapi.co/api/v2/pokemon-species/'+p.id).then(r=>r.json());return 'Nom japonais : '+(d.names.find(x=>x.language?.name==='ja-Hrkt')?.name||d.names.find(x=>x.language?.name==='ja')?.name||'Inconnu')}catch(e){return 'Nom japonais indisponible'}}
+const KANA_HEPBURN={};
+const KANA_ROWS=[
+['あいうえお','a i u e o'],['かきくけこ','ka ki ku ke ko'],['さしすせそ','sa shi su se so'],['たちつてと','ta chi tsu te to'],['なにぬねの','na ni nu ne no'],['はひふへほ','ha hi fu he ho'],['まみむめも','ma mi mu me mo'],['やゆよ','ya yu yo'],['らりるれろ','ra ri ru re ro'],['わをん','wa o n'],['がぎぐげご','ga gi gu ge go'],['ざじずぜぞ','za ji zu ze zo'],['だぢづでど','da ji zu de do'],['ばびぶべぼ','ba bi bu be bo'],['ぱぴぷぺぽ','pa pi pu pe po'],['ぁぃぅぇぉ','a i u e o']];
+for(const [chars,values] of KANA_ROWS){const words=values.split(' ');[...chars].forEach((c,i)=>KANA_HEPBURN[c]=words[i])}
+const KANA_PAIRS=[['き','ky'],['し','sh'],['ち','ch'],['に','ny'],['ひ','hy'],['み','my'],['り','ry'],['ぎ','gy'],['じ','j'],['び','by'],['ぴ','py']];
+for(const [c,prefix] of KANA_PAIRS){for(const [small,suffix] of [['ゃ','a'],['ゅ','u'],['ょ','o']])KANA_HEPBURN[c+small]=prefix+suffix}
+Object.assign(KANA_HEPBURN,{'ゔ':'vu','ふぁ':'fa','ふぃ':'fi','ふぇ':'fe','ふぉ':'fo','てぃ':'ti','でぃ':'di','とぅ':'tu','どぅ':'du','しぇ':'she','ちぇ':'che','じぇ':'je','うぃ':'wi','うぇ':'we','うぉ':'wo','つぁ':'tsa','つぃ':'tsi','つぇ':'tse','つぉ':'tso'});
+function kanaToRomaji(input){
+ const kana=String(input||'').normalize('NFKC').replace(/[\u30a1-\u30f6]/g,c=>String.fromCharCode(c.charCodeAt(0)-96));
+ let out='';
+ for(let i=0;i<kana.length;i++){
+  const ch=kana[i];
+  if(ch==='っ'){const next=KANA_HEPBURN[kana.slice(i+1,i+3)]||KANA_HEPBURN[kana[i+1]]||'';out+=(next.startsWith('ch')?'t':next[0]||'');continue}
+  if(ch==='ー'){out=out.replace(/[aiueo]$/i,c=>({a:'ā',i:'ī',u:'ū',e:'ē',o:'ō'})[c.toLowerCase()]||c);continue}
+  const pair=KANA_HEPBURN[kana.slice(i,i+2)],syllable=pair||KANA_HEPBURN[ch];
+  if(syllable){out+=syllable;if(pair)i++;continue}
+  out+=ch==='・'||ch==='　'?' ':ch;
+ }
+ out=out.replace(/uu/g,'ū').replace(/ou/g,'ō').replace(/oo/g,'ō').replace(/n(?=[bmp])/g,'m').replace(/\s+/g,' ').trim();
+ return out?out[0].toUpperCase()+out.slice(1):'Inconnu';
+}
+async function japaneseNameClue(p){try{const d=await fetch('https://pokeapi.co/api/v2/pokemon-species/'+p.id).then(r=>r.json());const original=d.names.find(x=>x.language?.name==='ja-Hrkt')?.name||d.names.find(x=>x.language?.name==='ja')?.name;return original?'Nom japonais (rōmaji) : '+kanaToRomaji(original):'Nom japonais indisponible'}catch(e){return 'Nom japonais indisponible'}}
 const FIRST_CONSOLE_COMPAT={
  'generation-i':'Game Boy • Game Boy Pocket • Game Boy Color • Game Boy Advance • Game Boy Advance SP',
  'generation-ii':'Game Boy Color • Game Boy Advance • Game Boy Advance SP',
@@ -2317,8 +2336,8 @@ async function rollCards(){
    if(gameMode.value==='zonemusic'){
      const e=await encounterInfo(p),m=await zoneMusicFor(p,e),a=m.audio;
      if(!a){c='🎵 Aucun extrait audio disponible pour ce tirage';p._musicAnswer='Aucun extrait disponible • '+m.zone+' • '+m.game+' • '+GEN_LABEL[m.gen];}else{
-     c=`🎵 <audio controls class="pokemonZoneAudio" aria-label="Extrait musical du Pokémon ${i+1}" preload="none" src="${a.url}"></audio>`;
-     p._musicAnswer='Source : '+m.zone+' • '+m.game+' • '+GEN_LABEL[m.gen]+(a.title?' • '+a.title:'');}
+     c=`🎵 Extrait de zone (association non vérifiée) <audio controls class="pokemonZoneAudio" aria-label="Extrait musical du Pokémon ${i+1}" preload="none" src="${a.url}"></audio>`;
+     p._musicAnswer='Extrait proposé (correspondance exacte non vérifiée) • '+m.zone+' • '+m.game+' • '+GEN_LABEL[m.gen]+(a.title?' • '+a.title:'');}
    }
    if(gameMode.value==='shinypalette'){
      const pal=await shinyPalette(p,5);
