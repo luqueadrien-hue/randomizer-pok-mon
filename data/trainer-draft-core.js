@@ -18,7 +18,7 @@ const TD6_NATURES=["Hardi","Solo","Brave","Rigide","Mauvais","Assuré","Docile",
 const TD6_TYPES=["normal","fire","water","electric","grass","ice","fighting","poison","ground","flying","psychic","bug","rock","ghost","dragon","dark","steel","fairy"];
 const TD6_ITEMS=[["leftovers","Restes"],["sitrus-berry","Baie Sitrus"],["shell-bell","Grelot Coque"],["expert-belt","Ceinture Pro"]];
 function td6Shuffle(input,rng=Math.random){const a=[...input];for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-function td6Create(offers,previous,rng=Math.random){
+function td6Create(offers,previous,rng=Math.random,game='sv'){
  if(!Array.isArray(offers)||offers.length<18)throw Error("Il faut 18 Pokémon validés.");
  const unique=new Map(offers.map(x=>[x.id,x]));if(unique.size<18)throw Error("Il faut 18 espèces distinctes.");
  let trainers,selected,signature;
@@ -28,10 +28,10 @@ function td6Create(offers,previous,rng=Math.random){
   signature=trainers.join("|")+"#"+selected.map(x=>x.id).join(",");
   if(signature!==previous?.signature)break;
  }
- return {version:1,game:"sv",gameId:"",budget:TD6_START_BUDGET,signature,trainers,offers:trainers.map((trainer,i)=>({trainer,rank:TD6_RANKS[5-i],pokemon:selected.slice(i*3,i*3+3)})),choices:{"1":{gameId:"",entries:[]},"2":{gameId:"",entries:[]}},created:Date.now()};
+ return {version:1,game,gameId:"",budget:TD6_START_BUDGET,signature,trainers,offers:trainers.map((trainer,i)=>({trainer,rank:TD6_RANKS[5-i],pokemon:selected.slice(i*3,i*3+3)})),choices:{"1":{gameId:"",entries:[]},"2":{gameId:"",entries:[]}},created:Date.now()};
 }
 function td6AddChoice(state,seat,trainerIndex,offerIndex,custom){
- if(!state||state.version!==1||state.game!=="sv"||![1,2].includes(Number(seat)))throw Error("Partie invalide.");
+ if(!state||state.version!==1||!["sv","swsh","bdsp"].includes(state.game)||![1,2].includes(Number(seat)))throw Error("Partie invalide.");
  const current=state.choices?.[seat]||state.choices?.[String(seat)];
  if(!current||current.gameId!==state.gameId||(current.entries!=null&&!Array.isArray(current.entries)))throw Error("Partie modifiée : recharge les choix.");
  const entries=Array.isArray(current.entries)?current.entries:[];
