@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Portail Pokémon en français : Randomizer en réseau, Pokédex visuel, objets, talents, capacités, reproduction et stratégie.">
+<title>Centre Pokémon — Accueil et Encyclopédie</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1830;--panel:#14243f;--line:#385070;--ink:#f7faff;--muted:#c0cde0;--gold:#ffce5c}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#173a5a,var(--bg) 60%);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}a{color:#ffe098}button,input,select{font:inherit}button,a,input,select{touch-action:manipulation}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+main,header,footer{max-width:1220px;margin:auto;padding:20px}header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}h1{font-size:clamp(26px,4vw,44px);margin:0}h2{margin:0 0 10px}p{margin:7px 0 15px}.muted,small{color:var(--muted)}.brand{font-weight:900;letter-spacing:.03em}.topnav{display:flex;gap:10px;flex-wrap:wrap}.topnav a,.btn{display:inline-block;background:#244367;color:#fff;border:1px solid #6983a5;border-radius:12px;padding:9px 14px;text-decoration:none;font-weight:700}.btn:hover,.topnav a:hover{background:#345981}
+.panel{background:rgba(20,36,63,.94);border:1px solid var(--line);border-radius:20px;padding:18px;margin:16px 0}.hero{padding:28px}.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.tile{border:1px solid #4d688d;border-radius:15px;background:#1c3555;padding:16px;text-align:left;color:#fff;min-height:120px}.tile strong{display:block;font-size:19px}.tile span{font-size:13px;color:#d2ddec}.tile:hover{background:#2b4c73}.tile .ico{font-size:30px;display:block;margin-bottom:8px}
+.controls{display:grid;grid-template-columns:minmax(220px,2fr) repeat(3,minmax(130px,1fr));gap:10px;margin:12px 0}label{display:block;font-weight:650;font-size:14px}input,select{display:block;width:100%;padding:11px;border-radius:10px;border:1px solid #7086a3;background:#09192d;color:white;min-height:44px}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(136px,1fr));gap:12px;margin:15px 0}.poke-card{background:#1b3150;color:#fff;border:1px solid #49648a;border-radius:14px;padding:12px 7px;min-height:173px;text-align:center;overflow:hidden}.poke-card:hover{background:#29496e}.poke-card img{display:block;margin:auto;width:100px;height:104px;object-fit:contain}.poke-card strong{display:block;overflow-wrap:anywhere}.poke-card small{display:block}.poke-card .placeholder{display:grid;place-items:center;height:104px;font-size:37px}.tag{display:inline-block;border:1px solid #738aaa;border-radius:20px;padding:3px 9px;font-size:12px;color:#d9e8f8}.detail{border:1px solid #5a789d;border-radius:18px;padding:20px;background:#101f37}.detail-head{display:flex;gap:20px;align-items:center;flex-wrap:wrap}.detail-head img{width:190px;height:190px;object-fit:contain}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px}.stat{padding:9px;border:1px solid #415d80;border-radius:10px}.stat b{display:block;font-size:22px}.data-list{display:flex;flex-wrap:wrap;gap:8px}.data-list span{background:#294463;border-radius:8px;padding:5px 9px}.notice{border-left:3px solid var(--gold);padding:10px 14px;background:#3a322a;margin:12px 0}.hide{display:none!important}.row{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}#status{min-height:24px}#more{width:100%;max-width:300px}.error{color:#ffb4b4}footer{font-size:13px;color:var(--muted)}@media(max-width:760px){.controls{grid-template-columns:1fr 1fr}.controls label:first-child{grid-column:1/-1}.hero{padding:18px}}@media(max-width:450px){.controls{grid-template-columns:1fr}.controls label:first-child{grid-column:auto}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-head img{width:140px;height:140px}}
+</style>
+<script defer src="data/encyclopedie-index.js"></script>
+<script defer src="data/portail.js"></script>
+</head>
+<body>
+<header><div class="brand">🔴 Centre Pokémon</div><nav class="topnav" aria-label="Navigation principale"><a href="#accueil">Accueil</a><a href="#encyclopedie">Encyclopédie</a><a href="index.html?outil=randomizer">Jouer en réseau</a></nav></header>
+<main>
+<section id="accueil" class="panel hero">
+<h1>Bienvenue dans ton Centre Pokémon</h1>
+<p class="muted">Randomizer en réseau, encyclopédie visuelle et outils pour préparer tes équipes, de Kanto à Paldea.</p>
+<div class="tiles" aria-label="Grandes rubriques">
+<a class="tile" href="index.html?outil=randomizer"><span class="ico">🎲</span><strong>Randomizer</strong><span>Défis, salons réseau et Marché des Dresseurs</span></a>
+<a class="tile" href="index.html?outil=strategy"><span class="ico">⚔️</span><strong>Stratégie</strong><span>Pokédex stratégique, VGC et Smogon par génération</span></a>
+<a class="tile" href="#encyclopedie" data-section="pokemon"><span class="ico">📖</span><strong>Pokédex</strong><span>Images, fiches, évolutions, statistiques et attaques</span></a>
+<a class="tile" href="#guides"><span class="ico">🎓</span><strong>Guides par jeu</strong><span>Mécaniques et conseils adaptés à la génération</span></a>
+<a class="tile" href="#reproduction"><span class="ico">🥚</span><strong>Reproduction</strong><span>Œufs, groupes, talents, natures et IV</span></a>
+<a class="tile" href="#outils"><span class="ico">🧰</span><strong>Outils</strong><span>Dégâts, faiblesses, EV, objets et capacités</span></a>
+</div>
+</section>
+<section id="encyclopedie" class="panel" aria-labelledby="ency-title">
+<div class="row"><h2 id="ency-title">🔎 Encyclopédie interactive</h2><span class="tag">Grille visuelle + recherche</span></div>
+<p class="muted">Clique sur une vignette ou recherche un nom ou numéro. Les noms français de l'index local proviennent du Marché des Dresseurs ; pour les autres entrées, le nom français apparaît à l'ouverture de la fiche.</p>
+<div class="controls">
+<label>Recherche<input id="search" type="search" autocomplete="off" placeholder="Nom, numéro ou mot-clé…" list="suggestions"><datalist id="suggestions"></datalist></label>
+<label>Rubrique<select id="kind"><option value="pokemon">Pokémon et formes</option><option value="item">Objets</option><option value="ability">Talents</option><option value="move">Capacités</option></select></label>
+<label>Génération<select id="generation"><option value="">Toutes</option><option value="1">1 — Kanto</option><option value="2">2 — Johto</option><option value="3">3 — Hoenn</option><option value="4">4 — Sinnoh</option><option value="5">5 — Unys</option><option value="6">6 — Kalos</option><option value="7">7 — Alola</option><option value="8">8 — Galar/Hisui</option><option value="9">9 — Paldea</option></select></label>
+<label>Type<select id="type"><option value="">Tous les types</option></select></label>
+<label>Jeu des fiches<select id="game"><option value="scarlet-violet">Écarlate / Violet</option><option value="sword-shield">Épée / Bouclier</option><option value="brilliant-diamond-and-shining-pearl">Diamant Étincelant / Perle Scintillante</option><option value="legends-arceus">Légendes : Arceus</option></select></label>
+<label id="categoryWrap" class="hide">Catégorie d'objet<select id="category"><option value="">Toutes</option></select></label>
+</div>
+<div class="notice">Les filtres de jeu s'appliquent aux capacités apprenables affichées dans les fiches, pas à une certification de compatibilité HOME/DLC. Les formes régionales de l'index sont distinctes ; l'inventaire de toutes les formes reste à compléter.</div>
+<div id="status" role="status" aria-live="polite">Chargement du catalogue…</div>
+<div id="detail" class="hide" aria-live="polite"></div>
+<div id="cards" class="cards"></div>
+<div class="row"><button id="back" class="btn hide" type="button">← Retour aux résultats</button><button id="more" class="btn hide" type="button">Afficher davantage</button></div>
+</section>
+<section id="guides" class="panel"><h2>🎓 Guides par jeu et génération</h2>
+<div class="grid2"><div><h3>Générations I à III</h3><p>Avant la quatrième génération, la catégorie physique ou spéciale d'une attaque dépend de son type. Vérifie les différences de mécaniques avant de transposer un set récent.</p></div><div><h3>Générations IV et V</h3><p>La quatrième génération introduit la séparation physique/spéciale par capacité. Les générations suivantes changent aussi les talents et les objets disponibles.</p></div><div><h3>Générations VI et VII</h3><p>Méga-Évolution à partir de la sixième génération ; capacités Z dans Soleil/Lune. Leur disponibilité dépend du jeu.</p></div><div><h3>Générations VIII et IX</h3><p>Dynamax/Gigamax dans Épée/Bouclier, mécaniques particulières dans Légendes : Arceus, Téracristallisation dans Écarlate/Violet.</p></div></div>
+<p><a href="index.html?outil=strategy">Ouvrir les ressources stratégiques</a> · <a href="index.html?outil=mechanics">Consulter les mécaniques</a></p></section>
+<section id="reproduction" class="panel"><h2>🥚 Reproduction, IV et EV</h2><p>Épée/Bouclier et DEPS utilisent les Garderies/Pensions pour produire des Œufs. Écarlate/Violet utilise le pique-nique. Légendes Pokémon : Arceus ne possède pas de reproduction.</p><p>Les fiches Pokémon affichent leurs groupes d'Œufs. Pour transmettre les IV, les natures et certains talents, vérifie les règles du jeu sélectionné : elles ne sont pas identiques dans toutes les générations.</p><a href="index.html?outil=training">Ouvrir le guide IV, EV et reproduction</a></section>
+<section id="outils" class="panel"><h2>🧰 Outils stratégiques</h2><div class="tiles">
+<a class="tile" href="index.html?outil=damage"><span class="ico">💥</span><strong>Dégâts</strong><span>Calculateur du Randomizer</span></a>
+<a class="tile" href="index.html?outil=types"><span class="ico">🎯</span><strong>Types</strong><span>Faiblesses et résistances</span></a>
+<a class="tile" href="index.html?outil=nature"><span class="ico">🌿</span><strong>Natures</strong><span>Boosts et malus</span></a>
+<a class="tile" href="index.html?outil=abilities"><span class="ico">✨</span><strong>Talents</strong><span>Encyclopédie existante</span></a>
+<a class="tile" href="index.html?outil=moves"><span class="ico">⚡</span><strong>Capacités</strong><span>Encyclopédie existante</span></a>
+<a class="tile" href="index.html?outil=strategy"><span class="ico">🎒</span><strong>Objets</strong><span>Stratégie et effets</span></a>
+</div></section>
+</main>
+<footer>Catalogue de base et descriptions : <a href="https://pokeapi.co/" rel="noopener noreferrer">PokéAPI</a> (source communautaire). Images : sprites hébergés par le projet PokéAPI. Les données en ligne nécessitent une connexion ; les traductions et les filtres sont partiels. Projet indépendant, non affilié à Nintendo ou The Pokémon Company.</footer>
+</body></html>
