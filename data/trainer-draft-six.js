@@ -34,7 +34,7 @@ function render(){
  }
  if(solo)state=soloState;
  if(!state||state.version!==1){
-  status.textContent='Choisis un Dex compatible, puis génère la boîte PC.';
+  status.textContent='Choisis un Dex compatible, puis génère la boîte PC. Les rangs nécessitent des associations documentées.';
   grid.innerHTML='';$('trainerDraftEditor').innerHTML='';return;
  }
  const mine=state.choices?.[seat]?.entries||[],used=new Set(mine.map(x=>x.trainerIndex));
@@ -104,9 +104,9 @@ async function start(){
   const game=selectedGame();
   $('trainerDraftStatus').textContent='Vérification des Pokémon et capacités Écarlate/Violet…';
   const eligible=await trainerMarketEligible(game,false);
-  const ids=Core.td6Shuffle([...eligible.ids].filter(id=>Number.isInteger(id)&&id>0&&id<=1025));
+  const ids=Core.td6Shuffle([...new Set(Core.TD6_LORE.map(x=>x.id))].filter(id=>eligible.ids.has(id)));
   const candidates=[];
-  for(let offset=0;offset<ids.length&&candidates.length<18;offset+=8){
+  for(let offset=0;offset<ids.length;offset+=8){
    const group=await Promise.all(ids.slice(offset,offset+8).map(async id=>{
     try{
      const p=await getP(id);
@@ -122,7 +122,7 @@ async function start(){
    }));
    candidates.push(...group.filter(Boolean));
   }
-  if(candidates.length<18)throw Error('Moins de 18 sets vérifiés : le draft ne sera pas publié.');
+  if(candidates.length<18)throw Error('Moins de 18 Pokémon compatibles et documentés : le marché ne sera pas publié.');
   const ref=mpRoom(mpSession.room).child('trainerDraft6');
   const prior=(await ref.once('value')).val();
   if(prior&&((prior.choices?.[1]?.entries?.length||0)+(prior.choices?.[2]?.entries?.length||0))>0&&!confirm('Nouvelle partie : effacer les choix actuels des deux joueurs ?'))return;
@@ -167,7 +167,7 @@ async function trySolo(){
   const eligible=await trainerMarketEligible('sv',false);
   const ids=Core.td6Shuffle(Core.TD6_POOL.filter(id=>eligible.ids.has(id)));
   const candidates=[];
-  for(let offset=0;offset<ids.length&&candidates.length<18;offset+=8){
+  for(let offset=0;offset<ids.length;offset+=8){
    const batch=await Promise.all(ids.slice(offset,offset+8).map(async id=>{
     try{const p=await getP(id);if(p.legendary||!p.abilities?.length)return null;
      const legalMoves=[...new Set((p.moves||[]).filter(m=>(m.version_group_details||[]).some(d=>d.version_group?.name===({sv:'scarlet-violet',swsh:'sword-shield',bdsp:'brilliant-diamond-and-shining-pearl'}[game])&&['level-up','machine','egg','tutor'].includes(d.move_learn_method?.name))).map(m=>m.name))].sort();
@@ -180,7 +180,7 @@ async function trySolo(){
     }catch(e){return null}
    }));candidates.push(...batch.filter(Boolean));
   }
-  if(candidates.length<18)throw Error('Catalogue insuffisant pour constituer 18 propositions.');
+  if(candidates.length<18)throw Error('Catalogue lore insuffisant pour constituer 18 propositions dans ce Dex.');
   soloState=Core.td6Create(candidates,null,Math.random,game);soloState.gameId='solo-'+Date.now();soloState.choices[1].gameId=soloState.gameId;soloState.choices[2].gameId=soloState.gameId;
   state=soloState;
  }catch(e){soloState=null;$('trainerDraftStatus').textContent='❌ Essai solo : '+e.message;throw e}
