@@ -30,12 +30,12 @@ function render(){
  }
  const mine=state.choices?.[seat]?.entries||[],used=new Set(mine.map(x=>x.trainerIndex));
  const one=state.choices?.[1]?.entries?.length||0,two=state.choices?.[2]?.entries?.length||0;
- status.textContent='Écarlate/Violet · 6 dresseurs · 18 Pokémon partagés · J1 : '+one+'/6 · J2 : '+two+'/6'+(seat?' · Tes manches : '+mine.length+'/6':'');
+ status.textContent='Écarlate/Violet · 6 catégories · 18 Pokémon aléatoires partagés (pas les équipes officielles des dresseurs) · J1 : '+one+'/6 · J2 : '+two+'/6'+(seat?' · Tes manches : '+mine.length+'/6':'');
  const taken=new Map();for(const n of [1,2])for(const e of state.choices?.[n]?.entries||[])taken.set(e.trainerIndex+':'+e.offerIndex,n);
  grid.classList.add('draftPcGrid');
  grid.innerHTML=state.offers.map((group,i)=>{
   const rank=group.rank||Core.TD6_RANKS[5-i],unavailable=used.has(i),chosen=mine.find(x=>x.trainerIndex===i);
-  return '<section class="draftPcRow"><div class="draftPcRank"><span class="draftPcIcon">'+esc(rank.icon)+'</span><strong>Rang '+(rank.id===6?'6–7':rank.id)+'</strong><small>'+esc(rank.label)+'</small></div>'+group.pokemon.map((p,j)=>{
+  return '<section class="draftPcRow"><div class="draftPcRank"><span class="draftPcIcon">'+esc(rank.icon)+'</span><strong>Rang '+(rank.id===6?'6–7':rank.id)+'</strong><small>'+esc(rank.label)+' · '+esc(group.trainer)+'</small></div>'+group.pokemon.map((p,j)=>{
    const owner=taken.get(i+':'+j),selected=chosen?.offerIndex===j,locked=!!owner;
    return '<button type="button" class="pcSlot draftPcCell'+(selected?' is-selected':'')+(locked?' is-locked':'')+'" data-draft-trainer="'+i+'" data-draft-offer="'+j+'" '+(locked||unavailable||!seat||mine.length>=6||busy?'disabled':'')+' aria-label="Rang '+rank.id+', case '+(j+1)+(locked?', déjà prise par J'+owner:'')+'"><span class="draftPcLogo">'+esc(rank.icon)+'</span><span class="draftPcQuestion">'+(locked?'🔒':'?')+'</span><small>'+(locked?'Prise par J'+owner:'Case '+(j+1))+'</small></button>';
   }).join('')+'</section>';
