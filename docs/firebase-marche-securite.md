@@ -1,16 +1,24 @@
-# Marché des Dresseurs — sécurité Firebase (état au 1er novembre 2026)
+# Marché des Dresseurs — sécurité Firebase (mise à jour du 2 novembre 2026)
 
 ## Ce qui est réellement protégé aujourd'hui
 
 Le client réalise chaque achat dans une **transaction Realtime Database** sur `rooms/{code}/trainerMarket`. La transaction relit l'état courant et refuse un Pokémon/forme déjà vendu, un budget insuffisant ou une équipe de six déjà pleine. Le stock est commun aux deux joueurs. La création du marché vérifie le propriétaire du salon ; la réinitialisation utilise aussi une transaction pour éviter d'effacer un achat intervenu entre la lecture et l'écriture.
 
-**Ces garanties ne valent que pour des clients honnêtes.** Les règles Firebase précédemment fournies sont :
+**Ces garanties ne valent que pour des clients honnêtes.** Les anciennes règles très permissives communiquées à l'utilisateur étaient :
 
 ```json
 {"rules":{".read":"auth != null",".write":"auth != null"}}
 ```
 
 Avec cette écriture globale, **n'importe quel utilisateur authentifié**, y compris via une connexion anonyme, peut écrire dans un salon dont il connaît le code. Il peut modifier `catalog`, `sold`, `spent`, `teams` ou supprimer le marché sans passer par le code de l'interface. Il est donc incorrect de qualifier les achats de sécurisés en production.
+
+## Mise à jour du dépôt au 2 novembre 2026
+
+Le dépôt contient désormais `firebase.database.rules.json` avec des permissions limitées aux participants pour `trainerMarket` et aux places attribuées pour `trainerDraft6/choices/$seat` ; seul l'hôte est autorisé à initialiser le Draft. **Ces règles sont commitées mais leur publication dans la base Firebase réelle n'est pas vérifiée.** Sans publication, les nouvelles transactions peuvent recevoir `PERMISSION_DENIED`.
+
+Les règles `trainerMarket/.write` restent toutefois volontairement permissives pour permettre la transaction client sur tout le marché : elles ne bloquent pas une écriture forgée par un participant. Elles ne constituent **pas** une sécurité de production. Le plan Cloud Functions ci-dessous reste nécessaire.
+
+Pour publier les règles, ouvrir la console Firebase du projet associé au site, puis **Realtime Database → Règles** et remplacer le contenu par le fichier `firebase.database.rules.json` complet du dépôt, en vérifiant d'abord les autres modes réseau, puis cliquer **Publier**. Ne pas publier seulement les deux nouveaux nœuds. Après publication, effectuer un test avec deux sessions authentifiées distinctes, une création de Draft, un choix pour chaque joueur, une reconnexion et deux achats concurrents du même Pokémon au Marché.
 
 ## Architecture cible nécessaire
 
@@ -27,7 +35,7 @@ Ne pas copier uniquement une règle `trainerMarket/.write=false` dans la configu
 ## Statut
 
 - Transactions et validations côté client : **implémentées**, simulations locales disponibles dans `tests/trainer-market.test.mjs`.
-- Fonctions serveur et règles strictes déployées : **non**.
+- Fonctions serveur et règles strictes déployées : **non**. Les règles intermédiaires ont été versionnées mais leur publication réelle n'a pas été confirmée.
 - Vérification du déploiement GitHub Pages, de la base réelle et des tests à deux navigateurs : **non effectuée**.
 - Les données des générations I à IX et les DLC restent **partiels**, même si les huit rangs sont représentés.
 
