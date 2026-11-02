@@ -9,9 +9,9 @@ const home=read('index.html'),portal=read('portail.html'),js=read('data/portail.
 const scope={window:{}};
 vm.runInNewContext(read('data/encyclopedie-index.js'),scope);
 const rows=scope.window.POKE_FR_MARKET_INDEX;
-test('index local : 358 espèces/formes, dont 11 formes historiques distinctes',()=>{
- assert.equal(rows.length,358);
- assert.equal(rows.filter(r=>r[2]).length,11);
+test('index local : 362 espèces/formes, dont 12 formes historiques distinctes',()=>{
+ assert.equal(rows.length,362);
+ assert.equal(rows.filter(r=>r[2]).length,12);
  assert.equal(new Set(rows.map(r=>r[0]+':'+r[2])).size,rows.length);
  assert.ok(rows.every(r=>Number.isInteger(r[0])&&r[0]>=1&&r[0]<=1025&&r[1]));
 });
