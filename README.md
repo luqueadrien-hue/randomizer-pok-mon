@@ -30,4 +30,4 @@ Documentation : [bilan du 1er novembre à 21 h](docs/marche-bilan-2026-11-01-21h
 node --test tests/trainer-market.test.mjs tests/portail.test.mjs tests/portail-dom.test.mjs
 ```
 
-Dix simulations historiques du marché avaient été déclarées réussies dans V8 ; un onzième test de concurrence et des tests du portail ont été ajoutés, sans exécution Node 20 confirmée. Cinq scénarios du portail ont été validés avec un DOM et des réponses API simulés dans V8. Le workflow GitHub Actions est configuré, mais son exécution effective n'a pas été vérifiée. Les tests ne remplacent pas des essais réels avec Firebase, deux comptes et deux navigateurs.
+Dix simulations historiques du marché avaient été déclarées réussies dans V8 ; un onzième test de concurrence, un douzième test des équipes historiques et des tests du portail ont été ajoutés, sans exécution Node 20 confirmée. Cinq scénarios du portail ont été validés avec un DOM et des réponses API simulés dans V8. Le workflow GitHub Actions est configuré, mais son exécution effective n'a pas été vérifiée. Les tests ne remplacent pas des essais réels avec Firebase, deux comptes et deux navigateurs.
