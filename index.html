@@ -167,6 +167,12 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 #trainerDraftPanel>.controls>button{width:auto;flex:1 1 230px}
 #trainerDraftPanel .draftPcRow,#trainerDraftPanel .draftPcSlots{min-width:0}
 @media(max-width:600px){#trainerDraftPanel>.controls>button{flex-basis:100%}}
+/* Marché : 6 colonnes et 5 lignes, prix et dresseur visibles. */
+#trainerDraftPanel .draftPcSlots{grid-template-columns:repeat(6,minmax(0,1fr))}
+#trainerDraftPanel .draftPcCell.pcSlot{min-height:110px;aspect-ratio:auto;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 3px}
+#trainerDraftPanel .draftPcCell .slotName{position:static;font-size:11px}
+#trainerDraftPanel .draftPcCell small{font-size:10px;line-height:1.15;overflow-wrap:anywhere}
+@media(max-width:650px){#trainerDraftPanel .draftPcSlots{gap:3px}#trainerDraftPanel .draftPcCell.pcSlot{min-height:90px;padding:4px 1px}#trainerDraftPanel .draftPcCell img{height:35px!important}#trainerDraftPanel .draftPcCell small{font-size:8px}#trainerDraftPanel .draftPcCell .slotName{font-size:9px}}
 </style>
 <script src="data/trainer-market-expansion.js"></script>
 </head>
@@ -282,16 +288,15 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 </div>
 
 <div id="trainerDraftPanel" class="panel" style="display:none;margin-top:14px">
-
-<div class="controls"><label style="display:none">Jeu Switch de référence <select id="trainerDraftGame"><option value="sv">Écarlate / Violet (Pokédex de Paldea validé)</option><option value="swsh" disabled>Épée / Bouclier — données à vérifier</option><option value="bdsp" disabled>Diamant Étincelant / Perle Scintillante — données à vérifier</option><option value="pla" disabled>Légendes : Arceus — données à vérifier</option></select></label>
-<button type="button" id="trainerDraftSolo" onclick="TrainerDraft6.trySolo().catch(e=>{document.getElementById('trainerDraftStatus').textContent='❌ Essai solo : '+e.message;console.error(e)})">🧪 Essayer en solo — boîte PC</button>
-<button type="button" id="trainerDraftStart" onclick="TrainerDraft6.start().catch(e=>{document.getElementById('trainerDraftStatus').textContent='❌ '+e.message;console.error(e)})">🎲 Ouvrir le marché : 6 rangs et 18 Pokémon</button></div>
-
+<div class="controls">
+<label>Budget par joueur ($)<input id="trainerDraftBudget" type="number" min="1" max="100000" step="1" value="30"></label>
+<label>Type de boîte<select id="trainerDraftBoxMode"><option value="shared">Boîte commune — mêmes 30 Pokémon</option><option value="separate">Boîtes individuelles — tirage par joueur</option></select></label>
+<button type="button" id="trainerDraftStart" onclick="TrainerDraft6.start().catch(e=>{document.getElementById('trainerDraftStatus').textContent='❌ '+e.message;console.error(e)})">🎲 Générer la boîte PC</button>
+</div>
 <div id="trainerDraftStatus" class="turn">En attente d'un salon réseau.</div>
-<div class="pcBoxHeader trainerPcHeader"><span>📦 BOÎTE PC — MARCHÉ & DRAFT DES DRESSEURS</span><span>6 rangs · 18 cases · 2 joueurs</span></div>
+<div class="pcBoxHeader trainerPcHeader"><span>📦 BOÎTE PC — MARCHÉ & DRAFT DES DRESSEURS</span><span>6 colonnes × 5 lignes · 30 Pokémon</span></div>
 <div id="trainerDraftGrid"></div><div id="trainerDraftEditor"></div><div id="trainerDraftTeams"></div>
 </div>
-
 <label>Taille équipe<select id="teamSize"><option>3</option><option>4</option><option>5</option><option selected>6</option></select></label>
 <label>Nombre de choix<input id="choiceCount" type="number" min="2" max="12" value="3"></label>
 <label>Légendaires<select id="legend"><option value="all">Autorisés</option><option value="no" selected>Sans légendaires</option><option value="yes">Uniquement légendaires</option></select></label>
@@ -3330,7 +3335,7 @@ function legacyMode(mode){return ({olddesc:'dexdesc',bstonly:'stats',evomethod:'
 function restoreLegacyMode(mode){const mapped=legacyMode(mode);return [...gameMode.options].some(x=>x.value===mapped)?mapped:'species'}
 syncMergedModeControls();
 syncCompetitiveGeneration();
-gameMode.addEventListener('change',()=>{roll.disabled=gameMode.value==='trainerdraft6';roll.title=roll.disabled?'Utilise le bouton Tirer 6 dresseurs et 18 Pokémon.':'';trainerMarketRender();if(window.TrainerDraft6)window.TrainerDraft6.render();syncCompetitiveGeneration();syncMergedModeControls();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('noelPanel').style.display=gameMode.value==='noel'?'block':'none';document.getElementById('tcgAttacksPanel').style.display=gameMode.value==='tcgattacks'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';document.getElementById('trainerOptions').style.display=gameMode.value==='trainerteam'?'block':'none';document.getElementById('moduloPanel').style.display=gameMode.value==='modulodex'?'block':'none';if(gameMode.value==='modulodex')moduloRender();if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
+gameMode.addEventListener('change',()=>{roll.disabled=gameMode.value==='trainerdraft6';roll.title=roll.disabled?'Utilise le bouton Générer la boîte PC.':'';trainerMarketRender();if(window.TrainerDraft6)window.TrainerDraft6.render();syncCompetitiveGeneration();syncMergedModeControls();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('noelPanel').style.display=gameMode.value==='noel'?'block':'none';document.getElementById('tcgAttacksPanel').style.display=gameMode.value==='tcgattacks'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';document.getElementById('trainerOptions').style.display=gameMode.value==='trainerteam'?'block':'none';document.getElementById('moduloPanel').style.display=gameMode.value==='modulodex'?'block':'none';if(gameMode.value==='modulodex')moduloRender();if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
 ['teamSize','choiceCount','legend','generation','competitiveGeneration','typeMode','revealMode','lieMode','boxSize','evolutionMergedStyle','abilityMergedStyle','habitatMergedStyle','statHighestMergedStyle'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
 
 const CALC_NATURE_MAP={Assuré:['defense','attack'],Bizarre:[null,null],Brave:['attack','speed'],Calme:['special-defense','attack'],Discret:['special-attack','speed'],Docile:[null,null],Doux:['special-attack','defense'],Foufou:['special-attack','special-defense'],Gentil:['special-defense','defense'],Hardi:[null,null],Jovial:['speed','special-attack'],Lâche:['defense','special-defense'],Malin:['defense','special-attack'],Malpoli:['special-defense','speed'],Mauvais:['attack','special-defense'],Modeste:['special-attack','attack'],Naïf:['speed','special-defense'],Pressé:['speed','defense'],Prudent:['special-defense','special-attack'],Pudique:[null,null],Relax:['defense','speed'],Rigide:['attack','special-attack'],Sérieux:[null,null],Solo:['attack','defense'],Timide:['speed','attack']};
