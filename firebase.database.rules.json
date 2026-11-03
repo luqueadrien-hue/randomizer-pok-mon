@@ -79,14 +79,12 @@
           ".validate": "newData.child('version').val() === 2 && newData.child('game').isString() && newData.child('catalog').numChildren() > 0 && newData.child('catalog').numChildren() <= 2000 && newData.child('budget').isNumber() && newData.child('purchaseCount').isNumber()"
         },
         "trainerDraft6": {
-          ".write": "auth != null && root.child('rooms').child($room).child('ownerUid').val() === auth.uid && root.child('rooms').child($room).child('started').val() === true",
-          ".validate": "newData.child('version').val() === 1 && newData.child('game').val() === 'sv' && newData.child('gameId').isString() && newData.child('trainers').numChildren() === 6 && newData.child('offers').numChildren() === 6 && newData.child('choices').child('1').child('gameId').val() === newData.child('gameId').val() && newData.child('choices').child('2').child('gameId').val() === newData.child('gameId').val()",
-          "choices": {
-            "$seat": {
-              ".write": "auth != null && ($seat === '1' || $seat === '2') && root.child('rooms').child($room).child('seats').child($seat).val() === auth.uid && root.child('rooms').child($room).child('started').val() === true",
-              ".validate": "newData.child('gameId').val() === root.child('rooms').child($room).child('trainerDraft6').child('gameId').val() && newData.child('entries').numChildren() <= 6"
-            }
-          }
+          ".write": "auth != null && root.child('rooms').child($room).child('started').val() === true && root.child('rooms').child($room).child('players').child(auth.uid).exists() && (!data.exists() ? root.child('rooms').child($room).child('ownerUid').val() === auth.uid : true)",
+          ".validate": "newData.child('version').val() === 2 && (newData.child('game').val() === 'sv' || newData.child('game').val() === 'swsh' || newData.child('game').val() === 'bdsp') && newData.child('gameId').isString() && newData.child('boxes').child('1').numChildren() === 5 && newData.child('boxes').child('2').numChildren() === 5 && newData.child('choices').child('1').child('gameId').val() === newData.child('gameId').val() && newData.child('choices').child('2').child('gameId').val() === newData.child('gameId').val() && newData.child('choices').child('1').child('entries').numChildren() <= 6 && newData.child('choices').child('2').child('entries').numChildren() <= 6 && (!data.exists() || root.child('rooms').child($room).child('ownerUid').val() === auth.uid || (newData.child('gameId').val() === data.child('gameId').val() && newData.child('boxes').val() === data.child('boxes').val() && newData.child('budget').val() === data.child('budget').val() && newData.child('boxMode').val() === data.child('boxMode').val()))"
+        },
+        "zoneWheel": {
+          ".write": "auth != null && root.child('rooms').child($room).child('started').val() === true && root.child('rooms').child($room).child('players').child(auth.uid).exists()",
+          ".validate": "newData.child('version').val() === 3 && newData.child('game').isString() && newData.child('rounds').numChildren() <= 6"
         }
       }
     }
