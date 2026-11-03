@@ -153,7 +153,7 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 #trainerDraftPanel .draftPcRow{display:block;padding:6px 3px;border-radius:10px;background:#372b4b}
 #trainerDraftPanel .draftPcRank{display:flex;align-items:center;flex-wrap:nowrap;padding:4px 8px;margin-bottom:5px;border-radius:7px;background:#1b1428;font-size:.86rem}
 #trainerDraftPanel .draftPcRank small{flex-basis:auto;margin-left:auto;text-align:right}
-#trainerDraftPanel .draftPcSlots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+#trainerDraftPanel .draftPcSlots{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
 #trainerDraftPanel .draftPcCell.pcSlot{aspect-ratio:1.15/1;min-height:100px;position:relative;padding:4px;justify-content:center;overflow:hidden;box-shadow:inset 0 0 0 1px #e7dff5}
 #trainerDraftPanel .draftPcCell .slotNo{position:absolute;top:4px;left:4px;font-size:11px;background:#eee8f5c9;border-radius:6px;color:#241b38;padding:1px 4px;font-weight:900}
 #trainerDraftPanel .draftPcCell .slotName{position:absolute;bottom:2px;left:2px;right:2px;background:#33283e;color:#fff;border-radius:5px;font-size:11px;text-align:center;font-weight:800}
@@ -264,7 +264,7 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 <option value="modulodex">🔢 Modulo Pokédex — permutations des chiffres</option>
 <option value="impossibledilemma">😈 Dilemmes impossibles</option>
 <option value="blinddraft">🕶️ Draft à l’aveugle — 6 manches par joueur</option>
-<option value="zonewheel">🎡 Roue des zones — 6 captures communes (Écarlate/Violet + DLC)</option>
+<option value="zonewheel">🎡 Roue des zones — jeux Switch, 6 captures communes</option>
 <option value="trainerdraft6">🏆 Marché & Draft des Dresseurs — boîte PC réseau (bêta)</option>
 <option value="auction">💰 Enchères Pokémon</option>
 <option value="noel">🎄 NOËL — Cadoizo et capacités</option>
@@ -340,7 +340,7 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 </label>
 </div>
 <div id="zoneWheelPanel" class="panel" hidden style="grid-column:1/-1;width:100%;min-width:0;box-sizing:border-box;margin-top:14px">
-<h3>🎡 Roue des zones — Capture à l'aveugle</h3>
+<h3>🎡 Roue des zones — jeux Pokémon Switch</h3>
 <p>Une seule roue pour les deux joueurs : 6 manches communes, une capture par joueur dans la zone tirée à chaque manche. Les zones déjà tirées sont exclues.</p>
 <div id="zoneWheelDisc" aria-hidden="true" style="width:130px;height:130px;margin:12px auto;border-radius:50%;border:7px solid #f9cb56;background:conic-gradient(#2f8fcb 0 25%,#8ecb7e 25% 50%,#d47c7c 50% 75%,#7e70b5 75%);transition:transform 1s ease;position:relative"><span style="position:absolute;top:43px;left:42px;font-size:28px">🎯</span></div>
 <p id="zoneWheelResult" style="font-size:1.15em;font-weight:bold;text-align:center">La roue attend son premier tirage</p>
