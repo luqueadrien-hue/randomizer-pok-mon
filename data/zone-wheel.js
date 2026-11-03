@@ -12,9 +12,12 @@ const escape=s=>String(s).replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&g
 const title=z=>z.region+' — '+z.name;
 function paint(){
  const panel=$('zoneWheelPanel');if(!panel)return;panel.hidden=!active();if(!active())return;
- const can=!!mpSession&&mpLobbyStarted&&seat()!==0;
- const spin=$('zoneWheelSpin');spin.disabled=busy||!can||!!state?.rounds?.length&&state.rounds.length>=6;
+ const can=!!mpSession&&mpLobbyStarted&&seat()!==0&&!!mpSeats[1]&&!!mpSeats[2];
+ const spin=$('zoneWheelSpin');spin.disabled=busy||!can||(state?.rounds?.length||0)>=6;
  const rounds=state?.rounds||[];
+ const captures=state?.captures||{};
+ const captureBox=$('zoneWheelCaptures');if(captureBox){captureBox.innerHTML=rounds.map((z,i)=>'<div class="card"><strong>Manche '+(i+1)+' — '+escape(title(z))+'</strong><div>J1 : '+escape(captures[1]?.[i]||'Non renseigné')+' · J2 : '+escape(captures[2]?.[i]||'Non renseigné')+'</div></div>').join('');}
+ const captureInput=$('zoneWheelCaptureName'),captureButton=$('zoneWheelCaptureSave');if(captureInput&&captureButton){const idx=rounds.length-1;captureInput.disabled=captureButton.disabled=!can||idx<0||!!captures[seat()]?.[idx];captureInput.placeholder=idx<0?'Lance la roue d’abord':'Pokémon capturé dans la dernière zone';}
  $('zoneWheelStatus').textContent=!can?'Rejoins un salon à deux joueurs et lance le challenge pour activer la roue commune.':rounds.length>=6?'Six manches terminées : chaque joueur doit avoir capturé six Pokémon.':'Manche '+(rounds.length+1)+'/6 — un seul tirage partagé pour les deux joueurs.';
  $('zoneWheelResult').textContent=rounds.length?title(rounds[rounds.length-1]):'La roue attend son premier tirage';
  $('zoneWheelHistory').innerHTML=rounds.map((z,i)=>'<li>Manche '+(i+1)+' : '+escape(title(z))+'</li>').join('');
@@ -42,20 +45,30 @@ async function spin(){
    const used=new Set(rounds.map(z=>z.region+'|'+z.name));
    const remaining=ZONES.filter(z=>!used.has(z.region+'|'+z.name));
    const chosen=remaining[random[0]%remaining.length];
-   return {version:1,rounds:[...rounds,chosen],updated:Date.now()};
+   return {version:2,rounds:[...rounds,chosen],captures:old?.captures||{},updated:Date.now()};
   });
   if(!tx.committed)throw Error('Six manches déjà jouées ou tirage simultané : actualise la roue.');
  }catch(e){$('zoneWheelStatus').textContent='❌ '+e.message}
  finally{busy=false;paint()}
 }
+async function saveCapture(){
+ if(!mpSession||!mpLobbyStarted||!seat())return;
+ const name=$('zoneWheelCaptureName')?.value?.trim();if(!name||name.length>80){alert('Indique le nom du Pokémon capturé (80 caractères maximum).');return}
+ const ref=mpRoom(mpSession.room).child('zoneWheel');
+ const tx=await ref.transaction(old=>{const i=(old?.rounds?.length||0)-1;if(i<0||old?.captures?.[seat()]?.[i])return;const captures=old.captures||{};captures[seat()]={...(captures[seat()]||{}),[i]:name};return {...old,captures}});
+ if(!tx.committed)throw Error('Capture déjà renseignée ou manche indisponible.');
+ $('zoneWheelCaptureName').value='';paint();
+}
 async function reset(){
- if(!mpSession||!mpLobbyStarted||mpSession.role!=='host')return;
+ if(!mpSession||!mpLobbyStarted)return;
+ const room=(await mpRoom(mpSession.room).once('value')).val();if(room?.ownerUid!==mpSession.id)return;
  if(!confirm('Réinitialiser les six manches de la roue pour les deux joueurs ?'))return;
  try{await mpRoom(mpSession.room).child('zoneWheel').remove()}catch(e){alert(e.message)}
 }
 function init(){
  $('zoneWheelSpin')?.addEventListener('click',spin);
  $('zoneWheelReset')?.addEventListener('click',reset);
+ $('zoneWheelCaptureSave')?.addEventListener('click',()=>saveCapture().catch(e=>alert(e.message)));
  $('gameMode')?.addEventListener('change',()=>{watch();paint()});
  setInterval(()=>{if(active()){watch();paint()}else if(unsub)watch()},1800);
  paint();
