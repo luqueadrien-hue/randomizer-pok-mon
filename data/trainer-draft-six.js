@@ -35,7 +35,7 @@ function render(){
  if(solo)state=soloState;
  if(!state||state.version!==1){
   status.textContent='Choisis un Dex compatible, puis génère la boîte PC. Les rangs nécessitent des associations documentées.';
-  grid.innerHTML='';$('trainerDraftEditor').innerHTML='';return;
+  renderPcPlaceholder();$('trainerDraftEditor').innerHTML='';$('trainerDraftTeams').innerHTML='';return;
  }
  const mine=state.choices?.[seat]?.entries||[],used=new Set(mine.map(x=>x.trainerIndex));
  const one=state.choices?.[1]?.entries?.length||0,two=state.choices?.[2]?.entries?.length||0;
@@ -102,7 +102,7 @@ async function start(){
   if(room.ownerUid!==mpSession.id)throw Error('Seul l’hôte peut préparer le tirage.');
   if(!room.started||!room.seats?.[1]||!room.seats?.[2]||room.seats[1]===room.seats[2])throw Error('Il faut deux joueurs attribués.');
   const game=selectedGame();
-  $('trainerDraftStatus').textContent='Vérification des Pokémon et capacités Écarlate/Violet…';
+  $('trainerDraftStatus').textContent='Vérification des Pokémon, des rangs et des capacités pour '+gameLabel[game]+'…';
   const eligible=await trainerMarketEligible(game,false);
   const ids=Core.td6Shuffle([...new Set(Core.TD6_LORE.map(x=>x.id))].filter(id=>eligible.ids.has(id)));
   const candidates=[];
@@ -164,8 +164,8 @@ async function trySolo(){
  const game=selectedGame();
  busy=true;solo=true;soloState=null;editing=null;render();
  try{
-  const eligible=await trainerMarketEligible('sv',false);
-  const ids=Core.td6Shuffle(Core.TD6_POOL.filter(id=>eligible.ids.has(id)));
+  const eligible=await trainerMarketEligible(game,false);
+  const ids=Core.td6Shuffle([...new Set(Core.TD6_LORE.map(x=>x.id))].filter(id=>eligible.ids.has(id)));
   const candidates=[];
   for(let offset=0;offset<ids.length;offset+=8){
    const batch=await Promise.all(ids.slice(offset,offset+8).map(async id=>{
@@ -183,7 +183,7 @@ async function trySolo(){
   if(candidates.length<18)throw Error('Catalogue lore insuffisant pour constituer 18 propositions dans ce Dex.');
   soloState=Core.td6Create(candidates,null,Math.random,game);soloState.gameId='solo-'+Date.now();soloState.choices[1].gameId=soloState.gameId;soloState.choices[2].gameId=soloState.gameId;
   state=soloState;
- }catch(e){soloState=null;$('trainerDraftStatus').textContent='❌ Essai solo : '+e.message;throw e}
+ }catch(e){soloState=null;solo=false;throw e}
  finally{busy=false;render()}
 }
 window.TrainerDraft6={start,receive,render,trySolo};
