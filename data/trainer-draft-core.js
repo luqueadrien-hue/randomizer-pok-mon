@@ -696,8 +696,8 @@ function td6AddChoice(state,seat,trainerIndex,offerIndex,custom){
  if(entries.length>=6)throw Error("Les six manches sont terminées.");
  if(!Number.isInteger(trainerIndex)||trainerIndex<0||trainerIndex>5||!Number.isInteger(offerIndex)||offerIndex<0||offerIndex>2)throw Error("Proposition inconnue.");
  if(entries.some(e=>e.trainerIndex===trainerIndex))throw Error("Dresseur déjà utilisé par ce joueur.");
- const taken=[...(state.choices?.[1]?.entries||[]),...(state.choices?.[2]?.entries||[])];
- if(taken.some(e=>e.trainerIndex===trainerIndex&&e.offerIndex===offerIndex))throw Error("Case déjà sélectionnée dans cette partie.");
+ // Les propositions sont communes, mais chaque joueur dispose de son propre droit de sélection.
+ // Un choix de l'autre joueur ne doit jamais réserver une case globalement.
  const offer=state.offers?.[trainerIndex]?.pokemon?.[offerIndex];
  if(!offer||!Array.isArray(offer.legalMoves)||offer.legalMoves.length<4)throw Error("Pokémon sans données légales.");
  const moves=custom?.moves;
