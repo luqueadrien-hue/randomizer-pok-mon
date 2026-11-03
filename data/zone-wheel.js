@@ -13,12 +13,12 @@ const title=z=>z.region+' — '+z.name;
 function paint(){
  const panel=$('zoneWheelPanel');if(!panel)return;panel.hidden=!active();if(!active())return;
  const can=!!mpSession&&mpLobbyStarted&&seat()!==0&&!!mpSeats[1]&&!!mpSeats[2];
- const spin=$('zoneWheelSpin');spin.disabled=busy||!can||(state?.rounds?.length||0)>=6;
+ const spin=$('zoneWheelSpin');const previous=(state?.rounds?.length||0)-1;const waiting=previous>=0&&(!state?.captures?.[1]?.[previous]||!state?.captures?.[2]?.[previous]);spin.disabled=busy||!can||waiting||(state?.rounds?.length||0)>=6;
  const rounds=state?.rounds||[];
  const captures=state?.captures||{};
  const captureBox=$('zoneWheelCaptures');if(captureBox){captureBox.innerHTML=rounds.map((z,i)=>'<div class="card"><strong>Manche '+(i+1)+' — '+escape(title(z))+'</strong><div>J1 : '+escape(captures[1]?.[i]||'Non renseigné')+' · J2 : '+escape(captures[2]?.[i]||'Non renseigné')+'</div></div>').join('');}
  const captureInput=$('zoneWheelCaptureName'),captureButton=$('zoneWheelCaptureSave');if(captureInput&&captureButton){const idx=rounds.length-1;captureInput.disabled=captureButton.disabled=!can||idx<0||!!captures[seat()]?.[idx];captureInput.placeholder=idx<0?'Lance la roue d’abord':'Pokémon capturé dans la dernière zone';}
- $('zoneWheelStatus').textContent=!can?'Rejoins un salon à deux joueurs et lance le challenge pour activer la roue commune.':rounds.length>=6?'Six manches terminées : chaque joueur doit avoir capturé six Pokémon.':'Manche '+(rounds.length+1)+'/6 — un seul tirage partagé pour les deux joueurs.';
+ $('zoneWheelStatus').textContent=!can?'Rejoins un salon à deux joueurs et lance le challenge pour activer la roue commune.':rounds.length>=6?'Six manches terminées : chaque joueur doit avoir capturé six Pokémon.':(waiting?'En attente des captures des deux joueurs pour passer à la manche suivante.':'Manche '+(rounds.length+1)+'/6 — un seul tirage partagé pour les deux joueurs.');
  $('zoneWheelResult').textContent=rounds.length?title(rounds[rounds.length-1]):'La roue attend son premier tirage';
  $('zoneWheelHistory').innerHTML=rounds.map((z,i)=>'<li>Manche '+(i+1)+' : '+escape(title(z))+'</li>').join('');
  $('zoneWheelDisc').style.transform='rotate('+((rounds.length*997)%360)+'deg)';
@@ -44,6 +44,7 @@ async function spin(){
    if(rounds.length>=6)return;
    const used=new Set(rounds.map(z=>z.region+'|'+z.name));
    const remaining=ZONES.filter(z=>!used.has(z.region+'|'+z.name));
+   if(rounds.length){const last=rounds.length-1;if(!old?.captures?.[1]?.[last]||!old?.captures?.[2]?.[last])return;}
    const chosen=remaining[random[0]%remaining.length];
    return {version:2,rounds:[...rounds,chosen],captures:old?.captures||{},updated:Date.now()};
   });
