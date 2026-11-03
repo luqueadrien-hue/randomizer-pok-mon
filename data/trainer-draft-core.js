@@ -669,47 +669,58 @@ const TD6_LORE=[
   "note": "Association issue des équipes ou rencontres du support cité — à auditer individuellement"
  }
 ];
+// Cinq paliers, six cases par palier. Les méchants réunissent sbires et chefs.
+const TD_MARKET_RANKS=[
+ {id:1,label:"Dresseurs ordinaires",icon:"🧢",price:1,loreRanks:[1]},
+ {id:2,label:"Méchants — sbires et chefs",icon:"🅁",price:2,loreRanks:[2,5]},
+ {id:3,label:"Champions d’Arène et équivalents",icon:"🏅",price:5,loreRanks:[3]},
+ {id:4,label:"Rivaux",icon:"⚡",price:10,loreRanks:[4]},
+ {id:5,label:"Conseil 4 et Maîtres de Ligue",icon:"🏆",price:15,loreRanks:[6]}
+];
 function td6LoreFor(id,rank){return TD6_LORE.filter(x=>x.id===id&&x.rank===rank)}
 function td6Shuffle(input,rng=Math.random){const a=[...input];for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-function td6Create(offers,previous,rng=Math.random,game='sv'){
- if(!Array.isArray(offers)||offers.length<18)throw Error("Il faut 18 Pokémon validés.");
- const unique=new Map(offers.map(x=>[x.id,x]));if(unique.size<18)throw Error("Il faut 18 espèces distinctes.");
- let trainers,selected,signature;
- for(let attempt=0;attempt<8;attempt++){
-  trainers=TD6_RANKS.slice().reverse().map(rank=>td6Shuffle(TD6_TRAINERS_BY_RANK[rank.id],rng)[0]);
-  selected=[];
-  for(const rank of TD6_RANKS.slice().reverse()){
-   const pool=td6Shuffle([...unique.values()].filter(p=>td6LoreFor(p.id,rank.id).length&&!selected.some(x=>x.id===p.id)),rng);
-   if(pool.length<3)throw Error('Catalogue lore insuffisant pour le rang '+rank.id+' : '+pool.length+'/3 Pokémon documentés. Aucun Pokémon ne sera classé arbitrairement.');
-   selected.push(...pool.slice(0,3).map(p=>({...p,lore:td6LoreFor(p.id,rank.id)[0]})));
-  }
-  signature=trainers.join("|")+"#"+selected.map(x=>x.id).join(",");
-  if(signature!==previous?.signature)break;
- }
- return {version:1,game,gameId:"",budget:TD6_START_BUDGET,signature,trainers,offers:trainers.map((trainer,i)=>({trainer,rank:TD6_RANKS[5-i],pokemon:selected.slice(i*3,i*3+3)})),choices:{"1":{gameId:"",entries:[]},"2":{gameId:"",entries:[]}},created:Date.now()};
+function td6Create(candidates,previous,rng=Math.random,game='sv',budget=30,boxMode='shared'){
+ if(!Array.isArray(candidates))throw Error('Catalogue de Pokémon absent.');
+ if(!Number.isInteger(budget)||budget<1||budget>100000)throw Error('Budget invalide.');
+ if(!['shared','separate'].includes(boxMode))throw Error('Mode de boîte invalide.');
+ const unique=new Map(candidates.map(p=>[p.id,p]));
+ const generate=()=>{
+  const used=new Set();
+  return TD_MARKET_RANKS.slice().reverse().map(rank=>{
+   const pool=td6Shuffle([...unique.values()].filter(p=>!used.has(p.id)&&TD6_LORE.some(l=>l.id===p.id&&rank.loreRanks.includes(l.rank))),rng);
+   if(pool.length<6)throw Error('Catalogue documenté insuffisant pour '+rank.label+' : '+pool.length+'/6 Pokémon compatibles.');
+   const pokemon=pool.slice(0,6).map(p=>{
+    used.add(p.id);
+    const lore=td6Shuffle(TD6_LORE.filter(l=>l.id===p.id&&rank.loreRanks.includes(l.rank)),rng)[0];
+    return {...p,lore};
+   });
+   return {rank,price:rank.price,pokemon};
+  });
+ };
+ const shared=generate(),boxes=boxMode==='shared'?{'1':shared,'2':shared}:{'1':shared,'2':generate()};
+ return {version:2,game,gameId:'',budget,boxMode,boxes,choices:{'1':{gameId:'',entries:[]},'2':{gameId:'',entries:[]}},created:Date.now()};
 }
-function td6AddChoice(state,seat,trainerIndex,offerIndex,custom){
- if(!state||state.version!==1||!["sv","swsh","bdsp"].includes(state.game)||![1,2].includes(Number(seat)))throw Error("Partie invalide.");
- const current=state.choices?.[seat]||state.choices?.[String(seat)];
- if(!current||current.gameId!==state.gameId||(current.entries!=null&&!Array.isArray(current.entries)))throw Error("Partie modifiée : recharge les choix.");
- const entries=Array.isArray(current.entries)?current.entries:[];
- if(entries.length>=6)throw Error("Les six manches sont terminées.");
- if(!Number.isInteger(trainerIndex)||trainerIndex<0||trainerIndex>5||!Number.isInteger(offerIndex)||offerIndex<0||offerIndex>2)throw Error("Proposition inconnue.");
- if(entries.some(e=>e.trainerIndex===trainerIndex))throw Error("Dresseur déjà utilisé par ce joueur.");
- // Les propositions sont communes, mais chaque joueur dispose de son propre droit de sélection.
- // Un choix de l'autre joueur ne doit jamais réserver une case globalement.
- const offer=state.offers?.[trainerIndex]?.pokemon?.[offerIndex];
- if(!offer||!Array.isArray(offer.legalMoves)||offer.legalMoves.length<4)throw Error("Pokémon sans données légales.");
+function td6AddChoice(state,seat,rowIndex,offerIndex,custom){
+ seat=Number(seat);
+ if(!state||state.version!==2||!['sv','swsh','bdsp'].includes(state.game)||![1,2].includes(seat))throw Error('Partie invalide.');
+ const current=state.choices?.[seat];
+ if(!current||current.gameId!==state.gameId||!Array.isArray(current.entries))throw Error('Choix obsolètes.');
+ const entries=current.entries;
+ if(entries.length>=6)throw Error('Équipe de six Pokémon déjà complète.');
+ if(!Number.isInteger(rowIndex)||rowIndex<0||rowIndex>=5||!Number.isInteger(offerIndex)||offerIndex<0||offerIndex>=6)throw Error('Case inconnue.');
+ const box=state.boxes?.[seat],row=box?.[rowIndex],offer=row?.pokemon?.[offerIndex];
+ if(!offer||!Array.isArray(offer.legalMoves)||offer.legalMoves.length<4)throw Error('Pokémon sans données légales.');
+ if(entries.some(e=>e.rowIndex===rowIndex&&e.offerIndex===offerIndex))throw Error('Pokémon déjà choisi.');
+ // En boîte commune, une case déjà achetée par l'autre joueur n'est plus disponible.
+ if(state.boxMode==='shared'&&state.choices?.[seat===1?2:1]?.entries?.some(e=>e.rowIndex===rowIndex&&e.offerIndex===offerIndex))throw Error('Pokémon déjà acheté par l’autre joueur.');
  const moves=custom?.moves;
- if(!Array.isArray(moves)||moves.length!==4||new Set(moves).size!==4||moves.some(m=>!offer.legalMoves.includes(m)))throw Error("Les quatre capacités doivent être distinctes et légales.");
- if(!TD6_NATURES.includes(custom?.nature))throw Error("Nature invalide.");
- if(!TD6_TYPES.includes(custom?.tera))throw Error("Type Téracristal invalide.");
- const price=TD6_RANK_PRICES[state.offers[trainerIndex].rank?.id]||0;
- const spent=entries.reduce((sum,e)=>sum+(e.price||TD6_RANK_PRICES[state.offers[e.trainerIndex]?.rank?.id]||0),0);
- if(spent+price>(state.budget||TD6_START_BUDGET))throw Error("Budget de Pokédollars insuffisant.");
- const entry={trainerIndex,offerIndex,price,pokemonId:offer.id,moves:[...moves],nature:custom.nature,tera:custom.tera};
- return {gameId:state.gameId,entries:[...entries,entry]};
+ if(!Array.isArray(moves)||moves.length!==4||new Set(moves).size!==4||moves.some(m=>!offer.legalMoves.includes(m)))throw Error('Quatre capacités légales et distinctes requises.');
+ if(!TD6_NATURES.includes(custom?.nature)||!TD6_TYPES.includes(custom?.tera))throw Error('Nature ou type Téracristal invalide.');
+ const price=row.price;
+ const spent=entries.reduce((s,e)=>s+e.price,0);
+ if(spent+price>state.budget)throw Error('Budget insuffisant.');
+ return {gameId:state.gameId,entries:[...entries,{rowIndex,offerIndex,price,pokemonId:offer.id,moves:[...moves],nature:custom.nature,tera:custom.tera}]};
 }
-const TrainerDraftCore={TD6_LORE,td6LoreFor,TD6_START_BUDGET,TD6_RANK_PRICES,TD6_RANKS,TD6_TRAINERS,TD6_TRAINERS_BY_RANK,TD6_POOL,TD6_NATURES,TD6_TYPES,TD6_ITEMS,td6Shuffle,td6Create,td6AddChoice};
+const TrainerDraftCore={TD_MARKET_RANKS,TD6_LORE,td6LoreFor,TD6_START_BUDGET,TD6_RANK_PRICES,TD6_RANKS,TD6_TRAINERS,TD6_TRAINERS_BY_RANK,TD6_POOL,TD6_NATURES,TD6_TYPES,TD6_ITEMS,td6Shuffle,td6Create,td6AddChoice};
 if(typeof module!=='undefined'&&module.exports)module.exports=TrainerDraftCore;
 if(typeof window!=='undefined')window.TrainerDraftCore=TrainerDraftCore;
