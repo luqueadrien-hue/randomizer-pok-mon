@@ -258,6 +258,7 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 <option value="modulodex">🔢 Modulo Pokédex — permutations des chiffres</option>
 <option value="impossibledilemma">😈 Dilemmes impossibles</option>
 <option value="blinddraft">🕶️ Draft à l’aveugle — 6 manches par joueur</option>
+<option value="zonewheel">🎡 Roue des zones — 6 captures communes (Écarlate/Violet + DLC)</option>
 <option value="trainerdraft6">🏆 Marché & Draft des Dresseurs — boîte PC réseau (bêta)</option>
 <option value="auction">💰 Enchères Pokémon</option>
 <option value="noel">🎄 NOËL — Cadoizo et capacités</option>
@@ -332,6 +333,15 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 <option value="yes">Oui — adapté automatiquement au jeu choisi</option>
 </select>
 </label>
+</div>
+<div id="zoneWheelPanel" class="panel" hidden style="grid-column:1/-1;width:100%;min-width:0;box-sizing:border-box;margin-top:14px">
+<h3>🎡 Roue des zones — Capture à l'aveugle</h3>
+<p>Une seule roue pour les deux joueurs : 6 manches communes, une capture par joueur dans la zone tirée à chaque manche. Les zones déjà tirées sont exclues.</p>
+<div id="zoneWheelDisc" aria-hidden="true" style="width:130px;height:130px;margin:12px auto;border-radius:50%;border:7px solid #f9cb56;background:conic-gradient(#2f8fcb 0 25%,#8ecb7e 25% 50%,#d47c7c 50% 75%,#7e70b5 75%);transition:transform 1s ease;position:relative"><span style="position:absolute;top:43px;left:42px;font-size:28px">🎯</span></div>
+<p id="zoneWheelResult" style="font-size:1.15em;font-weight:bold;text-align:center">La roue attend son premier tirage</p>
+<p id="zoneWheelStatus" aria-live="polite"></p>
+<div class="actions"><button type="button" id="zoneWheelSpin" class="primary">🎡 Faire tourner la roue commune</button><button type="button" id="zoneWheelReset">↺ Recommencer (hôte)</button></div>
+<h4>Historique des manches</h4><ol id="zoneWheelHistory"></ol>
 </div>
 <div class="actions"><button id="roll" class="primary">🎲 GÉNÉRER</button><button id="reveal">👁 Révéler tous</button><button id="hide">🙈 Masquer tous</button><button id="reset">↺ Nouvelle partie</button></div>
 <div id="turn" class="turn">Tour du JOUEUR 1</div>
@@ -3959,6 +3969,7 @@ async function trainerMarketBuy(key){
 }
 
 </script>
+<script src="data/zone-wheel.js"></script>
 <script src="data/trainer-draft-core.js"></script>
 <script src="data/trainer-draft-six.js"></script>
 <script>
