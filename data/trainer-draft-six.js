@@ -37,14 +37,14 @@ function openEditor(rowIndex,offerIndex){
  const entries=state.choices?.[me]?.entries||[],other=state.choices?.[me===1?2:1]?.entries||[];
  if(entries.length>=6||entries.some(e=>e.rowIndex===rowIndex&&e.offerIndex===offerIndex)||(state.boxMode==='shared'&&other.some(e=>e.rowIndex===rowIndex&&e.offerIndex===offerIndex)))return;
  if(entries.reduce((s,e)=>s+e.price,0)+row.price>state.budget)return;
- editing={gameId:state.gameId,rowIndex,offerIndex,moves:[...p.initialMoves],nature:p.nature,tera:p.tera};renderEditor();
+ editing={gameId:state.gameId,rowIndex,offerIndex,moves:[...p.initialMoves],nature:p.nature,tera:state.game==='sv'?p.tera:'normal'};renderEditor();
 }
 function renderEditor(){
  const box=$('trainerDraftEditor');if(!editing||editing.gameId!==state?.gameId){box.innerHTML='';return}
  const row=state.boxes[seat()][editing.rowIndex],p=row.pokemon[editing.offerIndex];
- box.innerHTML='<div class="panel"><h3>'+esc(p.name)+' — '+esc(p.lore?.trainer)+' · '+row.price+' $</h3><p>'+esc(p.lore?.source||'')+'</p><div class="controls">'+editing.moves.map((m,i)=>'<label>Capacité '+(i+1)+'<select data-move="'+i+'">'+p.legalMoves.map(x=>'<option value="'+esc(x)+'" '+(m===x?'selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label>').join('')+'<label>Nature<select id="draftNature">'+Core.TD6_NATURES.map(n=>'<option '+(n===editing.nature?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label><label>Type Téra<select id="draftTera">'+Core.TD6_TYPES.map(n=>'<option '+(n===editing.tera?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label></div><button id="draftBuy" type="button">Acheter</button><button id="draftCancel" type="button">Annuler</button></div>';
+ box.innerHTML='<div class="panel"><h3>'+esc(p.name)+' — '+esc(p.lore?.trainer)+' · '+row.price+' $</h3><p>'+esc(p.lore?.source||'')+'</p><div class="controls">'+editing.moves.map((m,i)=>'<label>Capacité '+(i+1)+'<select data-move="'+i+'">'+p.legalMoves.map(x=>'<option value="'+esc(x)+'" '+(m===x?'selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label>').join('')+'<label>Nature<select id="draftNature">'+Core.TD6_NATURES.map(n=>'<option '+(n===editing.nature?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label>'+(state.game==='sv'?'<label>Type Téra<select id="draftTera">'+Core.TD6_TYPES.map(n=>'<option '+(n===editing.tera?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label>':'')+'</div><button id="draftBuy" type="button">Acheter</button><button id="draftCancel" type="button">Annuler</button></div>';
  box.querySelectorAll('[data-move]').forEach(el=>el.onchange=()=>editing.moves[+el.dataset.move]=el.value);
- $('draftNature').onchange=e=>editing.nature=e.target.value;$('draftTera').onchange=e=>editing.tera=e.target.value;
+ $('draftNature').onchange=e=>editing.nature=e.target.value;if($('draftTera'))$('draftTera').onchange=e=>editing.tera=e.target.value;
  $('draftBuy').onclick=()=>choose().catch(e=>{alert(e.message);console.error(e)});
  $('draftCancel').onclick=()=>{editing=null;renderEditor()};
 }
