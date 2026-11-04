@@ -7,6 +7,23 @@ const active=()=>$('gameMode')?.value==='trainerdraft6';
 const seat=()=>localMode||!mpSession||!mpLobbyStarted?1:mpSession.id===mpSeats[1]?1:mpSession.id===mpSeats[2]?2:0;
 const gameLabel={sv:'Écarlate / Violet',swsh:'Épée / Bouclier',bdsp:'Diamant Étincelant / Perle Scintillante'};
 function selectedGame(){const dex=$('generation')?.value;const games={'9':'sv','8':'swsh','4':'bdsp'};if(dex==='all')return 'sv';if(!games[dex])throw Error('Choisis Paldea (9), Galar (8) ou Sinnoh (4) dans Dex / Génération.');return games[dex]}
+const frenchNames=new Map();
+async function loadFrenchNames(draft){
+ if(!draft)return;
+ const ids=[...new Set(Object.values(draft.boxes||{}).flatMap(rows=>rows.flatMap(row=>row.pokemon.map(p=>p.id))))];
+ const pending=ids.filter(id=>!frenchNames.has(id));
+ for(let i=0;i<pending.length;i+=6){
+  await Promise.all(pending.slice(i,i+6).map(async id=>{
+   try{const response=await fetch('https://pokeapi.co/api/v2/pokemon-species/'+id+'/');if(!response.ok)return;
+    const data=await response.json();const fr=data.names?.find(n=>n.language?.name==='fr')?.name;
+    if(fr)frenchNames.set(id,fr);
+   }catch(e){console.warn('Nom français non chargé',id,e)}
+  }));
+  if(state?.gameId!==draft.gameId)return;
+  for(const rows of Object.values(state.boxes||{}))for(const row of rows)for(const p of row.pokemon)if(frenchNames.has(p.id))p.name=frenchNames.get(p.id);
+  if(!editing)render();
+ }
+}
 function render(){
  const panel=$('trainerDraftPanel');if(!panel)return;panel.style.display=active()?'block':'none';if(!active())return;
  $('roll').disabled=busy;
@@ -74,9 +91,9 @@ async function start(){
   if(prior&&((prior.choices?.[1]?.entries?.length||0)+(prior.choices?.[2]?.entries?.length||0))>0&&!confirm('Effacer les achats actuels des deux joueurs ?'))return;
   const next=Core.td6Create(candidates,prior,Math.random,game,budget,boxMode);
   next.gameId=(offline?'local-':mpId())+Date.now();next.choices[1].gameId=next.gameId;next.choices[2].gameId=next.gameId;
-  if(offline){localMode=true;state=next;editing=null;render();return;}localMode=false;const tx=await ref.transaction(current=>{if((current?.gameId||null)!==(prior?.gameId||null)||(current?.created||null)!==(prior?.created||null))return;return next});
+  if(offline){localMode=true;state=next;editing=null;render();loadFrenchNames(next).catch(console.error);return;}localMode=false;const tx=await ref.transaction(current=>{if((current?.gameId||null)!==(prior?.gameId||null)||(current?.created||null)!==(prior?.created||null))return;return next});
   if(!tx.committed)throw Error('Partie modifiée pendant la génération.');
-  state=tx.snapshot.val();editing=null;render();
+  state=tx.snapshot.val();editing=null;render();loadFrenchNames(state).catch(console.error);
  }finally{busy=false;render()}
 }
 async function choose(){
@@ -93,6 +110,6 @@ async function choose(){
   state=tx.snapshot.val();editing=null;render();
  }finally{busy=false;render()}
 }
-function receive(value){if(localMode)return;localMode=false;state=value||null;if(editing&&editing.gameId!==state?.gameId)editing=null;render()}
+function receive(value){if(localMode)return;localMode=false;state=value||null;if(editing&&editing.gameId!==state?.gameId)editing=null;render();if(state?.version===2)loadFrenchNames(state).catch(console.error)}
 window.TrainerDraft6={start,receive,render};
 })();
