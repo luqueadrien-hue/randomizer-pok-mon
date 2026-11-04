@@ -4,14 +4,14 @@ const Core=window.TrainerDraftCore,$=id=>document.getElementById(id);
 let state=null,editing=null,busy=false,localMode=false;
 const esc=s=>String(s??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
 const active=()=>$('gameMode')?.value==='trainerdraft6';
-const seat=()=>localMode?1:!mpSession?0:mpSession.id===mpSeats[1]?1:mpSession.id===mpSeats[2]?2:0;
+const seat=()=>localMode||!mpSession||!mpLobbyStarted?1:mpSession.id===mpSeats[1]?1:mpSession.id===mpSeats[2]?2:0;
 const gameLabel={sv:'Écarlate / Violet',swsh:'Épée / Bouclier',bdsp:'Diamant Étincelant / Perle Scintillante'};
 function selectedGame(){const dex=$('generation')?.value;const games={'9':'sv','8':'swsh','4':'bdsp'};if(dex==='all')return 'sv';if(!games[dex])throw Error('Choisis Paldea (9), Galar (8) ou Sinnoh (4) dans Dex / Génération.');return games[dex]}
 function render(){
  const panel=$('trainerDraftPanel');if(!panel)return;panel.style.display=active()?'block':'none';if(!active())return;
- $('roll').disabled=true;
+ $('roll').disabled=busy;
  const host=!mpSession||mpSession.role==='host',me=seat();
- const start=$('trainerDraftStart');start.style.display=host?'':'none';start.disabled=busy||(!!mpSession&&(!mpLobbyStarted||!me));
+ const start=$('trainerDraftStart');if(start){start.style.display=host?'':'none';start.disabled=busy||(!!mpSession&&(!mpLobbyStarted||!me));}
  const grid=$('trainerDraftGrid'),status=$('trainerDraftStatus');
  if(!state||state.version!==2){
   status.textContent='Configure le budget et le type de boîte, puis clique sur Générer. Sans salon, une boîte locale est créée pour essayer le marché.';
@@ -50,7 +50,7 @@ function renderEditor(){
 }
 async function start(){
  if(busy)return;if(!active())throw Error('Sélectionne Marché & Draft.');
- const offline=!mpSession;if(!offline&&(!MPAUTH?.currentUser||mpSession.id!==MPAUTH.currentUser.uid))throw Error('Session Firebase invalide.');
+ const offline=!mpSession||!mpLobbyStarted;if(!offline&&(!MPAUTH?.currentUser||mpSession.id!==MPAUTH.currentUser.uid))throw Error('Session Firebase invalide.');
  busy=true;render();
  try{
   const room=offline?{}:(await mpRoom(mpSession.room).once('value')).val()||{};
@@ -78,7 +78,7 @@ async function start(){
   const ref=offline?null:mpRoom(mpSession.room).child('trainerDraft6'),prior=offline?state:(await ref.once('value')).val();
   if(prior&&((prior.choices?.[1]?.entries?.length||0)+(prior.choices?.[2]?.entries?.length||0))>0&&!confirm('Effacer les achats actuels des deux joueurs ?'))return;
   const next=Core.td6Create(candidates,prior,Math.random,game,budget,boxMode);
-  next.gameId=mpId()+Date.now();next.choices[1].gameId=next.gameId;next.choices[2].gameId=next.gameId;
+  next.gameId=(offline?'local-':mpId())+Date.now();next.choices[1].gameId=next.gameId;next.choices[2].gameId=next.gameId;
   if(offline){localMode=true;state=next;editing=null;render();return;}localMode=false;const tx=await ref.transaction(current=>{if((current?.gameId||null)!==(prior?.gameId||null)||(current?.created||null)!==(prior?.created||null))return;return next});
   if(!tx.committed)throw Error('Partie modifiée pendant la génération.');
   state=tx.snapshot.val();editing=null;render();
@@ -98,6 +98,6 @@ async function choose(){
   state=tx.snapshot.val();editing=null;render();
  }finally{busy=false;render()}
 }
-function receive(value){if(localMode&&!mpSession)return;localMode=false;state=value||null;if(editing&&editing.gameId!==state?.gameId)editing=null;render()}
+function receive(value){if(localMode)return;localMode=false;state=value||null;if(editing&&editing.gameId!==state?.gameId)editing=null;render()}
 window.TrainerDraft6={start,receive,render};
 })();
