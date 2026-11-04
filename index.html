@@ -3038,7 +3038,7 @@ document.getElementById('roll').addEventListener('click',()=>{
  const button=document.getElementById('roll');
  if(button.disabled){alert(button.title||'La génération est momentanément indisponible.');return;}
  const mode=gameMode.value;
- if(mode==='trainerdraft6')return alert('Pour ce Draft, utilise « Tirer 6 dresseurs et 18 Pokémon » dans la boîte PC.');
+ if(mode==='trainerdraft6'){document.getElementById('trainerDraftPanel')?.scrollIntoView({behavior:'smooth',block:'start'});return alert('Pour le Marché & Draft, clique sur « 🎲 Générer la boîte PC » dans le panneau du jeu. La génération nécessite un salon lancé avec deux joueurs ; seul l’hôte peut la lancer.');}
  if(mode==='modulodex')return alert('Pour Modulo Pokédex, utilise « Préparer les propositions ».');
  rollCards().catch(e=>{console.error('Erreur du bouton Générer',e);turn.textContent='❌ Génération impossible : '+(e?.message||e);alert(e?.message||'Erreur de génération');});
 });
