@@ -72,7 +72,6 @@ async function start(){
   const candidates=[...new Set(Core.TD6_LORE.map(x=>x.id))].map(id=>({id,name:'Pokémon n°'+id,img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/'+id+'.png',legalMoves:[],initialMoves:[],nature:'Hardi',tera:'normal'}));
   const ref=offline?null:mpRoom(mpSession.room).child('trainerDraft6'),prior=offline?state:(await ref.once('value')).val();
   if(prior&&((prior.choices?.[1]?.entries?.length||0)+(prior.choices?.[2]?.entries?.length||0))>0&&!confirm('Effacer les achats actuels des deux joueurs ?'))return;
-  if(needed.some(x=>x.count<target))throw Error('Catalogue insuffisant pour générer les cinq rangs : '+needed.filter(x=>x.count<target).map(x=>x.rank.label+' ('+x.count+'/'+target+')').join(', '));
   const next=Core.td6Create(candidates,prior,Math.random,game,budget,boxMode);
   next.gameId=(offline?'local-':mpId())+Date.now();next.choices[1].gameId=next.gameId;next.choices[2].gameId=next.gameId;
   if(offline){localMode=true;state=next;editing=null;render();return;}localMode=false;const tx=await ref.transaction(current=>{if((current?.gameId||null)!==(prior?.gameId||null)||(current?.created||null)!==(prior?.created||null))return;return next});
