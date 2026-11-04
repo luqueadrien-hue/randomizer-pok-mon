@@ -715,7 +715,9 @@ function td6AddChoice(state,seat,rowIndex,offerIndex,custom){
  if(state.boxMode==='shared'&&state.choices?.[seat===1?2:1]?.entries?.some(e=>e.rowIndex===rowIndex&&e.offerIndex===offerIndex))throw Error('Pokémon déjà acheté par l’autre joueur.');
  const moves=custom?.moves;
  if(!Array.isArray(moves)||moves.length!==4||new Set(moves).size!==4||moves.some(m=>!offer.legalMoves.includes(m)))throw Error('Quatre capacités légales et distinctes requises.');
- if(!TD6_NATURES.includes(custom?.nature)||!TD6_TYPES.includes(custom?.tera))throw Error('Nature ou type Téracristal invalide.');
+ if(!TD6_NATURES.includes(custom?.nature))throw Error('Nature invalide.');
+ // Le type Téracristal n'est personnalisable que dans Écarlate/Violet.
+ if(state.game==='sv'?!TD6_TYPES.includes(custom?.tera):custom?.tera!=='normal')throw Error('Type Téracristal invalide pour ce jeu.');
  const price=row.price;
  const spent=entries.reduce((s,e)=>s+e.price,0);
  if(spent+price>state.budget)throw Error('Budget insuffisant.');
