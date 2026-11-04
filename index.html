@@ -291,10 +291,10 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 <div class="controls">
 <label>Budget par joueur ($)<input id="trainerDraftBudget" type="number" min="1" max="100000" step="1" value="30"></label>
 <label>Type de boîte<select id="trainerDraftBoxMode"><option value="shared">Boîte commune — mêmes 30 Pokémon</option><option value="separate">Boîtes individuelles — tirage par joueur</option></select></label>
-<button type="button" id="trainerDraftStart" onclick="TrainerDraft6.start().catch(e=>{document.getElementById('trainerDraftStatus').textContent='❌ '+e.message;console.error(e)})">🎲 Générer la boîte PC</button>
+
 </div>
 <div id="trainerDraftStatus" class="turn">En attente d'un salon réseau.</div>
-<div class="pcBoxHeader trainerPcHeader"><span>📦 BOÎTE PC — MARCHÉ & DRAFT DES DRESSEURS</span><span>6 colonnes × 5 lignes · 30 Pokémon</span></div>
+
 <div id="trainerDraftGrid"></div><div id="trainerDraftEditor"></div><div id="trainerDraftTeams"></div>
 </div>
 <label>Taille équipe<select id="teamSize"><option>3</option><option>4</option><option>5</option><option selected>6</option></select></label>
@@ -574,7 +574,7 @@ async function mpHydrateState(st){
   }
   if(st.revealEvent?.id&&st.revealEvent.id!==mpSeenRevealId){const ev=st.revealEvent;mpSeenRevealId=ev.id;if(mpSession&&ev.origin!==mpSession.id){try{pokeReleaseAnimation(await getP(ev.pokemonId))}catch(e){console.warn('Animation distante',e)}}}
   if(st.turn)turn.textContent=st.turn;
-  if(mpSession){const isSpecial=['trainerdraft6','modulodex','auction','tcgattacks'].includes(st.mode);roll.disabled=isSpecial||!mpLobbyStarted||mpSession.id!==mpSeats[player===1?2:1]||sixRoundFinished();roll.title=roll.disabled?(isSpecial?'Utilise le bouton de préparation du mode sélectionné.':!mpLobbyStarted?'L’organisateur doit lancer le challenge.':'Seul le randomiseur du tour peut générer.'):'';}
+  if(mpSession){const isSpecial=['trainerdraft6','modulodex','auction','tcgattacks'].includes(st.mode);roll.disabled=st.mode==='trainerdraft6'?false:isSpecial||!mpLobbyStarted||mpSession.id!==mpSeats[player===1?2:1]||sixRoundFinished();roll.title=roll.disabled?(isSpecial?'Utilise le bouton de préparation du mode sélectionné.':!mpLobbyStarted?'L’organisateur doit lancer le challenge.':'Seul le randomiseur du tour peut générer.'):'';}
   if(st.mode==='learnleave'){
    dealPanel.style.display='block';
    if(!mine){
@@ -614,7 +614,7 @@ function mpReceive(r){
  if(lobby.innerHTML!==lobbyMarkup)lobby.innerHTML=lobbyMarkup;
  [1,2].forEach(n=>{const el=document.getElementById('mpSeat'+n);if(el){el.value=mpSeats[n]||'';el.onchange=()=>{if(!isHost)return;const other=n===1?2:1;if(el.value&&el.value===mpSeats[other]){el.value=mpSeats[n]||'';return}mpRoom(mpSession.room).child('seats/'+n).set(el.value||null).then(()=>mpSetStatus('✅ Joueur '+n+' attribué.')).catch(e=>mpSetStatus('❌ '+mpEsc(e.message)))}}});
  const activeGenerator=mpSeats[player===1?2:1];
- if(mpSession&&r.state?.mode!=='auction'&&r.state?.mode!=='hangman'&&r.state?.mode!=='blinddraft')roll.disabled=r.state?.mode==='trainerdraft6'||!mpLobbyStarted||mpSession.id!==activeGenerator||sixRoundFinished();
+ if(mpSession&&r.state?.mode!=='auction'&&r.state?.mode!=='hangman'&&r.state?.mode!=='blinddraft')roll.disabled=r.state?.mode==='trainerdraft6'?false:!mpLobbyStarted||mpSession.id!==activeGenerator||sixRoundFinished();
  const activeName=ps[activeGenerator]?.name||'Non attribué';
  document.getElementById('mpRoleStatus').textContent=mpLobbyStarted?'🎲 Générateur : '+activeName+' → fait deviner au Joueur '+player+' ('+(ps[mpSeats[player]]?.name||'?')+')':'Les rôles de génération seront définis avant le lancement.';
  const btn=document.getElementById('mpStartChallenge');
@@ -3036,9 +3036,9 @@ document.getElementById('keepStarter').addEventListener('click',()=>dealKeep().c
 document.getElementById('discardStarter').addEventListener('click',()=>dealRefuse().catch(console.error));
 document.getElementById('roll').addEventListener('click',()=>{
  const button=document.getElementById('roll');
- if(button.disabled){alert(button.title||'La génération est momentanément indisponible.');return;}
  const mode=gameMode.value;
- if(mode==='trainerdraft6'){document.getElementById('trainerDraftPanel')?.scrollIntoView({behavior:'smooth',block:'start'});return alert('Pour le Marché & Draft, clique sur « 🎲 Générer la boîte PC » dans le panneau du jeu. La génération nécessite un salon lancé avec deux joueurs ; seul l’hôte peut la lancer.');}
+ if(mode==='trainerdraft6'){window.TrainerDraft6.start().catch(e=>{console.error('Marché & Draft',e);document.getElementById('trainerDraftStatus').textContent='❌ '+e.message;alert(e.message)});return;}
+ if(button.disabled){alert(button.title||'La génération est momentanément indisponible.');return;}
  if(mode==='modulodex')return alert('Pour Modulo Pokédex, utilise « Préparer les propositions ».');
  rollCards().catch(e=>{console.error('Erreur du bouton Générer',e);turn.textContent='❌ Génération impossible : '+(e?.message||e);alert(e?.message||'Erreur de génération');});
 });
@@ -3335,7 +3335,7 @@ function legacyMode(mode){return ({olddesc:'dexdesc',bstonly:'stats',evomethod:'
 function restoreLegacyMode(mode){const mapped=legacyMode(mode);return [...gameMode.options].some(x=>x.value===mapped)?mapped:'species'}
 syncMergedModeControls();
 syncCompetitiveGeneration();
-gameMode.addEventListener('change',()=>{roll.disabled=gameMode.value==='trainerdraft6';roll.title=roll.disabled?'Utilise le bouton Générer la boîte PC.':'';trainerMarketRender();if(window.TrainerDraft6)window.TrainerDraft6.render();syncCompetitiveGeneration();syncMergedModeControls();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('noelPanel').style.display=gameMode.value==='noel'?'block':'none';document.getElementById('tcgAttacksPanel').style.display=gameMode.value==='tcgattacks'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';document.getElementById('trainerOptions').style.display=gameMode.value==='trainerteam'?'block':'none';document.getElementById('moduloPanel').style.display=gameMode.value==='modulodex'?'block':'none';if(gameMode.value==='modulodex')moduloRender();if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
+gameMode.addEventListener('change',()=>{roll.disabled=false;roll.title=gameMode.value==='trainerdraft6'?'Générer une boîte de 30 Pokémon (6 par rang).':'';trainerMarketRender();if(window.TrainerDraft6)window.TrainerDraft6.render();syncCompetitiveGeneration();syncMergedModeControls();surpriseActive=false;const notice=document.getElementById('surpriseNotice');if(notice)notice.textContent='';dealStage=0;dealStarted=false;dealRemaining=[];dealButtons();batchLocked=false;cards.innerHTML='';dealPanel.style.display=gameMode.value==='learnleave'?'block':'none';if(gameMode.value==='impossibledilemma'){impossible={phase:'idle',ids:[],banned:null,constraints:['',''],generator:player,chooser:player===1?2:1};impossibleRender();}auctionPanel.style.display=gameMode.value==='auction'?'block':'none';document.getElementById('noelPanel').style.display=gameMode.value==='noel'?'block':'none';document.getElementById('tcgAttacksPanel').style.display=gameMode.value==='tcgattacks'?'block':'none';document.getElementById('questionDuelPanel').style.display=gameMode.value==='questionduel'?'block':'none';document.getElementById('trainerOptions').style.display=gameMode.value==='trainerteam'?'block':'none';document.getElementById('moduloPanel').style.display=gameMode.value==='modulodex'?'block':'none';if(gameMode.value==='modulodex')moduloRender();if(gameMode.value==='questionduel')qdRender();turn.textContent='Tour du JOUEUR '+player;mpSyncState()});
 ['teamSize','choiceCount','legend','generation','competitiveGeneration','typeMode','revealMode','lieMode','boxSize','evolutionMergedStyle','abilityMergedStyle','habitatMergedStyle','statHighestMergedStyle'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>mpSyncState()));
 
 const CALC_NATURE_MAP={Assuré:['defense','attack'],Bizarre:[null,null],Brave:['attack','speed'],Calme:['special-defense','attack'],Discret:['special-attack','speed'],Docile:[null,null],Doux:['special-attack','defense'],Foufou:['special-attack','special-defense'],Gentil:['special-defense','defense'],Hardi:[null,null],Jovial:['speed','special-attack'],Lâche:['defense','special-defense'],Malin:['defense','special-attack'],Malpoli:['special-defense','speed'],Mauvais:['attack','special-defense'],Modeste:['special-attack','attack'],Naïf:['speed','special-defense'],Pressé:['speed','defense'],Prudent:['special-defense','special-attack'],Pudique:[null,null],Relax:['defense','speed'],Rigide:['attack','special-attack'],Sérieux:[null,null],Solo:['attack','defense'],Timide:['speed','attack']};
