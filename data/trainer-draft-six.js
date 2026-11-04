@@ -27,7 +27,7 @@ async function loadFrenchNames(draft){
 function render(){
  const panel=$('trainerDraftPanel');if(!panel)return;panel.style.display=active()?'block':'none';if(!active())return;
  $('roll').disabled=busy;
- const host=!mpSession||mpSession.role==='host',me=seat();
+ const host=!mpSession||!mpLobbyStarted||mpSession.role==='host',me=seat();
  const start=$('trainerDraftStart');if(start){start.style.display=host?'':'none';start.disabled=busy||(!!mpSession&&(!mpLobbyStarted||!me));}
  const grid=$('trainerDraftGrid'),status=$('trainerDraftStatus');
  if(!state||state.version!==2){
@@ -100,12 +100,11 @@ async function choose(){
  if(busy||!editing||!state)return;
  const me=seat();if(!me||(!localMode&&(!mpLobbyStarted||MPAUTH?.currentUser?.uid!==mpSession?.id)))throw Error('Session réseau non autorisée.');
  const draft=state,form={moves:[...editing.moves],nature:editing.nature,tera:editing.tera};
- Core.td6AddChoice(draft,me,editing.rowIndex,editing.offerIndex,form);
  if(localMode){state.choices[me]=Core.td6AddChoice(state,me,editing.rowIndex,editing.offerIndex,form);editing=null;render();return;}
  busy=true;
  try{
   const ref=mpRoom(mpSession.room).child('trainerDraft6');
-  const tx=await ref.transaction(current=>{try{if(current?.gameId!==draft.gameId)return;current.choices[me]=Core.td6AddChoice(current,me,editing.rowIndex,editing.offerIndex,form);return current}catch(e){return}});
+  const tx=await ref.transaction(current=>{try{if(current?.gameId!==draft.gameId)return;const p=current.boxes?.[me]?.[editing.rowIndex]?.pokemon?.[editing.offerIndex];if(!p)return;const source=draft.boxes?.[me]?.[editing.rowIndex]?.pokemon?.[editing.offerIndex];if(source?.legalMoves?.length){p.legalMoves=source.legalMoves;p.initialMoves=source.initialMoves;p.name=source.name;p.nature=source.nature;p.tera=source.tera;}current.choices[me]=Core.td6AddChoice(current,me,editing.rowIndex,editing.offerIndex,form);return current}catch(e){console.warn('Achat rejeté',e);return}});
   if(!tx.committed)throw Error('Achat refusé : case déjà prise, budget insuffisant ou partie modifiée.');
   state=tx.snapshot.val();editing=null;render();
  }finally{busy=false;render()}
