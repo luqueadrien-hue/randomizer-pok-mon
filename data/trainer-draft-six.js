@@ -7,7 +7,10 @@ const active=()=>$('gameMode')?.value==='trainerdraft6';
 const seat=()=>localMode||!mpSession||!mpLobbyStarted?1:mpSession.id===mpSeats[1]?1:mpSession.id===mpSeats[2]?2:0;
 const gameLabel={sv:'Écarlate / Violet',swsh:'Épée / Bouclier',bdsp:'Diamant Étincelant / Perle Scintillante'};
 function selectedGame(){const dex=$('generation')?.value;const games={'9':'sv','8':'swsh','4':'bdsp'};if(dex==='all')return 'sv';if(!games[dex])throw Error('Choisis Paldea (9), Galar (8) ou Sinnoh (4) dans Dex / Génération.');return games[dex]}
-const frenchNames=new Map();
+const frenchNames=new Map(),frenchMoves=new Map();
+const typeFr={normal:'Normal',fire:'Feu',water:'Eau',electric:'Électrik',grass:'Plante',ice:'Glace',fighting:'Combat',poison:'Poison',ground:'Sol',flying:'Vol',psychic:'Psy',bug:'Insecte',rock:'Roche',ghost:'Spectre',dragon:'Dragon',dark:'Ténèbres',steel:'Acier',fairy:'Fée'};
+async function loadMoveNames(moves){await Promise.all(moves.filter(x=>!frenchMoves.has(x)).map(async move=>{try{const r=await fetch('https://pokeapi.co/api/v2/move/'+encodeURIComponent(move)+'/');if(!r.ok)return;const data=await r.json();const name=data.names?.find(n=>n.language?.name==='fr')?.name;if(name)frenchMoves.set(move,name)}catch(e){console.warn('Traduction capacité indisponible',move)}}));if(editing)renderEditor()}
+
 async function loadFrenchNames(draft){
  if(!draft)return;
  const ids=[...new Set(Object.values(draft.boxes||{}).flatMap(rows=>rows.flatMap(row=>row.pokemon.map(p=>p.id))))];
@@ -62,14 +65,14 @@ async function openEditor(rowIndex,offerIndex){
    if(moves.length<4)throw Error('Moins de quatre capacités disponibles pour ce Pokémon dans ce jeu.');
    p.name=full.name;p.img=full.img||p.img;p.legalMoves=moves;p.initialMoves=Core.td6Shuffle(moves).slice(0,4);p.nature='Rigide';p.tera=full.types?.[0]||'normal';
   }
-  editing={gameId:state.gameId,rowIndex,offerIndex,moves:[...p.initialMoves],nature:p.nature,tera:state.game==='sv'?p.tera:'normal'};render();renderEditor();
+  editing={gameId:state.gameId,rowIndex,offerIndex,moves:[...p.initialMoves],nature:p.nature,tera:state.game==='sv'?p.tera:'normal'};render();renderEditor();loadMoveNames(editing.moves).catch(console.error);
  }catch(e){$('trainerDraftStatus').textContent='❌ '+e.message;console.error(e)}
 
 }
 function renderEditor(){
  const box=$('trainerDraftEditor');if(!editing||editing.gameId!==state?.gameId){box.innerHTML='';return}
  const row=state.boxes[seat()][editing.rowIndex],p=row.pokemon[editing.offerIndex];
- box.innerHTML='<div class="panel"><h3>'+esc(p.name)+' — '+esc(p.lore?.trainer)+' · '+row.price+' $</h3><p>'+esc(p.lore?.source||'')+'</p><div class="controls">'+editing.moves.map((m,i)=>'<label>Capacité '+(i+1)+'<select data-move="'+i+'">'+p.legalMoves.map(x=>'<option value="'+esc(x)+'" '+(m===x?'selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label>').join('')+'<label>Nature<select id="draftNature">'+Core.TD6_NATURES.map(n=>'<option '+(n===editing.nature?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label>'+(state.game==='sv'?'<label>Type Téra<select id="draftTera">'+Core.TD6_TYPES.map(n=>'<option '+(n===editing.tera?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label>':'')+'</div><button id="draftBuy" type="button">Acheter</button><button id="draftCancel" type="button">Annuler</button></div>';
+ box.innerHTML='<div class="panel"><h3>'+esc(p.name)+' — '+esc(p.lore?.trainer)+' · '+row.price+' $</h3><p>'+esc(p.lore?.source||'')+'</p><div class="controls">'+editing.moves.map((m,i)=>'<label>Capacité '+(i+1)+'<select data-move="'+i+'">'+p.legalMoves.map(x=>'<option value="'+esc(x)+'" '+(m===x?'selected':'')+'>'+esc(frenchMoves.get(x)||x)+'</option>').join('')+'</select></label>').join('')+'<label>Nature<select id="draftNature">'+Core.TD6_NATURES.map(n=>'<option '+(n===editing.nature?'selected':'')+'>'+esc(typeFr[n]||n)+'</option>').join('')+'</select></label>'+(state.game==='sv'?'<label>Type Téra<select id="draftTera">'+Core.TD6_TYPES.map(n=>'<option '+(n===editing.tera?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label>':'')+'</div><button id="draftBuy" type="button">Acheter</button><button id="draftCancel" type="button">Annuler</button></div>';
  box.querySelectorAll('[data-move]').forEach(el=>el.onchange=()=>editing.moves[+el.dataset.move]=el.value);
  $('draftNature').onchange=e=>editing.nature=e.target.value;if($('draftTera'))$('draftTera').onchange=e=>editing.tera=e.target.value;
  $('draftBuy').onclick=()=>choose().catch(e=>{alert(e.message);console.error(e)});
