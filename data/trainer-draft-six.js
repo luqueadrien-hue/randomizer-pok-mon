@@ -9,7 +9,13 @@ const gameLabel={sv:'Écarlate / Violet',swsh:'Épée / Bouclier',bdsp:'Diamant 
 function selectedGame(){const dex=$('generation')?.value;const games={'9':'sv','8':'swsh','4':'bdsp'};if(dex==='all')return 'sv';if(!games[dex])throw Error('Choisis Paldea (9), Galar (8) ou Sinnoh (4) dans Dex / Génération.');return games[dex]}
 const frenchNames=new Map(),frenchMoves=new Map();
 const typeFr={normal:'Normal',fire:'Feu',water:'Eau',electric:'Électrik',grass:'Plante',ice:'Glace',fighting:'Combat',poison:'Poison',ground:'Sol',flying:'Vol',psychic:'Psy',bug:'Insecte',rock:'Roche',ghost:'Spectre',dragon:'Dragon',dark:'Ténèbres',steel:'Acier',fairy:'Fée'};
-async function loadMoveNames(moves){await Promise.all(moves.filter(x=>!frenchMoves.has(x)).map(async move=>{try{const r=await fetch('https://pokeapi.co/api/v2/move/'+encodeURIComponent(move)+'/');if(!r.ok)return;const data=await r.json();const name=data.names?.find(n=>n.language?.name==='fr')?.name;if(name)frenchMoves.set(move,name)}catch(e){console.warn('Traduction capacité indisponible',move)}}));if(editing)renderEditor()}
+async function loadMoveNames(moves){
+ const pending=[...new Set(moves)].filter(x=>!frenchMoves.has(x));
+ for(let i=0;i<pending.length;i+=8){
+  await Promise.all(pending.slice(i,i+8).map(async move=>{try{const r=await fetch('https://pokeapi.co/api/v2/move/'+encodeURIComponent(move)+'/');if(!r.ok)return;const data=await r.json();const name=data.names?.find(n=>n.language?.name==='fr')?.name;if(name)frenchMoves.set(move,name)}catch(e){console.warn('Traduction capacité indisponible',move)}}));
+  if(editing)renderEditor();
+ }
+}
 
 async function loadFrenchNames(draft){
  if(!draft)return;
@@ -65,7 +71,7 @@ async function openEditor(rowIndex,offerIndex){
    if(moves.length<4)throw Error('Moins de quatre capacités disponibles pour ce Pokémon dans ce jeu.');
    p.name=full.name;p.img=full.img||p.img;p.legalMoves=moves;p.initialMoves=Core.td6Shuffle(moves).slice(0,4);p.nature='Rigide';p.tera=full.types?.[0]||'normal';
   }
-  editing={gameId:state.gameId,rowIndex,offerIndex,moves:[...p.initialMoves],nature:p.nature,tera:state.game==='sv'?p.tera:'normal'};render();renderEditor();loadMoveNames(editing.moves).catch(console.error);
+  editing={gameId:state.gameId,rowIndex,offerIndex,moves:[...p.initialMoves],nature:p.nature,tera:state.game==='sv'?p.tera:'normal'};render();renderEditor();loadMoveNames(p.legalMoves).catch(console.error);
  }catch(e){$('trainerDraftStatus').textContent='❌ '+e.message;console.error(e)}
 
 }
