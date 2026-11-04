@@ -63,3 +63,16 @@ test('HTML, scripts et règles Firebase compatibles avec le mode actuel',()=>{
  assert.match(rules.rules.rooms['$room'].zoneWheel['.validate'],/version'\)\.val\(\) === 3/);
  new Script(ui);new Script(wheel);
 });
+
+test('type Téra réservé à Écarlate/Violet, refusé dans les autres jeux',()=>{
+ const sv=build();assert.doesNotThrow(()=>C.td6AddChoice(sv,1,4,0,{...custom,tera:'fire'}));
+ for(const game of ['swsh','bdsp']){
+  const s=build();s.game=game;
+  assert.doesNotThrow(()=>C.td6AddChoice(s,1,4,0,custom));
+  assert.throws(()=>C.td6AddChoice(s,1,4,0,{...custom,tera:'fire'}),/Téracristal/);
+ }
+ const ui=readFileSync(new URL('../data/trainer-draft-six.js',import.meta.url),'utf8');
+ assert.match(ui,/state\.game==='sv'\?p\.tera:'normal'/);
+ assert.match(ui,/state\.game==='sv'\?'<label>Type Téra/);
+ assert.match(ui,/if\(\$\('draftTera'\)\)/);
+});
