@@ -1,0 +1,23 @@
+name: Vérification Marché et Draft
+on:
+  push:
+    paths:
+      - 'data/trainer-draft-core.js'
+      - 'data/trainer-draft-six.js'
+      - 'tests/trainer-market-regression.test.cjs'
+      - '.github/workflows/trainer-market.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Vérifier la syntaxe JavaScript
+        run: |
+          node --check data/trainer-draft-core.js
+          node --check data/trainer-draft-six.js
+      - name: Tester la génération et les achats
+        run: node --test tests/trainer-market-regression.test.cjs
