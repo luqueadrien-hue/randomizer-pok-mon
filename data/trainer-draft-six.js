@@ -8,6 +8,7 @@ const seat=()=>localMode||!mpSession||!mpLobbyStarted?1:mpSession.id===mpSeats[1
 const gameLabel={sv:'Écarlate / Violet',swsh:'Épée / Bouclier',bdsp:'Diamant Étincelant / Perle Scintillante'};
 function selectedGame(){const dex=$('generation')?.value;const games={'9':'sv','8':'swsh','4':'bdsp'};if(dex==='all')return 'sv';if(!games[dex])throw Error('Choisis Paldea (9), Galar (8) ou Sinnoh (4) dans Dex / Génération.');return games[dex]}
 const frenchNames=new Map(),frenchMoves=new Map();
+const readableMove=move=>frenchMoves.get(move)||'Capacité en cours de traduction ('+String(move).replace(/-/g,' ')+')';
 const typeFr={normal:'Normal',fire:'Feu',water:'Eau',electric:'Électrik',grass:'Plante',ice:'Glace',fighting:'Combat',poison:'Poison',ground:'Sol',flying:'Vol',psychic:'Psy',bug:'Insecte',rock:'Roche',ghost:'Spectre',dragon:'Dragon',dark:'Ténèbres',steel:'Acier',fairy:'Fée'};
 async function loadMoveNames(moves){
  const pending=[...new Set(moves)].filter(x=>!frenchMoves.has(x));
@@ -78,7 +79,7 @@ async function openEditor(rowIndex,offerIndex){
 function renderEditor(){
  const box=$('trainerDraftEditor');if(!editing||editing.gameId!==state?.gameId){box.innerHTML='';return}
  const row=state.boxes[seat()][editing.rowIndex],p=row.pokemon[editing.offerIndex];
- box.innerHTML='<div class="panel"><h3>'+esc(p.name)+' — '+esc(p.lore?.trainer)+' · '+row.price+' $</h3><p>'+esc(p.lore?.source||'')+'</p><div class="controls">'+editing.moves.map((m,i)=>'<label>Capacité '+(i+1)+'<select data-move="'+i+'">'+p.legalMoves.map(x=>'<option value="'+esc(x)+'" '+(m===x?'selected':'')+'>'+esc(frenchMoves.get(x)||x)+'</option>').join('')+'</select></label>').join('')+'<label>Nature<select id="draftNature">'+Core.TD6_NATURES.map(n=>'<option '+(n===editing.nature?'selected':'')+'>'+esc(typeFr[n]||n)+'</option>').join('')+'</select></label>'+(state.game==='sv'?'<label>Type Téra<select id="draftTera">'+Core.TD6_TYPES.map(n=>'<option '+(n===editing.tera?'selected':'')+'>'+esc(n)+'</option>').join('')+'</select></label>':'')+'</div><button id="draftBuy" type="button">Acheter</button><button id="draftCancel" type="button">Annuler</button></div>';
+ box.innerHTML='<div class="panel"><h3>'+esc(p.name)+' — '+esc(p.lore?.trainer)+' · '+row.price+' $</h3><p>'+esc(p.lore?.source||'')+'</p><div class="controls">'+editing.moves.map((m,i)=>'<label>Capacité '+(i+1)+'<select data-move="'+i+'">'+p.legalMoves.map(x=>'<option value="'+esc(x)+'" '+(m===x?'selected':'')+'>'+esc(readableMove(x))+'</option>').join('')+'</select></label>').join('')+'<label>Nature<select id="draftNature">'+Core.TD6_NATURES.map(n=>'<option '+(n===editing.nature?'selected':'')+'>'+esc(typeFr[n]||n)+'</option>').join('')+'</select></label>'+(state.game==='sv'?'<label>Type Téra<select id="draftTera">'+Core.TD6_TYPES.map(n=>'<option '+(n===editing.tera?'selected':'')+'>'+esc(typeFr[n]||n)+'</option>').join('')+'</select></label>':'')+'</div><button id="draftBuy" type="button">Acheter</button><button id="draftCancel" type="button">Annuler</button></div>';
  box.querySelectorAll('[data-move]').forEach(el=>el.onchange=()=>editing.moves[+el.dataset.move]=el.value);
  $('draftNature').onchange=e=>editing.nature=e.target.value;if($('draftTera'))$('draftTera').onchange=e=>editing.tera=e.target.value;
  $('draftBuy').onclick=()=>choose().catch(e=>{alert(e.message);console.error(e)});
@@ -118,6 +119,6 @@ async function choose(){
   state=tx.snapshot.val();editing=null;render();
  }finally{busy=false;render()}
 }
-function receive(value){if(localMode)return;localMode=false;state=value||null;if(editing&&editing.gameId!==state?.gameId)editing=null;render();if(state?.version===2)loadFrenchNames(state).catch(console.error)}
+function receive(value){if(localMode){if(!mpSession||!mpLobbyStarted)return;localMode=false;}state=value||null;if(editing&&editing.gameId!==state?.gameId)editing=null;render();if(state?.version===2)loadFrenchNames(state).catch(console.error)}
 window.TrainerDraft6={start,receive,render};
 })();
