@@ -32,12 +32,22 @@ function render(){
  $('trainerDraftTeams').innerHTML=[1,2].map(n=>{const entries=state.choices?.[n]?.entries||[],spent=entries.reduce((s,e)=>s+e.price,0);return '<p><strong>Joueur '+n+'</strong> · '+entries.length+'/6 · '+(state.budget-spent)+' $ restants : '+(entries.map(e=>esc(state.boxes[n][e.rowIndex].pokemon[e.offerIndex].name)).join(', ')||'Aucun achat')+'</p>'}).join('');
  renderEditor();
 }
-function openEditor(rowIndex,offerIndex){
+async function openEditor(rowIndex,offerIndex){
  const me=seat(),row=state?.boxes?.[me]?.[rowIndex],p=row?.pokemon?.[offerIndex];if(!p)return;
  const entries=state.choices?.[me]?.entries||[],other=state.choices?.[me===1?2:1]?.entries||[];
  if(entries.length>=6||entries.some(e=>e.rowIndex===rowIndex&&e.offerIndex===offerIndex)||(state.boxMode==='shared'&&other.some(e=>e.rowIndex===rowIndex&&e.offerIndex===offerIndex)))return;
  if(entries.reduce((s,e)=>s+e.price,0)+row.price>state.budget)return;
- editing={gameId:state.gameId,rowIndex,offerIndex,moves:[...p.initialMoves],nature:p.nature,tera:state.game==='sv'?p.tera:'normal'};renderEditor();
+ $('trainerDraftStatus').textContent='Chargement des capacités du Pokémon n°'+p.id+'…';
+ try{
+  if(!p.legalMoves.length){
+   const full=await getP(p.id),version={sv:'scarlet-violet',swsh:'sword-shield',bdsp:'brilliant-diamond-and-shining-pearl'}[state.game];
+   const moves=[...new Set((full.moves||[]).filter(m=>(m.version_group_details||[]).some(d=>d.version_group?.name===version)).map(m=>m.name))];
+   if(moves.length<4)throw Error('Moins de quatre capacités disponibles pour ce Pokémon dans ce jeu.');
+   p.name=full.name;p.img=full.img||p.img;p.legalMoves=moves;p.initialMoves=Core.td6Shuffle(moves).slice(0,4);p.nature='Rigide';p.tera=full.types?.[0]||'normal';
+  }
+  editing={gameId:state.gameId,rowIndex,offerIndex,moves:[...p.initialMoves],nature:p.nature,tera:state.game==='sv'?p.tera:'normal'};render();renderEditor();
+ }catch(e){$('trainerDraftStatus').textContent='❌ '+e.message;console.error(e)}
+
 }
 function renderEditor(){
  const box=$('trainerDraftEditor');if(!editing||editing.gameId!==state?.gameId){box.innerHTML='';return}
@@ -59,29 +69,7 @@ async function start(){
   const game=selectedGame(),budget=Number($('trainerDraftBudget').value),boxMode=$('trainerDraftBoxMode').value;
   if(!Number.isInteger(budget)||budget<1||budget>100000)throw Error('Budget entre 1 et 100 000 $ requis.');
   $('trainerDraftStatus').textContent='Chargement des associations de dresseurs et Pokémon compatibles…';
-  const eligible=offline?{ids:new Set(Core.TD6_LORE.map(x=>x.id))}:await trainerMarketEligible(game,false);
-  const ids=Core.td6Shuffle([...new Set(Core.TD6_LORE.map(x=>x.id))].filter(id=>eligible.ids.has(id)));
-  const target=boxMode==='separate'?12:6;
-  const needed=Core.TD_MARKET_RANKS.map(rank=>({rank,count:0}));
-  const candidates=[];
-  for(let offset=0;offset<ids.length;offset+=8){
-   if(needed.every(x=>x.count>=target))break;
-   const group=await Promise.all(ids.slice(offset,offset+8).map(async id=>{
-    try{
-     const p=await getP(id);if(p.legendary||!p.abilities?.length)return null;
-     const version={sv:'scarlet-violet',swsh:'sword-shield',bdsp:'brilliant-diamond-and-shining-pearl'}[game];
-     const legalMoves=[...new Set((p.moves||[]).filter(m=>(m.version_group_details||[]).some(d=>d.version_group?.name===version&&['level-up','machine','egg','tutor'].includes(d.move_learn_method?.name))).map(m=>m.name))];
-     if(legalMoves.length<4)return null;
-     const physical=(p.stats?.attack||0)>=(p.stats?.['special-attack']||0),item=Core.TD6_ITEMS[Math.floor(Math.random()*Core.TD6_ITEMS.length)];
-     const ev={hp:252,speed:4};ev[physical?'attack':'special-attack']=252;
-     return {id,name:p.name,img:p.img||'',ability:p.abilities.find(a=>!a.hidden)?.name||p.abilities[0].name,item:item[0],itemName:item[1],ev,iv:{hp:31,attack:31,defense:31,'special-attack':31,'special-defense':31,speed:31},legalMoves,initialMoves:Core.td6Shuffle(legalMoves).slice(0,4),nature:physical?'Rigide':'Modeste',tera:p.types[0]||'normal'};
-    }catch(e){console.warn('Candidat écarté',id,e);return null}
-   }));for(const p of group.filter(Boolean)){
-    const ranks=needed.filter(x=>x.count<target&&Core.TD6_LORE.some(l=>l.id===p.id&&x.rank.loreRanks.includes(l.rank)));
-    if(ranks.length){candidates.push(p);ranks.forEach(x=>x.count++);}
-   }
-   $('trainerDraftStatus').textContent='Préparation de la boîte PC : '+needed.map(x=>x.count+'/'+target).join(' · ')+' Pokémon par rang';
-  }
+  const candidates=[...new Set(Core.TD6_LORE.map(x=>x.id))].map(id=>({id,name:'Pokémon n°'+id,img:'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/'+id+'.png',legalMoves:[],initialMoves:[],nature:'Hardi',tera:'normal'}));
   const ref=offline?null:mpRoom(mpSession.room).child('trainerDraft6'),prior=offline?state:(await ref.once('value')).val();
   if(prior&&((prior.choices?.[1]?.entries?.length||0)+(prior.choices?.[2]?.entries?.length||0))>0&&!confirm('Effacer les achats actuels des deux joueurs ?'))return;
   if(needed.some(x=>x.count<target))throw Error('Catalogue insuffisant pour générer les cinq rangs : '+needed.filter(x=>x.count<target).map(x=>x.rank.label+' ('+x.count+'/'+target+')').join(', '));
