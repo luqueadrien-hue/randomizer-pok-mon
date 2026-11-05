@@ -712,7 +712,7 @@ function td6AddChoice(state,seat,rowIndex,offerIndex,custom){
  if(!offer||!Array.isArray(offer.legalMoves)||offer.legalMoves.length<4)throw Error('Pokémon sans données légales.');
  if(entries.some(e=>e.rowIndex===rowIndex&&e.offerIndex===offerIndex))throw Error('Pokémon déjà choisi.');
  // En boîte commune, une case déjà achetée par l'autre joueur n'est plus disponible.
- if(state.boxMode==='shared'&&state.choices?.[seat===1?2:1]?.entries?.some(e=>e.rowIndex===rowIndex&&e.offerIndex===offerIndex))throw Error('Pokémon déjà acheté par l’autre joueur.');
+ if(state.boxMode==='shared'&&state.choices?.[seat===1?2:1]?.entries?.some(e=>e.pokemonId===offer.id))throw Error('Espèce ou forme déjà achetée par l’autre joueur, même dans un autre rang.');
  const moves=custom?.moves;
  if(!Array.isArray(moves)||moves.length!==4||new Set(moves).size!==4||moves.some(m=>!offer.legalMoves.includes(m)))throw Error('Quatre capacités légales et distinctes requises.');
  if(!TD6_NATURES.includes(custom?.nature))throw Error('Nature invalide.');
