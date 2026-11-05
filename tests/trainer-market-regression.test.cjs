@@ -26,3 +26,15 @@ test('Marché & Draft : limite de six Pokémon et budget',()=>{
  assert.equal(state.choices[1].entries.length,6);
  assert.throws(()=>Core.td6AddChoice(state,1,3,0,custom),/déjà complète/);
 });
+
+// Le libellé français ne doit pas remplacer la valeur interne attendue par le moteur.
+test('Marché & Draft : les types Téra français conservent leur valeur canonique',()=>{
+ const fs=require('node:fs');
+ const ui=fs.readFileSync(require('node:path').join(__dirname,'../data/trainer-draft-six.js'),'utf8');
+ assert.match(ui,/\x27<option value="\x27\+esc\(n\)/);
+ assert.match(ui,/esc\(typeFr\[n\]\|\|n\)/);
+ const state=Core.td6Create(candidates,null,Math.random,'sv',30,'shared');
+ state.gameId='test';state.choices[1].gameId='test';state.choices[2].gameId='test';
+ const entry=Core.td6AddChoice(state,1,4,0,{moves:['a','b','c','d'],nature:'Hardi',tera:'fire'});
+ assert.equal(entry.entries[0].tera,'fire');
+});
