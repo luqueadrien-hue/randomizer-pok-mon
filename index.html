@@ -2475,7 +2475,7 @@ async function applyLieMode(){
 
  // Avec 2 ou 3 choix, le mensonge porte uniquement sur le nom affiché.
  // À partir de 4 choix, on conserve le système de faux indice / fausse information.
- if(current.length<=3){
+ if(current.length<=3&&gameMode.value!=='egg'){
    const usedNames=new Set(current.map(x=>x.p.name));
    let fake=null;
    const usedIds=new Set(current.map(x=>x.p.id));
