@@ -51,7 +51,7 @@ function render(){
  grid.classList.add('draftPcGrid');
  grid.innerHTML=box.map((row,i)=>'<section class="draftPcRow"><div class="draftPcRank"><strong>'+esc(row.rank.icon)+' '+esc(row.rank.label)+'</strong><small>'+row.price+' $ par Pokémon</small></div><div class="draftPcSlots">'+row.pokemon.map((p,j)=>{
   const mineTaken=mine.some(e=>e.rowIndex===i&&e.offerIndex===j);
-  const other=state.boxMode==='shared'&&(state.choices?.[me===1?2:1]?.entries||[]).some(e=>e.rowIndex===i&&e.offerIndex===j);
+  const other=state.boxMode==='shared'&&(state.choices?.[me===1?2:1]?.entries||[]).some(e=>e.pokemonId===p.id);
   const taken=mineTaken||other,disabled=!me||busy||taken||mine.length>=6||spent+row.price>state.budget;
   return '<button type="button" class="pcSlot draftPcCell'+(taken?' is-locked':'')+'" data-draft-row="'+i+'" data-draft-offer="'+j+'" '+(disabled?'disabled':'')+' aria-label="'+esc(p.name)+' : '+row.price+' dollars"><span class="slotNo">'+(i*6+j+1)+'</span>'+(p.img?'<img src="'+esc(p.img)+'" alt="" loading="lazy" style="height:55px;max-width:90%;object-fit:contain">':'<span class="draftPcLogo">'+esc(row.rank.icon)+'</span>')+'<span class="slotName">'+esc(p.name)+'</span><small>'+esc(p.lore?.trainer||'Dresseur inconnu')+(taken?' · Acheté':'')+'</small></button>';
  }).join('')+'</div></section>').join('');
