@@ -43,3 +43,11 @@
 - **Limites** : PokéAPI peut être indisponible ; les capacités non traduites s'affichent en anglais ; les objets tenus sont issus d'une courte liste de quatre objets connus d'Écarlate/Violet ; EV/IV prédéfinis légaux mais non optimisés. Les règles Firebase actuelles ne suffisent pas encore à garantir contre un client malveillant l'immuabilité des offres et la légalité de chaque attaque : renforcement côté serveur nécessaire avant un usage compétitif ouvert.
 
 **Statut : bêta codée, tests unitaires réussis ; fonctionnement réseau réel à confirmer après publication des règles et test sur deux navigateurs.**
+
+## Variantes de boîtes et règles de dévoilement (demandes ultérieures)
+- **Boîtes indépendantes** : chaque joueur reçoit ses propres propositions aléatoires ; les tirages d'un joueur ne consomment pas le stock de l'autre. Éviter les doublons de proposition à l'intérieur d'une même boîte.
+- **Boîte commune** : mêmes propositions cachées pour les deux joueurs. Un Pokémon dévoilé est consommé et ne peut plus être dévoilé ou attribué une seconde fois, même par l'autre joueur ; verrouillage atomique Firebase nécessaire avant révélation.
+- Ces variantes modifient la règle historique « les deux joueurs peuvent choisir le même Pokémon ». Ne pas appliquer l'exclusivité globale au mode indépendant.
+- La question de la consommation des deux Pokémon non choisis parmi trois propositions dévoilées n'est pas définitivement arbitrée ; ne pas implémenter silencieusement une règle irréversible sans décision explicite.
+- Les restrictions de **rang et budget** concernent le Marché des Dresseurs, pas la limite d'un dresseur par joueur dans ce Draft.
+- **État** : règles documentées seulement ; ne pas présenter ces deux variantes comme implémentées ni testées.
