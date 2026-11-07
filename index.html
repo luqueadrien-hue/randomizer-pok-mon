@@ -280,10 +280,10 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 <label id="habitatMergedWrap" style="display:none">Type d’habitat<select id="habitatMergedStyle"><option value="all">Officiel + hypothèse réelle</option><option value="official">Officiel uniquement</option><option value="real">Notre monde (hypothèse)</option></select></label>
 <label id="statHighestMergedWrap" style="display:none">Difficulté<select id="statHighestMergedStyle"><option value="normal">Normal : nom et valeur</option><option value="hard">Difficile : nom seul</option></select></label></div>
 <div id="trainerMarketPanel" class="panel" style="display:none;margin-top:14px">
-<h2>🏆 Marché des Dresseurs — 8 rangs</h2>
+<h2>🏆 Marché des Dresseurs — 7 rangs</h2>
 <p>Grille commune en réseau. Les achats sont exclusifs, limités à six Pokémon par joueur. <strong>Bêta :</strong> le catalogue historique est encore incomplet : seuls les Pokémon confirmés du catalogue initial sont achetables.</p>
 <div class="controls"><label>Jeu de destination <select id="trainerMarketGame"><option value="sv">Écarlate / Violet + DLC</option><option value="swsh">Épée / Bouclier + DLC</option><option value="bdsp">Diamant Étincelant / Perle Scintillante</option><option value="pla">Légendes Pokémon : Arceus</option></select></label><label><input type="checkbox" id="trainerMarketHome" checked> Transferts HOME confirmés (liste partielle)</label><label>Budget par joueur <select id="trainerMarketBudget"><option value="1500">1 500 ₽</option><option value="3000" selected>3 000 ₽</option><option value="4500">4 500 ₽</option><option value="6500">6 500 ₽</option><option value="0">Illimité</option></select></label><button type="button" id="trainerMarketStart" onclick="trainerMarketStart().catch(e=>{document.getElementById('trainerMarketStatus').textContent='❌ '+e.message;alert(e.message);console.error(e)})">Créer / réinitialiser le marché</button></div>
-<label>Rechercher dans les huit rangs <input id="trainerMarketSearch" type="search" placeholder="Pokémon, dresseur ou jeu source…" oninput="trainerMarketRender()"></label>
+<label>Rechercher dans les sept rangs <input id="trainerMarketSearch" type="search" placeholder="Pokémon, dresseur ou jeu source…" oninput="trainerMarketRender()"></label>
 <div id="trainerMarketStatus" class="turn"></div>
 <div id="trainerMarketGrid"></div>
 </div>
@@ -3598,7 +3598,7 @@ async function moduloChoose(id){if(!moduloIs(moduloRemote?.chooser||2)||!moduloR
 
 
 const TRAINER_MARKET_RANKS=[
- ['Dresseurs ordinaires',200,'🧢'],['Sbires antagonistes',350,'🚩'],['Champions d’Arène',500,'🏅'],['Rivaux',650,'⚡'],['Professeurs combattants',700,'🎓'],['Admins et chefs antagonistes',800,'🛡️'],['Conseil 4',1000,'💎'],['Maîtres de Ligue et équivalents',1300,'👑']
+ ['Dresseurs ordinaires',200,'🧢'],['Sbires antagonistes',350,'🚩'],['Champions d’Arène',500,'🏅'],['Rivaux',650,'⚡'],['Professeurs combattants',700,'🎓'],['Admins et chefs antagonistes',800,'🛡️'],['Conseil 4, Maîtres de Ligue et équivalents',1000,'👑']
 ];
 // Sélection de départ non exhaustive : équipes de Paldea, sources Serebii et Pokémon Database.
 // Ne pas inclure de Pokémon dont l'attribution à un dresseur n'est pas confirmée.
@@ -3995,7 +3995,10 @@ async function trainerMarketStart(){
  const includeHome=document.getElementById('trainerMarketHome').checked;
  document.getElementById('trainerMarketStatus').textContent='Chargement des Pokédex du jeu et de ses DLC…';
  const eligible=await trainerMarketEligible(game,includeHome);
- const catalog=TRAINER_MARKET_ALL_SEED.map(([rank,id,name,trainer,sourceGame='SV',formKey=''])=>{
+ const catalog=TRAINER_MARKET_ALL_SEED.map(([sourceRank,id,name,trainer,sourceGame='SV',formKey=''])=>{
+  // Les anciennes données distinguent Conseil 4 (7) et Maîtres (8).
+  // Leur fusion au rang 7 conserve la provenance sans perdre les Pokémon.
+  const rank=sourceRank===8?7:sourceRank;
   const sourceUrl=sourceGame==='RB'&&rank===2?TRAINER_MARKET_SOURCES.rocket:sourceGame==='SWSH'&&rank===3?'https://pokemondb.net/sword-shield/gymleaders':TRAINER_MARKET_SOURCES[sourceGame];
   const availability=eligible.ids.has(id)?'Pokédex de base':eligible.dlcIds?.has(id)?'DLC attesté':eligible.homeIds.has(id)?'HOME partiel':'';
   const safe=(value)=>String(value).normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-zA-Z0-9_-]/g,'_');
@@ -4022,7 +4025,7 @@ async function trainerMarketBuy(key){
  const tx=await ref.transaction(state=>{
   if(!state||!Array.isArray(state.catalog)||state.version!==2||![0,1500,3000,4500,6500].includes(state.budget))return;
   const entry=state.catalog.find(p=>p.key===key);
-  if(!entry||state.sold?.[key]||!Number.isInteger(entry.rank)||entry.rank<1||entry.rank>8)return;
+  if(!entry||state.sold?.[key]||!Number.isInteger(entry.rank)||entry.rank<1||entry.rank>TRAINER_MARKET_RANKS.length)return;
   const price=TRAINER_MARKET_RANKS[entry.rank-1][1],team=state.teams?.[seat]||[],spent=state.spent?.[seat]||0;
   if(!Array.isArray(team)||!Number.isInteger(spent)||spent<0)return;
   if(team.length>=6||(state.budget!==0&&spent+price>state.budget))return;
