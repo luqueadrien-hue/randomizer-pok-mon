@@ -3166,32 +3166,32 @@ async function noelGenerate(){
  const old=noelRound;if(old.phase==='guess'||old.phase==='reserve')return;
  const generator=old.nextGenerator||1,chooser=3-generator;
  if(!noelCan(generator))return alert('Seul le joueur qui randomise peut lancer la manche.');
- const c=await getP(225),cadoizoMoves=new Set((c.moves||[]).map(m=>m.name));
- const candidates=[];
- for(let i=0;i<45;i++){
-  const p=await draw(new Set()),q=await draw(new Set([p.id]));
-  const pm=new Set((p.moves||[]).map(x=>x.name)),qm=new Set((q.moves||[]).map(x=>x.name));
-  const shared=[...pm].filter(x=>qm.has(x)&&!cadoizoMoves.has(x)&&x!=='present');
-  if(shared.length)candidates.push({p,q,shared});
-  if(candidates.some(x=>x.shared.some(m=>NOEL_SIGNATURE_MOVES.has(m))))break;
- }
- if(!candidates.length)throw Error('Aucun duo compatible trouvé : relance la manche.');
- const signature=candidates.flatMap(x=>x.shared.filter(m=>NOEL_SIGNATURE_MOVES.has(m)).map(move=>({...x,move})));
- let chosen;
- if(signature.length)chosen=signature[Math.floor(Math.random()*signature.length)];
- else{
-  const sample=candidates.slice(0,12).flatMap(x=>x.shared.map(move=>({...x,move}))).sort(()=>Math.random()-.5).slice(0,24);
-  const scored=await Promise.all(sample.map(async x=>({...x,rarity:await noelMoveRarity(x.move)})));
-  scored.sort((a,b)=>a.rarity-b.rarity);
-  const rare=scored.filter(x=>x.rarity<=12);
-  const pool=rare.length?rare:scored.filter(x=>x.rarity===scored[0].rarity);
-  chosen=pool[Math.floor(Math.random()*Math.min(pool.length,5))];
- }
- const move=chosen.move,moveFr=await noelMoveName(move);
- const options=[chosen.p,chosen.q].map(p=>({id:p.id,name:p.name,img:p.img,move,moveFr}));
- options.push({id:225,name:'Cadoizo',img:c.img,move,moveFr});
- for(let i=options.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[options[i],options[j]]=[options[j],options[i]]}
- await noelSave({phase:'guess',round:(old.round||0)+1,chooser,generator,nextGenerator:chooser,options,reserves:old.reserves||{1:[],2:[]},awards:old.awards||{1:[],2:[]}});
+ const button=document.getElementById('noelGenerate'),info=document.getElementById('noelInfo');
+ if(button.disabled)return;
+ button.disabled=true;info.textContent='🎄 Recherche de deux Pokémon et de leur capacité commune…';
+ try{
+  const c=await getP(225),cadoizoMoves=new Set((c.moves||[]).map(m=>m.name));
+  let best=null;
+  for(let i=0;i<18;i++){
+   const p=await draw(new Set()),q=await draw(new Set([p.id]));
+   if(p.id===225||q.id===225||p.id===q.id)continue;
+   const pm=new Set((p.moves||[]).map(x=>x.name)),qm=new Set((q.moves||[]).map(x=>x.name));
+   const shared=[...pm].filter(x=>qm.has(x)&&!cadoizoMoves.has(x)&&x!=='present');
+   if(!shared.length)continue;
+   const signatures=shared.filter(x=>NOEL_SIGNATURE_MOVES.has(x));
+   const move=signatures.length?signatures[Math.floor(Math.random()*signatures.length)]:shared[Math.floor(Math.random()*shared.length)];
+   const candidate={p,q,move,signature:signatures.length>0};
+   if(!best||candidate.signature&&!best.signature)best=candidate;
+   if(best.signature)break;
+  }
+  if(!best)throw Error('Aucun duo compatible trouvé avec les filtres actuels.');
+  const move=best.move,moveFr=await noelMoveName(move);
+  const options=[best.p,best.q].map(p=>({id:p.id,name:p.name,img:p.img,move,moveFr}));
+  options.push({id:225,name:'Cadoizo',img:c.img,move,moveFr});
+  for(let i=options.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[options[i],options[j]]=[options[j],options[i]]}
+  await noelSave({phase:'guess',round:(old.round||0)+1,chooser,generator,nextGenerator:chooser,options,reserves:old.reserves||{1:[],2:[]},awards:old.awards||{1:[],2:[]}});
+ }catch(e){console.error('Tirage Noël',e);info.textContent='Impossible de générer le trio : '+e.message;alert('Tirage Noël interrompu : '+e.message)}
+ finally{button.disabled=noelRound.phase==='guess'||noelRound.phase==='reserve'||(!!mpSession&&!noelCan(noelRound.nextGenerator||1))}
 }
 async function noelPick(i){
  const a=noelRound;if(a.phase!=='guess'||!noelCan(a.chooser)||!a.options?.[i])return;
