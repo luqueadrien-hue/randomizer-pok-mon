@@ -3159,28 +3159,38 @@ function noelRender(){
  reserve.innerHTML=a.phase==='reserve'&&isChooser?'<h3>Réserve de J'+(3-chooser)+'</h3>'+(stock.length?stock.map((p,i)=>'<button style="margin:5px" onclick="noelClaim('+i+')">'+mpEsc(p.name)+'</button>').join(''):'<p>Réserve vide : aucun Pokémon récupérable.</p><button onclick="noelClaim(-1)">Terminer sans récompense</button>'):'';
  if(a.phase==='done')info.textContent+=' Équipes : J1 '+(a.awards?.[1]||[]).map(p=>p.name).join(', ')+' / J2 '+(a.awards?.[2]||[]).map(p=>p.name).join(', ');
 }
+const NOEL_SIGNATURE_MOVES=new Set(['ceaseless-edge','armor-cannon','bitter-blade','flower-trick','torch-song','aqua-step','population-bomb','salt-cure','kowtow-cleave','rage-fist','gigaton-hammer','make-it-rain','electro-drift','collision-course','ivy-cudgel','blood-moon','surging-strikes','wicked-blow','spirit-shackle','sparkling-aria','darkest-lariat','behemoth-blade','behemoth-bash','astral-barrage','glacial-lance','dragon-darts','pyro-ball','snipe-shot','drum-beating','dire-claw','barb-barrage','infernal-parade','triple-arrows','stone-axe','esper-wing','victory-dance','lunar-blessing','mystical-power','ruination','silk-trap','spicy-extract','lumina-crash','tidy-up','fillet-away','doodle','mortal-spin','shed-tail','order-up','jet-punch','hyper-drill','twin-beam','last-respects','revival-blessing','spin-out','triple-dive','chilly-reception','snowscape']);
+const noelRarityCache=new Map();
+async function noelMoveRarity(slug){if(!noelRarityCache.has(slug))noelRarityCache.set(slug,fetch('https://pokeapi.co/api/v2/move/'+encodeURIComponent(slug)).then(r=>{if(!r.ok)throw Error('move');return r.json()}).then(d=>(d.learned_by_pokemon||[]).length).catch(()=>9999));return noelRarityCache.get(slug)}
 async function noelGenerate(){
  const old=noelRound;if(old.phase==='guess'||old.phase==='reserve')return;
  const generator=old.nextGenerator||1,chooser=3-generator;
  if(!noelCan(generator))return alert('Seul le joueur qui randomise peut lancer la manche.');
- const used=new Set();let pair=null,common=[];
- for(let i=0;i<50&&!pair;i++){
-  const p=await draw(used),q=await draw(used);
+ const c=await getP(225),cadoizoMoves=new Set((c.moves||[]).map(m=>m.name));
+ const candidates=[];
+ for(let i=0;i<45;i++){
+  const p=await draw(new Set()),q=await draw(new Set([p.id]));
   const pm=new Set((p.moves||[]).map(x=>x.name)),qm=new Set((q.moves||[]).map(x=>x.name));
-  const shared=[...pm].filter(x=>qm.has(x)&&x!=='present');
-  if(shared.length){pair=[p,q];common=shared}
+  const shared=[...pm].filter(x=>qm.has(x)&&!cadoizoMoves.has(x)&&x!=='present');
+  if(shared.length)candidates.push({p,q,shared});
+  if(candidates.some(x=>x.shared.some(m=>NOEL_SIGNATURE_MOVES.has(m))))break;
  }
- if(!pair)throw Error('Impossible de trouver deux Pokémon ayant une capacité commune. Réessaie.');
- const move=common[Math.floor(Math.random()*common.length)],moveFr=await noelMoveName(move);
- const c=await getP(225),options=[...pair.map(p=>({id:p.id,name:p.name,img:p.img,move,moveFr})),{id:225,name:'Cadoizo',img:c.img,move,moveFr}];
- // Un mensonge vérifiable : Cadoizo ne doit pas pouvoir apprendre la capacité indiquée.
- if((c.moves||[]).some(m=>m.name===move)){
-  const alternative=common.find(x=>!(c.moves||[]).some(m=>m.name===x));
-  if(!alternative)throw Error('Capacité commune également apprenable par Cadoizo. Relance la manche.');
-  const fr=await noelMoveName(alternative);
-  options.forEach(o=>{o.move=alternative;o.moveFr=fr});
+ if(!candidates.length)throw Error('Aucun duo compatible trouvé : relance la manche.');
+ const signature=candidates.flatMap(x=>x.shared.filter(m=>NOEL_SIGNATURE_MOVES.has(m)).map(move=>({...x,move})));
+ let chosen;
+ if(signature.length)chosen=signature[Math.floor(Math.random()*signature.length)];
+ else{
+  const sample=candidates.slice(0,12).flatMap(x=>x.shared.map(move=>({...x,move}))).sort(()=>Math.random()-.5).slice(0,24);
+  const scored=await Promise.all(sample.map(async x=>({...x,rarity:await noelMoveRarity(x.move)})));
+  scored.sort((a,b)=>a.rarity-b.rarity);
+  const rare=scored.filter(x=>x.rarity<=12);
+  const pool=rare.length?rare:scored.filter(x=>x.rarity===scored[0].rarity);
+  chosen=pool[Math.floor(Math.random()*Math.min(pool.length,5))];
  }
- options.sort(()=>Math.random()-.5);
+ const move=chosen.move,moveFr=await noelMoveName(move);
+ const options=[chosen.p,chosen.q].map(p=>({id:p.id,name:p.name,img:p.img,move,moveFr}));
+ options.push({id:225,name:'Cadoizo',img:c.img,move,moveFr});
+ for(let i=options.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[options[i],options[j]]=[options[j],options[i]]}
  await noelSave({phase:'guess',round:(old.round||0)+1,chooser,generator,nextGenerator:chooser,options,reserves:old.reserves||{1:[],2:[]},awards:old.awards||{1:[],2:[]}});
 }
 async function noelPick(i){
