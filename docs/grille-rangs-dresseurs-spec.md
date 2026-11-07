@@ -1,4 +1,4 @@
-# Mode non numéroté : Marché des Dresseurs — grille commune à huit rangs
+# Mode non numéroté : Marché des Dresseurs — grille commune à sept rangs
 
 ## Rangs proposés (de bas en haut)
 | Rang | Catégorie | Prix fixe par Pokémon |
@@ -9,8 +9,7 @@
 | 4 | Rivaux officiels | 650 ₽ |
 | 5 | Professeurs Pokémon combattants | 700 ₽ |
 | 6 | Admins et chefs des organisations antagonistes | 800 ₽ |
-| 7 | Conseil 4 et équivalents | 1 000 ₽ |
-| 8 | Maîtres de Ligue, boss ultimes et équivalents | 1 300 ₽ |
+| 7 | Conseil 4, Maîtres de Ligue, boss ultimes et équivalents | 1 000 ₽ |
 
 La catégorie des professeurs ne comprend que les professeurs effectivement affrontés dans un combat officiel ; pour Sada et Turum, distinguer leurs homologues IA. Emblème proposé : toque universitaire et Poké Ball sur fond turquoise.
 
@@ -41,3 +40,8 @@ Mode non numéroté spécifié, **non opérationnel** tant que corpus, interface
 - Les équipes du Conseil 4 de Kanto, de la Team Rocket et de toutes les autres régions sont à intégrer sur cette base ; les DLC sont inclus dans le filtre de destination et dans les sources d'équipes.
 - **Ne pas déclarer le corpus complet** avant un audit de couverture génération par génération, dresseur par dresseur, forme par forme et jeu cible par jeu cible.
 - Sources de référence : https://www.serebii.net/pokearth/kanto/1st/indigoplateau.shtml (exemple équipes Kanto) ; https://home.pokemon.com/fr-fr/move/ et https://support.pokemon.com/hc/fr/articles/360039592832-Comme-savoir-vers-quels-jeux-je-peux-transf%C3%A9rer-mes-Pok%C3%A9mon-depuis-Pok%C3%A9mon-HOME (compatibilité).
+
+## Harmonisation du 7 novembre 2026
+- Les anciennes entrées classées au rang 8 (Maîtres) sont affichées au rang 7 commun au Conseil 4 et aux Maîtres, sans suppression de leur provenance historique. Le prix du rang 7 est fixé à 1 000 ₽ pour toutes ces entrées.
+- Les sept rangs ne limitent pas le nombre d'achats par catégorie : seul le budget et le maximum de six Pokémon par joueur s'appliquent.
+- Cette harmonisation de l'interface et des tarifs ne constitue **pas** une validation de la couverture des équipes historiques ni des tests Firebase à deux joueurs.
