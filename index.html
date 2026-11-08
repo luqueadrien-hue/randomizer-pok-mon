@@ -294,7 +294,7 @@ audio.pokemonZoneAudio{display:block;width:100%;max-width:100%;min-width:0;box-s
 <label>Type de boîte<select id="trainerDraftBoxMode"><option value="shared">Boîte commune — mêmes 30 Pokémon</option><option value="separate">Boîtes individuelles — tirage par joueur</option></select></label>
 
 </div>
-<div id="trainerDraftStatus" class="turn">Sélectionne le budget et clique sur Générer. Aucun salon nécessaire pour essayer.</div>
+<div class="actions"><button id="trainerDraftStart" type="button" class="primary" onclick="TrainerDraft6.start().catch(e=>{document.getElementById('trainerDraftStatus').textContent='❌ '+e.message;console.error(e)})">🎲 Générer le Marché &amp; Draft</button></div>\n<div id="trainerDraftStatus" class="turn">Sélectionne le budget et le type de boîte, puis génère la grille. En réseau, seul l’hôte peut générer après le lancement du salon.</div>
 
 <div id="trainerDraftGrid"></div><div id="trainerDraftEditor"></div><div id="trainerDraftTeams"></div>
 </div>
