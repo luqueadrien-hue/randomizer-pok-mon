@@ -711,6 +711,8 @@ function td6AddChoice(state,seat,rowIndex,offerIndex,custom){
  const box=state.boxes?.[seat],row=box?.[rowIndex],offer=row?.pokemon?.[offerIndex];
  if(!offer||!Array.isArray(offer.legalMoves)||offer.legalMoves.length<4)throw Error('Pokémon sans données légales.');
  if(entries.some(e=>e.rowIndex===rowIndex&&e.offerIndex===offerIndex))throw Error('Pokémon déjà choisi.');
+ // Une espèce/forme ne peut pas être achetée plusieurs fois par le même joueur, même sur deux rangs.
+ if(entries.some(e=>String(e.pokemonId)===String(offer.id)))throw Error('Espèce ou forme déjà présente dans ton équipe.');
  // En boîte commune, une case déjà achetée par l'autre joueur n'est plus disponible.
  if(state.boxMode==='shared'&&state.choices?.[seat===1?2:1]?.entries?.some(e=>e.pokemonId===offer.id))throw Error('Espèce ou forme déjà achetée par l’autre joueur, même dans un autre rang.');
  const moves=custom?.moves;
@@ -719,6 +721,7 @@ function td6AddChoice(state,seat,rowIndex,offerIndex,custom){
  // Le type Téracristal n'est personnalisable que dans Écarlate/Violet.
  if(state.game==='sv'?!TD6_TYPES.includes(custom?.tera):custom?.tera!=='normal')throw Error('Type Téracristal invalide pour ce jeu.');
  const price=row.price;
+ if(!Number.isInteger(price)||price!==row.rank?.price||!TD_MARKET_RANKS.some(r=>r.id===row.rank.id&&r.price===price))throw Error('Tarif de rang invalide.');
  const spent=entries.reduce((s,e)=>s+e.price,0);
  if(spent+price>state.budget)throw Error('Budget insuffisant.');
  return {gameId:state.gameId,entries:[...entries,{rowIndex,offerIndex,price,pokemonId:offer.id,moves:[...moves],nature:custom.nature,tera:custom.tera}]};
