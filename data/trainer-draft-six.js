@@ -114,7 +114,7 @@ async function choose(){
  busy=true;
  try{
   const ref=mpRoom(mpSession.room).child('trainerDraft6');
-  const tx=await ref.transaction(current=>{try{if(current?.gameId!==draft.gameId)return;const p=current.boxes?.[me]?.[editing.rowIndex]?.pokemon?.[editing.offerIndex];if(!p)return;const source=draft.boxes?.[me]?.[editing.rowIndex]?.pokemon?.[editing.offerIndex];if(!source?.legalMoves?.length)return;const validated={...p,legalMoves:source.legalMoves,initialMoves:source.initialMoves};current.boxes[me][editing.rowIndex].pokemon[editing.offerIndex]=validated;const choice=Core.td6AddChoice(current,me,editing.rowIndex,editing.offerIndex,form);current.boxes[me][editing.rowIndex].pokemon[editing.offerIndex]=p;current.choices[me]=choice;return current}catch(e){console.warn('Achat rejeté',e);return}});
+  const tx=await ref.transaction(current=>{try{if(current?.gameId!==draft.gameId)return;const p=current.boxes?.[me]?.[editing.rowIndex]?.pokemon?.[editing.offerIndex];if(!p)return;const source=draft.boxes?.[me]?.[editing.rowIndex]?.pokemon?.[editing.offerIndex];if(!source?.legalMoves?.length)return;if(String(p.id)!==String(source.id)||!Array.isArray(p.legalMoves)||!Array.isArray(source.legalMoves)||p.legalMoves.length!==source.legalMoves.length||!p.legalMoves.every((move,i)=>move===source.legalMoves[i]))return;const choice=Core.td6AddChoice(current,me,editing.rowIndex,editing.offerIndex,form);current.choices[me]=choice;return current}catch(e){console.warn('Achat rejeté',e);return}});
   if(!tx.committed)throw Error('Achat refusé : case déjà prise, budget insuffisant ou partie modifiée.');
   state=tx.snapshot.val();editing=null;render();
  }finally{busy=false;render()}
