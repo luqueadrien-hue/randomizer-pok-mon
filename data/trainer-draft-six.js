@@ -114,7 +114,17 @@ async function choose(){
  busy=true;
  try{
   const ref=mpRoom(mpSession.room).child('trainerDraft6');
-  const tx=await ref.transaction(current=>{try{if(current?.gameId!==draft.gameId)return;const p=current.boxes?.[me]?.[editing.rowIndex]?.pokemon?.[editing.offerIndex];if(!p)return;const source=draft.boxes?.[me]?.[editing.rowIndex]?.pokemon?.[editing.offerIndex];if(!source?.legalMoves?.length)return;if(String(p.id)!==String(source.id)||!Array.isArray(p.legalMoves)||!Array.isArray(source.legalMoves)||p.legalMoves.length!==source.legalMoves.length||!p.legalMoves.every((move,i)=>move===source.legalMoves[i]))return;const choice=Core.td6AddChoice(current,me,editing.rowIndex,editing.offerIndex,form);current.choices[me]=choice;return current}catch(e){console.warn('Achat rejeté',e);return}});
+  const tx=await ref.transaction(current=>{try{if(current?.gameId!==draft.gameId)return;const p=current.boxes?.[me]?.[editing.rowIndex]?.pokemon?.[editing.offerIndex];if(!p)return;const source=draft.boxes?.[me]?.[editing.rowIndex]?.pokemon?.[editing.offerIndex];if(!source?.legalMoves?.length||!Array.isArray(source.initialMoves)||source.initialMoves.length!==4)return;
+   if(String(p.id)!==String(source.id)||!Array.isArray(p.legalMoves)||!Array.isArray(source.legalMoves))return;
+   // The catalogue initially stores empty move lists; opening the editor hydrates only the
+   // local offer. Persist that hydration atomically with the first purchase, without replacing
+   // a non-empty remote catalogue or changing another player's selection.
+   if(p.legalMoves.length===0){
+    if(!source.initialMoves.every(move=>source.legalMoves.includes(move)))return;
+    p.legalMoves=[...source.legalMoves];
+    p.initialMoves=[...source.initialMoves];
+   }else if(p.legalMoves.length!==source.legalMoves.length||!p.legalMoves.every((move,i)=>move===source.legalMoves[i]))return;
+   const choice=Core.td6AddChoice(current,me,editing.rowIndex,editing.offerIndex,form);current.choices[me]=choice;return current}catch(e){console.warn('Achat rejeté',e);return}});
   if(!tx.committed)throw Error('Achat refusé : case déjà prise, budget insuffisant ou partie modifiée.');
   state=tx.snapshot.val();editing=null;render();
  }finally{busy=false;render()}
