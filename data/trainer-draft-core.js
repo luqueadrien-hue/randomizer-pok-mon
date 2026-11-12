@@ -707,7 +707,7 @@ function td6AddChoice(state,seat,rowIndex,offerIndex,custom){
  if(!current||current.gameId!==state.gameId||!Array.isArray(current.entries))throw Error('Choix obsolètes.');
  const entries=current.entries;
  if(entries.length>=6)throw Error('Équipe de six Pokémon déjà complète.');
- if(!Number.isInteger(rowIndex)||rowIndex<0||rowIndex>=5||!Number.isInteger(offerIndex)||offerIndex<0||offerIndex>=6)throw Error('Case inconnue.');
+ if(!Number.isInteger(rowIndex)||rowIndex<0||rowIndex>=state.boxes?.[seat]?.length||!Number.isInteger(offerIndex)||offerIndex<0||offerIndex>=6)throw Error('Case inconnue.');
  const box=state.boxes?.[seat],row=box?.[rowIndex],offer=row?.pokemon?.[offerIndex];
  if(!offer||!Array.isArray(offer.legalMoves)||offer.legalMoves.length<4)throw Error('Pokémon sans données légales.');
  if(entries.some(e=>e.rowIndex===rowIndex&&e.offerIndex===offerIndex))throw Error('Pokémon déjà choisi.');
@@ -722,7 +722,18 @@ function td6AddChoice(state,seat,rowIndex,offerIndex,custom){
  if(state.game==='sv'?!TD6_TYPES.includes(custom?.tera):custom?.tera!=='normal')throw Error('Type Téracristal invalide pour ce jeu.');
  const price=row.price;
  if(!Number.isInteger(price)||price!==row.rank?.price||!TD_MARKET_RANKS.some(r=>r.id===row.rank.id&&r.price===price))throw Error('Tarif de rang invalide.');
- const spent=entries.reduce((s,e)=>s+e.price,0);
+ // Ne jamais calculer le solde depuis des prix de choix modifiables : recalculer
+ // chaque achat depuis la grille figée et vérifier son intégrité.
+ const seen=new Set();
+ const spent=entries.reduce((total,e)=>{
+  const purchased=state.boxes?.[seat]?.[e.rowIndex];
+  const selected=purchased?.pokemon?.[e.offerIndex];
+  const expected=purchased?.rank?.price;
+  if(!selected||!Number.isInteger(expected)||!TD_MARKET_RANKS.some(r=>r.id===purchased.rank.id&&r.price===expected)||e.price!==expected||String(e.pokemonId)!==String(selected.id))throw Error('Historique des achats incohérent.');
+  if(seen.has(String(selected.id)))throw Error('Doublon dans les achats existants.');
+  seen.add(String(selected.id));
+  return total+expected;
+ },0);
  if(spent+price>state.budget)throw Error('Budget insuffisant.');
  return {gameId:state.gameId,entries:[...entries,{rowIndex,offerIndex,price,pokemonId:offer.id,moves:[...moves],nature:custom.nature,tera:custom.tera}]};
 }
