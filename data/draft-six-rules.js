@@ -24,17 +24,20 @@ function create({game,trainers,offers,previousTrainerIds=[],rng=Math.random}){
  const eligible=trainers.filter(t=>t&&typeof t.id==='string'&&t.id&&typeof t.name==='string'&&t.name&&Array.isArray(t.games)&&t.games.includes(game));
  assert(new Set(eligible.map(t=>t.id)).size===eligible.length,'Identifiants de dresseurs en double');
  assert(eligible.length>=6,'Moins de six dresseurs vérifiés pour ce jeu');
- const shuffled=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+ const shuffled=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const roll=rng();assert(typeof roll==='number'&&Number.isFinite(roll)&&roll>=0&&roll<1,'Générateur aléatoire invalide');const j=Math.floor(roll*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
  const fresh=shuffled(eligible.filter(t=>!previousTrainerIds.includes(t.id)));
  const chosen=[...fresh,...shuffled(eligible.filter(t=>previousTrainerIds.includes(t.id)))].slice(0,6);
  const byTrainer=chosen.map(t=>({id:t.id,name:t.name,offers:[]}));
  const available=shuffled(offers.filter(p=>p.game===game));
+ // Ne jamais accepter une proposition non vérifiée au milieu d'un catalogue :
+ // une entrée invalide ne doit pas empêcher de tirer les 18 propositions valides.
+ const verified=[];
+ for(const p of available){try{validOffer(p,game);verified.push(p)}catch(_){/* Offre exclue, sans validation de légalité externe implicite. */}}
  const seen=new Set();
  for(const t of byTrainer){
-  for(const p of available){
+  for(const p of verified){
    const key=p.species+'|'+(p.form||'');
    if(seen.has(key)||t.offers.length===3)continue;
-   validOffer(p,game);
    seen.add(key);t.offers.push(copy(p));
   }
   assert(t.offers.length===3,'Catalogue légal insuffisant : 18 espèces/formes distinctes requises');
@@ -47,6 +50,8 @@ function choose(state,seat,trainerId,offerIndex,custom){
  assert(state.turn===seat,'Ce n’est pas ton tour');
  const mine=state.players[String(seat)],other=state.players[String(3-seat)];
  assert(Array.isArray(mine)&&Array.isArray(other)&&mine.length<6,'Équipe complète ou état invalide');
+ assert(Array.isArray(state.trainers)&&state.trainers.length===6&&new Set(state.trainers.map(t=>t.id)).size===6,'Dresseurs de partie invalides');
+ assert(mine.every(c=>c&&state.trainers.some(t=>t.id===c.trainerId))&&other.every(c=>c&&state.trainers.some(t=>t.id===c.trainerId)),'Historique de choix invalide');
  const trainer=state.trainers.find(t=>t.id===trainerId);
  assert(trainer&&!mine.some(c=>c.trainerId===trainerId),'Dresseur absent ou déjà utilisé par ce joueur');
  assert(Number.isInteger(offerIndex)&&offerIndex>=0&&offerIndex<3,'Proposition inconnue');
