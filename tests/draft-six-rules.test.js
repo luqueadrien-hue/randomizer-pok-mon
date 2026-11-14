@@ -30,3 +30,15 @@ test('illegal attacks, EVs, game mismatch and unsupported tera are rejected',()=
  assert.throws(()=>D.create({game:'sv',trainers,offers:[{...offer(0),evs:[252,252,252,0,0,0]},...Array.from({length:17},(_,i)=>offer(i+1))]}),/EV/);
  assert.throws(()=>D.create({game:'bdsp',trainers,offers:[]}),/dresseurs/);
 });
+
+test('invalid catalog entries are skipped when enough verified offers remain',()=>{
+ const invalid={...offer(99),verified:false};
+ const s=D.create({game:'sv',trainers,offers:[invalid,...Array.from({length:18},(_,i)=>offer(i))],rng:()=>0.5});
+ assert.equal(s.trainers.flatMap(t=>t.offers).length,18);
+ assert.ok(s.trainers.flatMap(t=>t.offers).every(p=>p.verified===true));
+});
+test('invalid RNG values and corrupted history are rejected',()=>{
+ assert.throws(()=>D.create({game:'sv',trainers,offers:Array.from({length:18},(_,i)=>offer(i)),rng:()=>1}),/aléatoire/);
+ const s=make();s.players['1'].push({trainerId:'unknown'});
+ assert.throws(()=>D.choose(s,1,s.trainers[0].id,0,custom),/Historique/);
+});
