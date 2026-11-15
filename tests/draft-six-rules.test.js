@@ -42,3 +42,17 @@ test('invalid RNG values and corrupted history are rejected',()=>{
  const s=make();s.players['1'].push({trainerId:'unknown'});
  assert.throws(()=>D.choose(s,1,s.trainers[0].id,0,custom),/Historique/);
 });
+
+test('rejects forged history: repeated trainer, changed offer and skipped turn',()=>{
+ const base=make(),t=base.trainers[0].id;
+ let s=D.choose(base,1,t,0,custom);
+ let tampered=structuredClone(s);
+ tampered.players['1'].push({...tampered.players['1'][0]});
+ assert.throws(()=>D.choose(tampered,2,t,0,custom),/Historique/);
+ tampered=structuredClone(s);
+ tampered.players['1'][0].species='fake-species';
+ assert.throws(()=>D.choose(tampered,2,t,0,custom),/Historique/);
+ tampered=structuredClone(s);
+ tampered.turn=1;
+ assert.throws(()=>D.choose(tampered,1,base.trainers[1].id,0,custom),/tours/);
+});
