@@ -52,6 +52,17 @@ function choose(state,seat,trainerId,offerIndex,custom){
  assert(Array.isArray(mine)&&Array.isArray(other)&&mine.length<6,'Équipe complète ou état invalide');
  assert(Array.isArray(state.trainers)&&state.trainers.length===6&&new Set(state.trainers.map(t=>t.id)).size===6,'Dresseurs de partie invalides');
  assert(mine.every(c=>c&&state.trainers.some(t=>t.id===c.trainerId))&&other.every(c=>c&&state.trainers.some(t=>t.id===c.trainerId)),'Historique de choix invalide');
+ // Un historique altéré ne doit pas autoriser un septième choix, un saut de tour
+ // ou la réutilisation d'un dresseur. Chaque sélection est liée à l'offre figée.
+ for(const player of [mine,other]){
+  assert(player.length<=6&&new Set(player.map(c=>c.trainerId)).size===player.length,'Historique de choix invalide');
+  for(const c of player){
+   const t=state.trainers.find(x=>x.id===c.trainerId);
+   const p=t&&t.offers[c.offerIndex];
+   assert(p&&c.species===p.species&&(c.form||'')===(p.form||'')&&Array.isArray(c.moves)&&c.moves.length===4&&new Set(c.moves).size===4&&c.moves.every(m=>p.legalMoves.includes(m))&&NATURES.includes(c.nature)&&(state.game==='sv'?TYPES.includes(c.tera):c.tera==null),'Historique de choix invalide');
+  }
+ }
+ assert(mine.length+other.length<12&&state.players['1'].length===state.players['2'].length+(seat===2?1:0),'Historique de tours invalide');
  const trainer=state.trainers.find(t=>t.id===trainerId);
  assert(trainer&&!mine.some(c=>c.trainerId===trainerId),'Dresseur absent ou déjà utilisé par ce joueur');
  assert(Number.isInteger(offerIndex)&&offerIndex>=0&&offerIndex<3,'Proposition inconnue');
