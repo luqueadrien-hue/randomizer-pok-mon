@@ -51,6 +51,18 @@ function choose(state,seat,trainerId,offerIndex,custom){
  const mine=state.players[String(seat)],other=state.players[String(3-seat)];
  assert(Array.isArray(mine)&&Array.isArray(other)&&mine.length<6,'Équipe complète ou état invalide');
  assert(Array.isArray(state.trainers)&&state.trainers.length===6&&new Set(state.trainers.map(t=>t.id)).size===6,'Dresseurs de partie invalides');
+ // Revalider les dix-huit offres figées avant toute sélection : une offre
+ // altérée ou dupliquée ne doit pas devenir admissible par simple indexation.
+ const offerKeys=new Set();
+ for(const trainer of state.trainers){
+  assert(Array.isArray(trainer.offers)&&trainer.offers.length===3,'Propositions de partie invalides');
+  for(const offer of trainer.offers){
+   validOffer(offer,state.game);
+   const key=offer.species+'|'+(offer.form||'');
+   assert(!offerKeys.has(key),'Espèce ou forme proposée plusieurs fois');
+   offerKeys.add(key);
+  }
+ }
  assert(mine.every(c=>c&&state.trainers.some(t=>t.id===c.trainerId))&&other.every(c=>c&&state.trainers.some(t=>t.id===c.trainerId)),'Historique de choix invalide');
  // Un historique altéré ne doit pas autoriser un septième choix, un saut de tour
  // ou la réutilisation d'un dresseur. Chaque sélection est liée à l'offre figée.
