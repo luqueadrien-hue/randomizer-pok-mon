@@ -27,7 +27,8 @@ test('twelve choices complete two teams of six',()=>{
 });
 test('illegal attacks, EVs, game mismatch and unsupported tera are rejected',()=>{
  let s=make();assert.throws(()=>D.choose(s,1,s.trainers[0].id,0,{...custom,moves:['a','a','b','c']}),/attaques/);
- assert.throws(()=>D.create({game:'sv',trainers,offers:[{...offer(0),evs:[252,252,252,0,0,0]},...Array.from({length:17},(_,i)=>offer(i+1))]}),/EV/);
+ assert.throws(()=>D.validOffer({...offer(0),evs:[252,252,252,0,0,0]},'sv'),/EV/);
+ assert.throws(()=>D.create({game:'sv',trainers,offers:[{...offer(0),evs:[252,252,252,0,0,0]},...Array.from({length:17},(_,i)=>offer(i+1))]}),/Catalogue légal insuffisant/);
  assert.throws(()=>D.create({game:'bdsp',trainers,offers:[]}),/dresseurs/);
 });
 
